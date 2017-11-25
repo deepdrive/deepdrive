@@ -1,0 +1,25 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+
+[dev-packages]
+
+
+
+[packages]
+
+#deepdrive = "*"
+scipy = "*"
+numpy = "*"
+"h5py" = "*"
+gym = "*"
+arrow = "*"
+matplotlib = "*"
+
+
+[requires]
+
+python_version = "3.5"
