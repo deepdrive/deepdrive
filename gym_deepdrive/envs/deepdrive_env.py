@@ -1,25 +1,19 @@
 import csv
-import platform
 import deepdrive as deepdrive_capture
 import deepdrive_control
+import platform
 import threading
-from collections import deque, OrderedDict, namedtuple
-
-import gym
-import sys
-
-import logging
-import numpy as np
-import arrow
-
 import time
-from gym import error, spaces, utils
+from collections import deque, OrderedDict
+
+import arrow
+import gym
+from gym import spaces, utils
 from gym.utils import seeding
 
-import tf_utils
 import utils
-from utils import obj2dict
 from config import *
+from utils import obj2dict
 
 # TODO: Set log level based on verbosity arg
 log = utils.get_log(__name__)
@@ -49,6 +43,30 @@ class Score(object):
     def __init__(self):
         self.start_time = time.time()
         self.end_time = None
+
+
+class DeepDriveRewardCalculator(object):
+    @staticmethod
+    def get_speed_reward(cmps, time_passed):
+        """
+        Incentivize going quickly while remaining under the speed limit.
+        :param cmps: speed in cm / s
+        :param time_passed: time passed since previous speed reward (allows running at variable frame rates while 
+        still receiving consistent rewards)
+        :return: positive or negative real valued speed reward on meter scale
+        """
+        speed_kph = cmps * 3600. / 100. / 1000.  # cm/s=>kph
+        balance_coeff = 2. / 10.
+        speed_delta = speed_kph - SPEED_LIMIT_KPH
+        if speed_delta > 4:
+            # too fast
+            speed_reward = -1 * balance_coeff * speed_kph * time_passed * speed_delta ** 2  # squared to outweigh advantage of speeding
+        else:
+            # incentivize timeliness
+            speed_reward = balance_coeff * time_passed * speed_kph
+
+            # No slow penalty as progress already incentivizes this (plus we'll need to stop at some points anyway)
+        return speed_reward
 
 
 class DeepDriveEnv(gym.Env):
@@ -225,19 +243,8 @@ class DeepDriveEnv(gym.Env):
         speed_reward = 0
         if 'speed' in obz:
             speed = obz['speed']
-            speed_kph = speed * 3600. / 100. / 1000.  # cm/s=>meters/hour
             if time_passed is not None:
-                balance_coeff = 2. / 10.
-                speed_delta = speed_kph - SPEED_LIMIT_KPH
-                if speed_delta > 4:
-                    # too fast
-                    speed_reward = - balance_coeff * (speed_kph * time_passed * speed_delta ** 2)  # squared to outweigh advantage of speeding
-                else:
-                    # incentivize timeliness
-                    speed_reward = balance_coeff * time_passed * speed_kph
-
-                # No slow penalty as progress already incentivizes this (plus we'll need to stop at some points anyway)
-
+                speed_reward = DeepDriveRewardCalculator.get_speed_reward(speed, time_passed)
                 self.display_stats['speed reward']['value'] = speed_reward
         self.score.speed_reward += speed_reward
         return speed_reward
@@ -433,6 +440,7 @@ class DeepDriveEnv(gym.Env):
             depth = camera.depth_data.reshape(camera.capture_height, camera.capture_width)
             start_preprocess = time.time()
             if self.preprocess_with_tensorflow:
+                import tf_utils  # avoid hard requirement on tensorflow
                 if self.sess is None:
                     raise Exception('No tensorflow session. Did you call set_tf_session?')
                 # This runs ~2x slower (18ms on a gtx 980) than CPU when we are not running a model due to

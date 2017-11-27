@@ -4,13 +4,16 @@ from distutils.version import LooseVersion as semvar
 
 
 def main():
-    error_msg = '\n\n*** Warning: %s - baseline imitation learning agent will not be available.\n\n'
+    error_msg = '\n\n*** Warning: %s, baseline imitation learning agent will not be available. ' \
+                'HINT: Check out our CUDA / cuDNN install tips on the readme ' \
+                'https://github.com/deepdrive/deepdrive-agents if you choose to install Tensorflow. ' \
+                '\n\n'
 
     print('Checking for valid Tensorflow installation')
     try:
         # noinspection PyUnresolvedReferences
         import tensorflow as tf
-        check = tf.constant('you call this a tensor!?')
+        check = tf.constant('string tensors are not tensors but are called tensors in tensorflow')
         with tf.Session(config=tf.ConfigProto(log_device_placement=False,
                                               gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.01,
                                                                         allow_growth=True))) as sess:

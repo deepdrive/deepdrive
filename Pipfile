@@ -11,14 +11,14 @@ name = "pypi"
 
 [packages]
 
-#deepdrive = "*"
+deepdrive = {extras = ["tensorflow-gpu"]}
 scipy = "*"
 numpy = "*"
 "h5py" = "*"
 gym = "*"
 arrow = "*"
 matplotlib = "*"
-
+pytest-xdist = "*"
 
 [requires]
 

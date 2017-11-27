@@ -296,5 +296,6 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
     agent.close()
     env.close()
 
+
 if __name__ == '__main__':
     run(False)

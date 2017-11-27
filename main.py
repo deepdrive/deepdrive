@@ -1,6 +1,7 @@
 import argparse
 
-import gym_deepdrive  # do not remove, registers enviornment
+import gym_deepdrive  # forward register gym enviornment
+
 
 def main():
     parser = argparse.ArgumentParser(description=None)

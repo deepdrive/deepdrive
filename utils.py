@@ -152,6 +152,7 @@ def show_camera(image, depth):
     input('Enter any key to continue')
 
 
+os.makedirs(LOG_DIR, exist_ok=True)
 log_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 log_rotator = RotatingFileHandler(os.path.join(LOG_DIR, 'log.txt'), maxBytes=(1048576 * 5), backupCount=7)
 log_rotator.setFormatter(log_format)
@@ -163,7 +164,6 @@ def get_log(namespace, level=logging.INFO, rotator=log_rotator):
     ch = logging.StreamHandler(sys.stdout)
     ch.setFormatter(log_format)
     ret.addHandler(ch)
-    os.makedirs(LOG_DIR, exist_ok=True)
     ret.addHandler(rotator)
     return ret
 

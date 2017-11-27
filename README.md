@@ -42,9 +42,9 @@ If you experience low frame rates on Linux, you may need to install NVIDIA’s d
 [CUDA install tips](#cuda-and-nvidia-driver-install)
 [cuDNN install tips](#cudnn-install-tips)
 
-#### CUDA and NVIDIA driver Install
+#### CUDA, cuDNN and NVIDIA driver Install
 
-Make sure to follow the [CUDA installation instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) thoroughly as you could end up with a broken video driver, login issues, and lots of frustration. We recommend the Package Manager installation method, i.e. deb[local], for the smoothest install. The runfile method can be fraught with pain, but If you really want to use it, make sure to follow NVIDIA’s instructions on how to disable the Nouveau drivers if you're using Ubuntu. Also, get the older CUDA 8 and cuDNN 6 for a standard tensorflow install later on (read here to see if this changes: https://github.com/tensorflow/tensorflow/issues/12052) - If you want to use CUDA 9 / cuDNN 7, you’ll need to install Tensorflow from source.
+Make sure to follow the [CUDA installation instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) thoroughly as you could end up with a broken video driver, login issues, and lots of frustration. We recommend the package manager installation method, i.e. deb[local], for the smoothest install of both CUDA and cuDNN. The runfile method can be fraught with pain, but if you really want to use it, make sure to follow NVIDIA’s instructions on how to disable the Nouveau drivers if you're on Ubuntu. You may want to have another computer handy (or use your mobile if you have to) to search for answers while your machine is unusable. Also, get the older CUDA 8 and cuDNN 6 for a standard tensorflow install later on (read here to see if this changes: https://github.com/tensorflow/tensorflow/issues/12052) - If you want to use CUDA 9 / cuDNN 7, you’ll need to install Tensorflow from source.
 http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html
 
 #### OpenGL
@@ -69,17 +69,16 @@ OpenGL ES profile extensions:
 ```
 You may need to disable secure boot in your BIOS in order for NVIDIA’s OpenGL and tools like nvidia-smi to work. This is not DeepDrive specific, but rather a general requirement of Ubuntu’s NVIDIA drivers.
 
-If you have not installed CUDA on Ubuntu before, know that this can be an adventure. Your video drivers may stop working, and you may feel like everything is lost, however this is a right of passage in the current age to deep learning so there is plenty of help online. You may want to have another computer handy (or use your mobile if you have to) to search for answers while your machine is unusable. 
 
 Also `sudo shutdown -r now` is your friend
 
-### cuDNN install tips
 
-Use the deb installation method for the smoothest Tensorflow install later on.
+### Development
+
+To run tests in PyCharm, go to File | Settings | Tools | Python Integrated Tools and change the default test runner 
+to py.test.
 
 
---- 
----
 ### Random notes (TODO: Cleanup)
 
 Windows
