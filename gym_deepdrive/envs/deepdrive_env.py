@@ -5,6 +5,7 @@ import platform
 import threading
 import time
 from collections import deque, OrderedDict
+from subprocess import Popen
 
 import arrow
 import gym
@@ -29,7 +30,7 @@ SHARED_CAPTURE_MEM_SIZE = 157286400
 SHARED_CONTROL_MEM_SIZE = 1048580
 SPEED_LIMIT_KPH = 64.
 
-log.info('Starting deepdrive, enter "s" or "stop" to stop')
+log.info('Starting deepdrive')
 
 
 class Score(object):
@@ -79,7 +80,6 @@ class DeepDriveEnv(gym.Env):
         self.sess = None
         self.prev_observation = None
         self.start_time = time.time()
-        self.control = deepdrive_control.DeepDriveControl()
         self.step_num = 0
         self.prev_step_time = None
         self.display_stats = OrderedDict()
@@ -92,6 +92,9 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['reward']                        = {'value': 0, 'ymin': -20,   'ymax': 20,    'units': ''}
         self.display_stats['total score']                   = {'value': 0, 'ymin': -500,  'ymax': 10000, 'units': ''}
 
+        self.sim_process = Popen(['/opt/deepdrive/DeepDrive/Binaries/Linux/DeepDrive'])
+
+        self.control = deepdrive_control.DeepDriveControl()
         self.reset_capture()
         self.reset_control()
 
@@ -119,10 +122,14 @@ class DeepDriveEnv(gym.Env):
     def start_dashboard(self):
         if utils.is_debugging():
             # TODO: Deal with plot UI not being in the main thread somehow - (move to browser?)
-            log.error('dashboard not supported in debug mode')
+            log.warning('Dashboard not supported in debug mode')
             return
         import matplotlib.animation as animation
-        import matplotlib.pyplot as plt
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError as e:
+            log.error('Error: Could not start dashboard:\n%s', e)
+            return
 
         display_stats = self.display_stats
 
@@ -408,6 +415,7 @@ class DeepDriveEnv(gym.Env):
         deepdrive_control.close()
         if self.sess:
             self.sess.close()
+        self.sim_process.kill()
 
     def _render(self, mode='human', close=False):
         # TODO: Implement proper render - this is really only good for one frame - Could use our OpenGLUT viewer (on raw images) for this or PyGame on preprocessed images
@@ -480,12 +488,20 @@ class DeepDriveEnv(gym.Env):
         deepdrive_control.send_control(self.control)
 
     def reset_capture(self):
-        # TODO: Establish some handshake so we don't hardcode size here and in Unreal project
-        if deepdrive_capture.reset(SHARED_CAPTURE_MEM_NAME, SHARED_CAPTURE_MEM_SIZE):
-            log.info('Connected to deepdrive shared capture memory')
-        else:
-            log.error('Could not connect to deepdrive capture memory at %s', SHARED_CAPTURE_MEM_NAME)
-            self.raise_connect_fail()
+        n = 10
+        sleep = 0.1
+        log.info('Connecting to deepdrive...')
+        while n > 0:
+            # TODO: Establish some handshake so we don't hardcode size here and in Unreal project
+            if deepdrive_capture.reset(SHARED_CAPTURE_MEM_NAME, SHARED_CAPTURE_MEM_SIZE):
+                log.info('Connected to deepdrive shared capture memory')
+                return
+            n -= 1
+            sleep *= 2
+            log.info('Sleeping %r', sleep)
+            time.sleep(sleep)
+        log.error('Could not connect to deepdrive capture memory at %s', SHARED_CAPTURE_MEM_NAME)
+        self.raise_connect_fail()
 
     @staticmethod
     def raise_connect_fail():
