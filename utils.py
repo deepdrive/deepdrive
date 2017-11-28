@@ -40,7 +40,6 @@ def preprocess_depth(depth):
     # plt.show()
     depth = depth ** -(1 / 3.)
     depth = normalize(depth)
-    depth = depth_heatmap(depth)
     return depth
 
 

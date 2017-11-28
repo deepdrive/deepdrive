@@ -360,7 +360,6 @@ class DeepDriveEnv(gym.Env):
             writer.writerow(['low score', low])
         log.info('wrote results to %r', filename)
 
-
     def get_action_array(self, steering=0, throttle=0, brake=0, handbrake=0, is_game_driving=False, should_reset=False):
         log.debug('steering %f', steering)
         action = [np.array([steering]),
