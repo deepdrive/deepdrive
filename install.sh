@@ -13,7 +13,7 @@ py="$(python -u scripts/check_py_version.py)"
 
 py_save=`which ${py}`
 echo "Downloading simulator - it's about ~1GB, so may take some time."
-sudo bash -c "${py_save} -u scripts/download.py --zip-dir-url https://d1y4edi1yk5yok.cloudfront.net/sim/deepdrive-2.0.201801010909.zip --dest /opt/deepdrive"
+sudo bash -c "${py_save} -u scripts/download.py --zip-dir-url https://d1y4edi1yk5yok.cloudfront.net/sim/deepdrive-sim-2.0.20171127052011.zip --dest /opt/deepdrive"
 #sudo bash -c "${py_save} -u scripts/download.py --zip-dir-url https://s3-us-west-1.amazonaws.com/deepdrive/sim/test-download.zip --dest /opt/dltest"
 
 # Install python dependencies
@@ -32,11 +32,19 @@ bash -c "${py} -u scripts/check_tf_version.py"
 
 pytest
 
+# Download test weights if tensorflow to /var/deepdrive
+# Run main.py --benchmark
+
 # Run the tutorial.sh
+# Mute with u
+# Escape to see menu / controls
+# Change cam with 1, 2, 3
+# Alt-tab to get back to agent.py
+# Change the throttle out in agent.py
 
 
 # If tensorflow installed, run the imitation learning agent, else run forward agent
-# Download the weights to /var/deepdrive
+
 
 # Pause the game, ask them to press j
 # Pause the game, ask them to change the camera position
