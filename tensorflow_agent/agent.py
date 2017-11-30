@@ -1,11 +1,16 @@
+import os
 import time
+from datetime import datetime
+
+
 import gym
 import tensorflow as tf
-from utils import save_hdf5, get_log
+import numpy as np
 from gym import wrappers
 
-from config import *
+import config as c
 from tensorflow_agent.net import Net
+from utils import save_hdf5, get_log
 
 gym.undo_logger_setup()
 log = get_log(__name__)
@@ -34,7 +39,7 @@ class Agent(object):
 
         # Recording state
         self.should_record = should_record
-        self.sess_dir = os.path.join(RECORDINGS_DIR, datetime.now().strftime(DIR_DATE_FORMAT))
+        self.sess_dir = os.path.join(c.RECORDINGS_DIR, datetime.now().strftime(c.DIR_DATE_FORMAT))
         self.obz_recording = []
 
         # Net
@@ -99,9 +104,9 @@ class Agent(object):
 
         desired_spin, desired_direction, desired_speed, desired_speed_change, desired_steering, desired_throttle = y[0]
 
-        desired_spin = desired_spin * SPIN_NORMALIZATION_FACTOR
-        desired_speed = desired_speed * SPEED_NORMALIZATION_FACTOR
-        desired_speed_change = desired_speed_change * SPEED_NORMALIZATION_FACTOR
+        desired_spin = desired_spin * c.SPIN_NORMALIZATION_FACTOR
+        desired_speed = desired_speed * c.SPEED_NORMALIZATION_FACTOR
+        desired_speed_change = desired_speed_change * c.SPEED_NORMALIZATION_FACTOR
 
         log.debug('desired_steering %f', desired_steering)
         log.debug('desired_throttle %f', desired_throttle)
@@ -133,9 +138,12 @@ class Agent(object):
         return action
 
     def maybe_save(self):
-        if self.should_record and self.recorded_obz_count % FRAMES_PER_HDF5_FILE == 0 and self.recorded_obz_count != 0:
+        if (
+            self.should_record and self.recorded_obz_count % c.FRAMES_PER_HDF5_FILE == 0 and
+            self.recorded_obz_count != 0
+           ):
             filename = os.path.join(self.sess_dir, '%s.hdf5' %
-                                    str(self.recorded_obz_count // FRAMES_PER_HDF5_FILE).zfill(10))
+                                    str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10))
             save_hdf5(self.obz_recording, filename=filename)
             log.info('Flushing output data')
             self.obz_recording = []
@@ -171,7 +179,7 @@ class Agent(object):
         
         where model/add_2 is the auto-generated name for self.net.p 
         '''
-        self.net_input_placeholder = tf.placeholder(tf.float32, (None,) + IMAGE_SHAPE)
+        self.net_input_placeholder = tf.placeholder(tf.float32, (None,) + c.IMAGE_SHAPE)
         if is_frozen:
             # TODO: Get frozen nets working
 
@@ -196,7 +204,7 @@ class Agent(object):
 
         else:
             with tf.variable_scope("model") as _vs:
-                self.net = Net(self.net_input_placeholder, NUM_TARGETS, is_training=False)
+                self.net = Net(self.net_input_placeholder, c.NUM_TARGETS, is_training=False)
             saver = tf.train.Saver()
             saver.restore(self.sess, net_path)
 
@@ -221,14 +229,14 @@ class Agent(object):
         for camera in obz['cameras']:
             image = camera['image']
             image = image.astype(np.float32)
-            image -= MEAN_PIXEL
+            image -= c.MEAN_PIXEL
             camera['image'] = image
         return obz
 
     def perform_semirandom_action(self):
         if self.semirandom_sequence_step == (self.random_action_count + self.non_random_action_count):
             self.semirandom_sequence_step = 0
-            rand = RNG.random()
+            rand = c.RNG.random()
             if 0 <= rand < 0.67:
                 self.random_action_count = 0
                 self.non_random_action_count = 10
@@ -263,7 +271,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
 
     sess = tf.Session(config=tf_config)
     env = gym.make(env_id)
-    env = wrappers.Monitor(env, directory=GYM_DIR, force=True)
+    env = wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
     env.seed(0)
     deepdrive_env = env.env
     deepdrive_env.set_tf_session(sess)
@@ -275,27 +283,39 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
     agent = Agent(env.action_space, sess, env=env.env, should_toggle_random_actions=should_record,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5)
 
+    def close():
+        env.close()
+        agent.close()
+
     for episode in range(episode_count):
         if episode == 0 or done:
             obz = env.reset()
         else:
             obz = None
-        while True:
-            action = agent.act(obz, reward, done)
-            obz, reward, done, _ = env.step(action)
-            if render:
-                env.render()
-            if done:
-                env.reset()
-            if should_record:
-                agent.perform_semirandom_action()
-            if agent.recorded_obz_count > MAX_RECORDED_OBSERVATIONS:
-                break
-            if should_benchmark and deepdrive_env.done_benchmarking:
-                break
-    agent.close()
-    env.close()
+        try:
+            while True:
+                action = agent.act(obz, reward, done)
+                obz, reward, done, _ = env.step(action)
+                if render:
+                    env.render()
+                if done:
+                    env.reset()
+                if should_record:
+                    agent.perform_semirandom_action()
+                if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:
+                    break
+                if should_benchmark and deepdrive_env.done_benchmarking:
+                    break
+                # if agent.step > 100:
+                #     # deepdrive_env.close()
+                #     print('closing!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                #     agent.close()
+                #     env.close()
+                #     print('closing222222222222222!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                #
+                #     break
 
-
-if __name__ == '__main__':
-    run(False)
+        except KeyboardInterrupt:
+            log.info('keyboard interrupt detected, closing')
+            close()
+    close()

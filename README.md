@@ -13,6 +13,8 @@
 git clone https://github.com/deepdrive/deepdrive-agents
 ```
 
+This creates a virtualenv if you're not already in one
+
 ### Linux
 
 ```

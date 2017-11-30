@@ -1,12 +1,15 @@
 from __future__ import print_function
 
 import logging
+import os
+
+import numpy as np
 import tensorflow as tf
+
+import config as c
+from tensorflow_agent.net import Net
 from tensorflow_agent.train.data_utils import get_dataset
 from utils import get_log
-
-from config import *
-from tensorflow_agent.net import Net
 
 log = get_log(__name__, logging.DEBUG)
 
@@ -37,23 +40,23 @@ def visualize_gradients(grads_and_vars):
 
 
 def run(resume_dir=None):
-    os.makedirs(TENSORFLOW_OUT_DIR, exist_ok=True)
+    os.makedirs(c.TENSORFLOW_OUT_DIR, exist_ok=True)
     if resume_dir is not None:
         date_str = resume_dir[:resume_dir.rindex('_')]
     else:
-        date_str = DATE_STR
+        date_str = c.DATE_STR
     sess_train_dir = date_str + '_train'
     sess_eval_dir = date_str + '_eval'
     os.makedirs(sess_train_dir, exist_ok=True)
     os.makedirs(sess_eval_dir, exist_ok=True)
     batch_size = 64  # Change this to fit in your GPU's memory
-    x = tf.placeholder(tf.float32, (None,) + IMAGE_SHAPE)
-    y = tf.placeholder(tf.float32, (None, NUM_TARGETS))
+    x = tf.placeholder(tf.float32, (None,) + c.IMAGE_SHAPE)
+    y = tf.placeholder(tf.float32, (None, c.NUM_TARGETS))
     log.info('creating model')
     with tf.variable_scope("model") as vs:
-        model = Net(x, NUM_TARGETS)
+        model = Net(x, c.NUM_TARGETS)
         vs.reuse_variables()
-        eval_model = Net(x, NUM_TARGETS, is_training=False)
+        eval_model = Net(x, c.NUM_TARGETS, is_training=False)
 
     l2_norm = tf.global_norm(tf.trainable_variables())
     loss = 0.5 * tf.reduce_sum(tf.square(model.p - y)) / tf.to_float(tf.shape(x)[0])
@@ -109,17 +112,17 @@ def run(resume_dir=None):
 
     eval_sw = tf.summary.FileWriter(sess_eval_dir)
 
-    train_dataset = get_dataset(RECORDINGS_DIR, log)
-    eval_dataset = get_dataset(RECORDINGS_DIR, log, train=False)
+    train_dataset = get_dataset(c.RECORDINGS_DIR, log)
+    eval_dataset = get_dataset(c.RECORDINGS_DIR, log, train=False)
     config = tf.ConfigProto(allow_soft_placement=True)
     with sv.managed_session(config=config) as sess, sess.as_default():
         train_data_provider = train_dataset.iterate_forever(batch_size)
-        log.info('Start tensorboard with \n\ttensorboard --logdir="' + TENSORFLOW_OUT_DIR +
-              '" (In Windows tensorboard will be in your python env\'s Scripts folder, '
-              'i.e. C:\\Users\\<YOU>\\Miniconda3\\envs\\tensorflow\\Scripts)\n'
-              'Then navigate to http://localhost:6006 - You may see errors if Tensorboard was already '
-              'started / has tabs open. If so, shut down Tenosrboard first and close all Tensorboard tabs. '
-              'Sometimes you may just need to restart if you get CUDA device errors.')
+        log.info('Start tensorboard with \n\ttensorboard --logdir="' + c.TENSORFLOW_OUT_DIR +
+                 '" (In Windows tensorboard will be in your python env\'s Scripts folder, '
+                 'i.e. C:\\Users\\<YOU>\\Miniconda3\\envs\\tensorflow\\Scripts)\n'
+                 'Then navigate to http://localhost:6006 - You may see errors if Tensorboard was already '
+                 'started / has tabs open. If so, shut down Tenosrboard first and close all Tensorboard tabs. '
+                 'Sometimes you may just need to restart if you get CUDA device errors.')
         while True:
             for i in range(1000):
                 images, targets = next(train_data_provider)
@@ -148,6 +151,7 @@ def run(resume_dir=None):
                 summary.value.add(tag="eval/{}".format(names[i]), simple_value=float(0.5 * losses[:, i].mean()))
             eval_sw.add_summary(summary, step)
             eval_sw.flush()
+
 
 if __name__ == "__main__":
     run()

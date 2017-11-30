@@ -3,13 +3,15 @@ import platform
 import sys
 import threading
 import time
+import numpy as np
+import os
 from logging.handlers import RotatingFileHandler
 
 import deepdrive
 import h5py
 import logging
 
-from config import *
+import config as c
 
 
 def normalize(a):
@@ -53,33 +55,11 @@ def depth_heatmap(depth):
     return ret
 
 
-class connection:
-    def __enter__(self):
-        connected = False
-        size = 157286400
-        # TODO: Establish some handshake so we don't hardcode size here and in Unreal project
-        if platform.system() == 'Linux':
-            connected = deepdrive.reset('/tmp/deepdrive_shared_memory', size)
-        elif platform.system() == 'Windows':
-            connected = deepdrive.reset('Local\DeepDriveCapture_1', size)
-        ret = connected == 1
-        if ret:
-            log.info('Connected to deepdrive')
-        else:
-            log.error('Could not connect to deepdrive')
-            raise Exception('Could not connect to deepdrive')
-        return ret
-
-    def __exit__(self, type, value, traceback):
-        log.debug('closing connection to deepdrive')
-        deepdrive.close()
-
-
 def obj2dict(obj, exclude=None):
     ret = {}
     exclude = exclude or []
     for name in dir(obj):
-        if not name.startswith('__') and not name in exclude:
+        if not name.startswith('__') and name not in exclude:
             value = getattr(obj, name)
             if not inspect.ismethod(value):
                 value = getattr(obj, name)
@@ -132,16 +112,16 @@ def read_hdf5(filename, save_png_dir=None):
                 out_camera['depth'] = camera['depth'].value
                 out_cameras.append(out_camera)
                 if save_png_dir is not None:
-                    save_camera(out_camera['image'], out_camera['depth'], dir=save_png_dir, name=str(i).zfill(10))
+                    save_camera(out_camera['image'], out_camera['depth'], save_dir=save_png_dir, name=str(i).zfill(10))
             out_frame['cameras'] = out_cameras
             ret.append(out_frame)
     return ret
 
 
-def save_camera(image, depth, dir, name):
+def save_camera(image, depth, save_dir, name):
     from scipy.misc import imsave
-    imsave(os.path.join(dir, 'i_' + name + '.png'), image)
-    imsave(os.path.join(dir, 'z_' + name + '.png'), depth)
+    imsave(os.path.join(save_dir, 'i_' + name + '.png'), image)
+    imsave(os.path.join(save_dir, 'z_' + name + '.png'), depth)
 
 
 def show_camera(image, depth):
@@ -151,9 +131,9 @@ def show_camera(image, depth):
     input('Enter any key to continue')
 
 
-os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(c.LOG_DIR, exist_ok=True)
 log_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-log_rotator = RotatingFileHandler(os.path.join(LOG_DIR, 'log.txt'), maxBytes=(1048576 * 5), backupCount=7)
+log_rotator = RotatingFileHandler(os.path.join(c.LOG_DIR, 'log.txt'), maxBytes=(1048576 * 5), backupCount=7)
 log_rotator.setFormatter(log_format)
 
 
@@ -168,13 +148,13 @@ def get_log(namespace, level=logging.INFO, rotator=log_rotator):
 
 
 def read_hdf5_manual():
-    save_png_dir = os.path.join(RECORDINGS_DIR, 'test_view')
+    save_png_dir = os.path.join(c.RECORDINGS_DIR, 'test_view')
     os.makedirs(save_png_dir)
-    read_hdf5(os.path.join(RECORDINGS_DIR, '2017-11-22_0105_26AM', '0000000001.hdf5'), save_png_dir=save_png_dir)
+    read_hdf5(os.path.join(c.RECORDINGS_DIR, '2017-11-22_0105_26AM', '0000000001.hdf5'), save_png_dir=save_png_dir)
 
 
 def log_manual():
-    test_log_rotator = RotatingFileHandler(os.path.join(LOG_DIR, 'test.txt'), maxBytes=3, backupCount=7)
+    test_log_rotator = RotatingFileHandler(os.path.join(c.LOG_DIR, 'test.txt'), maxBytes=3, backupCount=7)
     log1 = get_log('log1', rotator=test_log_rotator)
     log2 = get_log('log2', rotator=test_log_rotator)
     log1.info('asdf')
@@ -186,6 +166,7 @@ def is_debugging():
         if frame[1].endswith("pydevd.py"):
             return True
     return False
+
 
 log = get_log(__name__)
 

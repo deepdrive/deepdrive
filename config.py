@@ -1,5 +1,6 @@
 import random
 import os
+from sys import platform
 
 from datetime import datetime
 import numpy as np
@@ -32,3 +33,13 @@ TENSORFLOW_OUT_DIR = os.path.join(DEEPDRIVE_DIR, 'tensorflow')
 # Seeded random number generator for reproducibility
 RNG = random.Random(42.77)
 
+
+if platform == "linux" or platform == "linux2":
+    # linux
+    SIM_BIN_PATH = '/opt/deepdrive/DeepDrive/Binaries/Linux/DeepDrive'
+elif platform == "darwin":
+    # OS X
+    raise NotImplementedError('Support for OSX not yet implemented')
+elif platform == "win32":
+    # Windows...
+    raise NotImplementedError('Windows sim binary path not yet implemented')

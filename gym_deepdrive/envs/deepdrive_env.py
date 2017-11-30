@@ -1,19 +1,22 @@
+import os
 import csv
 import deepdrive as deepdrive_capture
 import deepdrive_control
 import platform
-import threading
 import time
 from collections import deque, OrderedDict
 from subprocess import Popen
+from multiprocessing import Process, Queue
+import queue
 
+import numpy as np
 import arrow
 import gym
 from gym import spaces, utils
 from gym.utils import seeding
 
 import utils
-from config import *
+import config as c
 from utils import obj2dict
 
 # TODO: Set log level based on verbosity arg
@@ -46,30 +49,7 @@ class Score(object):
         self.end_time = None
 
 
-class DeepDriveRewardCalculator(object):
-    @staticmethod
-    def get_speed_reward(cmps, time_passed):
-        """
-        Incentivize going quickly while remaining under the speed limit.
-        :param cmps: speed in cm / s
-        :param time_passed: time passed since previous speed reward (allows running at variable frame rates while 
-        still receiving consistent rewards)
-        :return: positive or negative real valued speed reward on meter scale
-        """
-        speed_kph = cmps * 3600. / 100. / 1000.  # cm/s=>kph
-        balance_coeff = 2. / 10.
-        speed_delta = speed_kph - SPEED_LIMIT_KPH
-        if speed_delta > 4:
-            # too fast
-            speed_reward = -1 * balance_coeff * speed_kph * time_passed * speed_delta ** 2  # squared to outweigh advantage of speeding
-        else:
-            # incentivize timeliness
-            speed_reward = balance_coeff * time_passed * speed_kph
-
-            # No slow penalty as progress already incentivizes this (plus we'll need to stop at some points anyway)
-        return speed_reward
-
-
+# noinspection PyMethodMayBeStatic
 class DeepDriveEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
@@ -91,8 +71,13 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['progress reward']               = {'value': 0, 'ymin': 0,     'ymax': 5,   'units': ''}
         self.display_stats['reward']                        = {'value': 0, 'ymin': -20,   'ymax': 20,    'units': ''}
         self.display_stats['total score']                   = {'value': 0, 'ymin': -500,  'ymax': 10000, 'units': ''}
+        self.dashboard_thread = None
+        self.dashboard_process = None
+        self.dashboard_queue = None
+        self.should_exit = False
 
-        self.sim_process = Popen(['/opt/deepdrive/DeepDrive/Binaries/Linux/DeepDrive'])
+        log.info('Starting %r', c.SIM_BIN_PATH)
+        self.sim_process = Popen([c.SIM_BIN_PATH])
 
         self.control = deepdrive_control.DeepDriveControl()
         self.reset_capture()
@@ -117,7 +102,67 @@ class DeepDriveEnv(gym.Env):
 
     def init_benchmarking(self):
         self.should_benchmark = True
-        os.makedirs(BENCHMARK_DIR, exist_ok=True)
+        os.makedirs(c.BENCHMARK_DIR, exist_ok=True)
+
+    def start_dashboard_test(self):
+        def f(dash_queue):
+            import matplotlib.pyplot as plt
+            import matplotlib.animation as animation
+
+            def data_gen(t=0):
+                cnt = 0
+                while cnt < 1000:
+                    cnt += 1
+                    t += 0.1
+                    yield t, np.sin(2 * np.pi * t) * np.exp(-t / 10.)
+
+            def init():
+                ax.set_ylim(-1.1, 1.1)
+                ax.set_xlim(0, 10)
+                del xdata[:]
+                del ydata[:]
+                line.set_data(xdata, ydata)
+                return line,
+
+            fig, ax = plt.subplots()
+            line, = ax.plot([], [], lw=2)
+            ax.grid()
+            xdata, ydata = [], []
+            anim = None
+
+            def run(data):
+                try:
+                    q_next = dash_queue.get(block=False)
+                    if q_next['should_stop']:
+                        print('Stopping dashboard')
+                        anim._fig.canvas._tkcanvas.master.quit()  # Hack to avoid "Exiting Abnormally"
+                        exit()
+                except queue.Empty:
+                    # print('q_next is empty')
+                    q_next = None
+
+                # update the data
+                t, y = data
+                xdata.append(t)
+                ydata.append(y)
+                xmin, xmax = ax.get_xlim()
+
+                if t >= xmax:
+                    ax.set_xlim(xmin, 2 * xmax)
+                    ax.figure.canvas.draw()
+                line.set_data(xdata, ydata)
+
+                return line,
+
+            anim = animation.FuncAnimation(fig, run, data_gen, blit=False,
+                                                     interval=10, repeat=False, init_func=init)
+            plt.show()
+
+        q = Queue()
+        p = Process(target=f, args=(q,))
+        p.start()
+        self.dashboard_process = p
+        self.dashboard_queue = q
 
     def start_dashboard(self):
         if utils.is_debugging():
@@ -126,67 +171,92 @@ class DeepDriveEnv(gym.Env):
             return
         import matplotlib.animation as animation
         try:
+            # noinspection PyUnresolvedReferences
             import matplotlib.pyplot as plt
         except ImportError as e:
-            log.error('Error: Could not start dashboard:\n%s', e)
+            log.error('\n\n\n***** Error: Could not start dashboard: %s\n\n', e)
             return
 
-        display_stats = self.display_stats
-
-        def ui_thread():
+        def dashboard(dash_queue):
             plt.figure(0)
-            for i, (stat_name, stat) in enumerate(display_stats.items()):
-                stat = display_stats[stat_name]
-                stat_label_subplot = plt.subplot2grid((len(display_stats), 3), (i, 0))
-                stat_value_subplot = plt.subplot2grid((len(display_stats), 3), (i, 1))
-                stat_graph_subplot = plt.subplot2grid((len(display_stats), 3), (i, 2))
-                txt_label = stat_label_subplot.text(0.5, 0.5, stat_name, fontsize=12, va="center", ha="center")
+
+            class Disp(object):
+                stats = {}
+                txt_values = {}
+                lines = {}
+                x_lists = {}
+                y_lists = {}
+
+            def get_next(block=False):
+                try:
+                    q_next = dash_queue.get(block=block)
+                    if q_next['should_stop']:
+                        print('Stopping dashboard')
+                        anim._fig.canvas._tkcanvas.master.quit()  # Hack to avoid "Exiting Abnormally"
+                        exit()
+                    else:
+                        Disp.stats = q_next['display_stats']
+                except queue.Empty:
+                    # Reuuse old stats
+                    pass
+
+            get_next(block=True)
+            for i, (stat_name, stat) in enumerate(Disp.stats.items()):
+                stat = Disp.stats[stat_name]
+                stat_label_subplot = plt.subplot2grid((len(Disp.stats), 3), (i, 0))
+                stat_value_subplot = plt.subplot2grid((len(Disp.stats), 3), (i, 1))
+                stat_graph_subplot = plt.subplot2grid((len(Disp.stats), 3), (i, 2))
+                stat_label_subplot.text(0.5, 0.5, stat_name, fontsize=12, va="center", ha="center")
                 txt_value = stat_value_subplot.text(0.5, 0.5, '', fontsize=12, va="center", ha="center")
-                stat['txt_value'] = txt_value
+                Disp.txt_values[stat_name] = txt_value
                 stat_graph_subplot.set_xlim([0, 200])
                 stat_graph_subplot.set_ylim([stat['ymin'], stat['ymax']])
-                stat['line'], = stat_graph_subplot.plot([], [])
+                Disp.lines[stat_name], = stat_graph_subplot.plot([], [])
                 stat_label_subplot.axis('off')
                 stat_value_subplot.axis('off')
-                stat['y_list'] = deque([-1] * 400)
-                stat['x_list'] = deque(np.linspace(200, 0, num=400))
+                Disp.x_lists[stat_name] = deque(np.linspace(200, 0, num=400))
+                Disp.y_lists[stat_name] = deque([-1] * 400)
 
             fig = plt.gcf()
-            fig.set_size_inches(7.5, len(display_stats) * 1.75)
+            fig.set_size_inches(7.5, len(Disp.stats) * 1.75)
             fig.canvas.set_window_title('DeepDrive score')
-            step = [0]
+            anim = None
 
             def init():
                 lines = []
-                for stat_name in display_stats:
-                    stat = display_stats[stat_name]
-                    stat['line'].set_data([], [])
-                    lines.append(stat['line'])
+                for s_name in Disp.stats:
+                    line = Disp.lines[s_name]
+                    line.set_data([], [])
+                    lines.append(line)
                 return lines
 
             def animate(_i):
-                step[0] += 1
                 lines = []
-                for stat_name in display_stats:
-                    stat = display_stats[stat_name]
-                    val = stat['value']
-                    stat['txt_value'].set_text(str(round(val, 2)) + stat['units'])
-                    stat['y_list'].pop()
-                    stat['y_list'].appendleft(val)
-                    stat['line'].set_data(stat['x_list'], stat['y_list'])
-                    lines.append(stat['line'])
+                get_next()
+                for s_name in Disp.stats:
+                    s = Disp.stats[s_name]
+                    xs = Disp.x_lists[s_name]
+                    ys = Disp.y_lists[s_name]
+                    tv = Disp.txt_values[s_name]
+                    line = Disp.lines[s_name]
+                    val = s['value']
+                    tv.set_text(str(round(val, 2)) + s['units'])
+                    ys.pop()
+                    ys.appendleft(val)
+                    line.set_data(xs, ys)
+                    lines.append(line)
                 plt.draw()
                 return lines
 
-            # noinspection PyUnusedLocal
             # TODO: Add blit=True and deal with updating the text if performance becomes unacceptable
-            _anim = animation.FuncAnimation(fig, animate, init_func=init, frames=200, interval=100)
-
+            anim = animation.FuncAnimation(fig, animate, init_func=init, frames=200, interval=100)
             plt.show()
 
-        thread = threading.Thread(target=ui_thread)
-        thread.daemon = True
-        thread.start()
+        q = Queue()
+        p = Process(target=dashboard, args=(q,))
+        p.start()
+        self.dashboard_process = p
+        self.dashboard_queue = q
 
     def set_tf_session(self, session):
         self.sess = session
@@ -207,7 +277,7 @@ class DeepDriveEnv(gym.Env):
     def get_reward(self, obz):
         reward = 0
 
-        if obz and time.time() - self.start_time > 6:
+        if obz and time.time() - self.start_time > 2.5:
             now = time.time()
             if self.prev_step_time is not None:
                 time_passed = now - self.prev_step_time
@@ -241,6 +311,8 @@ class DeepDriveEnv(gym.Env):
             self.lap_number = lap_number
             self.prev_step_time = now
 
+            if self.dashboard_queue is not None:
+                self.dashboard_queue.put({'display_stats': self.display_stats, 'should_stop': False})
         return reward
 
     def log_up_time(self):
@@ -262,7 +334,7 @@ class DeepDriveEnv(gym.Env):
             lane_deviation = obz['distance_to_center_of_lane']
             if time_passed is not None and lane_deviation > 200:  # Tuned for Canyons spline - change for future maps
                 lane_deviation_coeff = 0.1
-                lane_deviation_penalty =  lane_deviation_coeff * time_passed * lane_deviation ** 2 / 100.
+                lane_deviation_penalty = lane_deviation_coeff * time_passed * lane_deviation ** 2 / 100.
             # self.display_stats['lane deviation']['value'] = lane_deviation
             log.debug('distance_to_center_of_lane %r', lane_deviation)
         self.display_stats['lane deviation penalty']['value'] = lane_deviation_penalty
@@ -347,7 +419,7 @@ class DeepDriveEnv(gym.Env):
         low = min(totals)
         std = np.std(totals)
         log.info('benchmark lap #%d score: %f - high score: %f', len(self.trial_scores), self.score.total, median)
-        filename = os.path.join(BENCHMARK_DIR, DATE_STR + '.csv')
+        filename = os.path.join(c.BENCHMARK_DIR, c.DATE_STR + '.csv')
         with open(filename, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for i, score in enumerate(self.trial_scores):
@@ -377,6 +449,7 @@ class DeepDriveEnv(gym.Env):
                   should_reset]
         return action
 
+    # noinspection PyAttributeOutsideInit
     def reset_forward_progress(self):
         self.last_forward_progress_time = time.time()
         self.steps_crawling_with_throttle_on = 0
@@ -411,11 +484,14 @@ class DeepDriveEnv(gym.Env):
 
     def _close(self):
         log.debug('closing connection to deepdrive')
+        self.dashboard_queue.put({'should_stop': True})
+        self.dashboard_queue.close()
+        self.dashboard_process.join()
         deepdrive_capture.close()
         deepdrive_control.close()
         if self.sess:
             self.sess.close()
-        self.sim_process.kill()
+        self.sim_process.terminate()
 
     def _render(self, mode='human', close=False):
         # TODO: Implement proper render - this is really only good for one frame - Could use our OpenGLUT viewer (on raw images) for this or PyGame on preprocessed images
@@ -538,3 +614,27 @@ class DeepDriveEnv(gym.Env):
             obz_spaces.append(spaces.Box(low=0, high=255, shape=camera['img_shape']))
         observation_space = spaces.Tuple(tuple(obz_spaces))
         return observation_space
+
+
+class DeepDriveRewardCalculator(object):
+    @staticmethod
+    def get_speed_reward(cmps, time_passed):
+        """
+        Incentivize going quickly while remaining under the speed limit.
+        :param cmps: speed in cm / s
+        :param time_passed: time passed since previous speed reward (allows running at variable frame rates while
+        still receiving consistent rewards)
+        :return: positive or negative real valued speed reward on meter scale
+        """
+        speed_kph = cmps * 3600. / 100. / 1000.  # cm/s=>kph
+        balance_coeff = 2. / 10.
+        speed_delta = speed_kph - SPEED_LIMIT_KPH
+        if speed_delta > 4:
+            # too fast
+            speed_reward = -1 * balance_coeff * speed_kph * time_passed * speed_delta ** 2  # squared to outweigh advantage of speeding
+        else:
+            # incentivize timeliness
+            speed_reward = balance_coeff * time_passed * speed_kph
+
+            # No slow penalty as progress already incentivizes this (plus we'll need to stop at some points anyway)
+        return speed_reward
