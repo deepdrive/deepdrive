@@ -60,8 +60,8 @@ class Agent(object):
                 time.sleep(delta)
             else:
                 fps = 1. / delta
-                if fps < self.fps / 2:
-                    log.warning('Low FPS of %r, target is %r', fps, self.fps)
+                if self.step > 5 and fps < self.fps / 2:
+                    log.warning('Low FPS of %r, target is %r, step %r', fps, self.fps, self.step)
 
         if obz is not None:
             log.debug('steering %r', obz['steering'])
@@ -127,11 +127,11 @@ class Agent(object):
             desired_throttle = desired_throttle * 0.3 - self.previous_action[1][0] * 0.3
             desired_throttle = max(desired_throttle, 0.0)
         elif actual_speed < 0.7 * desired_speed or actual_speed < 25 * 100:
-            log.info('boosting throttle')
+            log.debug('boosting throttle')
             desired_throttle = desired_throttle * 1.25 + self.previous_action[1][0] * 0.5
             desired_throttle = min(desired_throttle, 1.25)
-        log.info('desired_steering %f', desired_steering)
-        log.info('desired_throttle %f', desired_throttle)
+        log.debug('desired_steering %f', desired_steering)
+        log.debug('desired_throttle %f', desired_throttle)
         smoothed_steering = 0.2 * self.previous_action[0][0] + 0.5 * desired_steering
         # desired_throttle = desired_throttle * 1.1
         action = self.env.get_action_array(smoothed_steering, desired_throttle, is_game_driving=is_game_driving)
@@ -292,6 +292,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
             obz = env.reset()
         else:
             obz = None
+        log.info('deep driving')
         try:
             while True:
                 action = agent.act(obz, reward, done)
@@ -306,15 +307,6 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                     break
                 if should_benchmark and deepdrive_env.done_benchmarking:
                     break
-                # if agent.step > 100:
-                #     # deepdrive_env.close()
-                #     print('closing!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                #     agent.close()
-                #     env.close()
-                #     print('closing222222222222222!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                #
-                #     break
-
         except KeyboardInterrupt:
             log.info('keyboard interrupt detected, closing')
             close()

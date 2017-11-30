@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # For saving to /opt/
-echo 'Please elevate to sudo...'
+echo 'Please elevate to sudo to install to /opt...'
 sudo bash -c ":"
 
 # Check for python 3.5+
@@ -35,7 +35,7 @@ weights_url="https://d1y4edi1yk5yok.cloudfront.net/weights/baseline_agent_weight
 sudo bash -c "${py_save} -u scripts/download.py --zip-dir-url $weights_url --dest /var/deepdrive"
 
 # Start the agent in a new terminal
-echo "Starting simulator in new window, this will take a few seconds the first time"
+echo "Starting simulator in new window, this will take a few seconds the first time around."
 x-terminal-emulator -e scripts/new_terminal_helper.sh "$py_save" main.py --benchmark -n /var/deepdrive/baseline_agent_weights/model.ckpt-122427
 
 # Run the tutorial.sh

@@ -135,7 +135,7 @@ class DeepDriveEnv(gym.Env):
                     q_next = dash_queue.get(block=False)
                     if q_next['should_stop']:
                         print('Stopping dashboard')
-                        anim._fig.canvas._tkcanvas.master.quit()  # Hack to avoid "Exiting Abnormally"
+                        anim._fig.canvas._tkcanvas.master.quit()  # Hack to avoid "Exiting Abnormally" - sometimes :(
                         exit()
                 except queue.Empty:
                     # print('q_next is empty')
@@ -219,7 +219,7 @@ class DeepDriveEnv(gym.Env):
 
             fig = plt.gcf()
             fig.set_size_inches(7.5, len(Disp.stats) * 1.75)
-            fig.canvas.set_window_title('DeepDrive score')
+            fig.canvas.set_window_title('Dashboard')
             anim = None
 
             def init():
@@ -277,18 +277,22 @@ class DeepDriveEnv(gym.Env):
     def get_reward(self, obz):
         reward = 0
 
-        if obz and time.time() - self.start_time > 2.5:
+        if obz:
             now = time.time()
             if self.prev_step_time is not None:
                 time_passed = now - self.prev_step_time
             else:
                 time_passed = None
 
-            progress_reward = self.get_progress_reward(obz, time_passed)
-            gforce_penalty = self.get_gforce_penalty(obz, time_passed)
-            lane_deviation_penalty = self.get_lane_deviation_penalty(obz, time_passed)
-            speed_reward = self.get_speed_reward(obz, time_passed)
-            reward += (progress_reward + speed_reward - gforce_penalty - lane_deviation_penalty)
+            if time.time() - self.start_time < 2:
+                # Give time to get on track after spawn
+                reward = 0
+            else:
+                progress_reward = self.get_progress_reward(obz, time_passed)
+                gforce_penalty = self.get_gforce_penalty(obz, time_passed)
+                lane_deviation_penalty = self.get_lane_deviation_penalty(obz, time_passed)
+                speed_reward = self.get_speed_reward(obz, time_passed)
+                reward += (progress_reward + speed_reward - gforce_penalty - lane_deviation_penalty)
 
             self.score.total += reward
             self.display_stats['reward']['value'] = reward
@@ -313,6 +317,8 @@ class DeepDriveEnv(gym.Env):
 
             if self.dashboard_queue is not None:
                 self.dashboard_queue.put({'display_stats': self.display_stats, 'should_stop': False})
+
+
         return reward
 
     def log_up_time(self):
@@ -464,9 +470,8 @@ class DeepDriveEnv(gym.Env):
             obz = self.get_observation()
             if obz and obz['distance_along_route'] < 20 * 100:
                 self.start_distance_along_route = obz['distance_along_route']
-                log.info('Finished resetting')
                 done = True
-            log.info('Waiting for reset...')  # TODO: Add a transactional comms channel using sockets as shared mem is bad for this type of signalling
+                log.info('Reset complete')
             time.sleep(1)
             i += 1
             if i > 5:
@@ -574,7 +579,7 @@ class DeepDriveEnv(gym.Env):
                 return
             n -= 1
             sleep *= 2
-            log.info('Sleeping %r', sleep)
+            log.debug('Sleeping %r', sleep)
             time.sleep(sleep)
         log.error('Could not connect to deepdrive capture memory at %s', SHARED_CAPTURE_MEM_NAME)
         self.raise_connect_fail()
