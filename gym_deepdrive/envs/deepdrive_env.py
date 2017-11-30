@@ -68,7 +68,7 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['speed reward']                  = {'value': 0, 'ymin': 0,     'ymax': 5,   'units': ''}
         self.display_stats['progress reward']               = {'value': 0, 'ymin': 0,     'ymax': 5,   'units': ''}
         self.display_stats['reward']                        = {'value': 0, 'ymin': -20,   'ymax': 20,    'units': ''}
-        self.display_stats['total score']                   = {'value': 0, 'ymin': -500,  'ymax': 10000, 'units': ''}
+        self.display_stats['score']                         = {'value': 0, 'ymin': -500,  'ymax': 10000, 'units': ''}
         self.dashboard_thread = None
         self.dashboard_process = None
         self.dashboard_queue = None
@@ -80,7 +80,7 @@ class DeepDriveEnv(gym.Env):
         self.control = deepdrive_control.DeepDriveControl()
         self.reset_capture()
         self.reset_control()
-        log.info('Connected to environment')
+        log.debug('Connected to the environment')
 
         # collision detection  # TODO: Remove in favor of in-game detection
         self.reset_forward_progress()
@@ -103,72 +103,13 @@ class DeepDriveEnv(gym.Env):
         self.should_benchmark = True
         os.makedirs(c.BENCHMARK_DIR, exist_ok=True)
 
-    def start_dashboard_test(self):
-        def f(dash_queue):
-            import matplotlib.pyplot as plt
-            import matplotlib.animation as animation
-
-            def data_gen(t=0):
-                cnt = 0
-                while cnt < 1000:
-                    cnt += 1
-                    t += 0.1
-                    yield t, np.sin(2 * np.pi * t) * np.exp(-t / 10.)
-
-            def init():
-                ax.set_ylim(-1.1, 1.1)
-                ax.set_xlim(0, 10)
-                del xdata[:]
-                del ydata[:]
-                line.set_data(xdata, ydata)
-                return line,
-
-            fig, ax = plt.subplots()
-            line, = ax.plot([], [], lw=2)
-            ax.grid()
-            xdata, ydata = [], []
-            anim = None
-
-            def run(data):
-                try:
-                    q_next = dash_queue.get(block=False)
-                    if q_next['should_stop']:
-                        print('Stopping dashboard')
-                        anim._fig.canvas._tkcanvas.master.quit()  # Hack to avoid "Exiting Abnormally" - sometimes :(
-                        exit()
-                except queue.Empty:
-                    # print('q_next is empty')
-                    q_next = None
-
-                # update the data
-                t, y = data
-                xdata.append(t)
-                ydata.append(y)
-                xmin, xmax = ax.get_xlim()
-
-                if t >= xmax:
-                    ax.set_xlim(xmin, 2 * xmax)
-                    ax.figure.canvas.draw()
-                line.set_data(xdata, ydata)
-
-                return line,
-
-            anim = animation.FuncAnimation(fig, run, data_gen, blit=False,
-                                                     interval=10, repeat=False, init_func=init)
-            plt.show()
-
-        q = Queue()
-        p = Process(target=f, args=(q,))
-        p.start()
-        self.dashboard_process = p
-        self.dashboard_queue = q
-
     def start_dashboard(self):
         if utils.is_debugging():
             # TODO: Deal with plot UI not being in the main thread somehow - (move to browser?)
             log.warning('Dashboard not supported in debug mode')
             return
         import matplotlib.animation as animation
+        import matplotlib
         try:
             # noinspection PyUnresolvedReferences
             import matplotlib.pyplot as plt
@@ -200,6 +141,11 @@ class DeepDriveEnv(gym.Env):
                     pass
 
             get_next(block=True)
+
+            font = {'size': 8}
+
+            matplotlib.rc('font', **font)
+
             for i, (stat_name, stat) in enumerate(Disp.stats.items()):
                 stat = Disp.stats[stat_name]
                 stat_label_subplot = plt.subplot2grid((len(Disp.stats), 3), (i, 0))
@@ -216,8 +162,9 @@ class DeepDriveEnv(gym.Env):
                 Disp.x_lists[stat_name] = deque(np.linspace(200, 0, num=400))
                 Disp.y_lists[stat_name] = deque([-1] * 400)
 
+            plt.subplots_adjust(hspace=0.88)
             fig = plt.gcf()
-            fig.set_size_inches(7.5, len(Disp.stats) * 1.75)
+            fig.set_size_inches(5.5, len(Disp.stats) * 0.5)
             fig.canvas.set_window_title('Dashboard')
             anim = None
 
@@ -295,7 +242,7 @@ class DeepDriveEnv(gym.Env):
 
             self.score.total += reward
             self.display_stats['reward']['value'] = reward
-            self.display_stats['total score']['value'] = self.score.total
+            self.display_stats['score']['value'] = self.score.total
 
             log.debug('reward %r', reward)
             log.debug('score %r', self.score.total)
@@ -316,7 +263,6 @@ class DeepDriveEnv(gym.Env):
 
             if self.dashboard_queue is not None:
                 self.dashboard_queue.put({'display_stats': self.display_stats, 'should_stop': False})
-
 
         return reward
 
@@ -429,7 +375,7 @@ class DeepDriveEnv(gym.Env):
             writer = csv.writer(csvfile)
             for i, score in enumerate(self.trial_scores):
                 if i == 0:
-                    writer.writerow(['lap #', 'total score', 'speed reward', 'progress reward', 'lane deviation penalty',
+                    writer.writerow(['lap #', 'score', 'speed reward', 'progress reward', 'lane deviation penalty',
                                      'gforce penalty', 'got stuck', 'start', 'end', 'lap time'])
                 writer.writerow([i + 1, score.total, score.speed_reward,
                                  score.progress_reward, score.lane_deviation_penalty,
