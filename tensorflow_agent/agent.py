@@ -292,7 +292,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
             obz = env.reset()
         else:
             obz = None
-        log.info('deep driving')
+        log.info('Deep driving')
         try:
             while True:
                 action = agent.act(obz, reward, done)

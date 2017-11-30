@@ -33,8 +33,6 @@ SHARED_CAPTURE_MEM_SIZE = 157286400
 SHARED_CONTROL_MEM_SIZE = 1048580
 SPEED_LIMIT_KPH = 64.
 
-log.info('Starting deepdrive')
-
 
 class Score(object):
     total = 0
@@ -76,12 +74,13 @@ class DeepDriveEnv(gym.Env):
         self.dashboard_queue = None
         self.should_exit = False
 
-        log.info('Starting %r', c.SIM_BIN_PATH)
+        log.info('Starting simulator at %s', c.SIM_BIN_PATH)
         self.sim_process = Popen([c.SIM_BIN_PATH])
 
         self.control = deepdrive_control.DeepDriveControl()
         self.reset_capture()
         self.reset_control()
+        log.info('Connected to environment')
 
         # collision detection  # TODO: Remove in favor of in-game detection
         self.reset_forward_progress()
@@ -284,7 +283,7 @@ class DeepDriveEnv(gym.Env):
             else:
                 time_passed = None
 
-            if time.time() - self.start_time < 2:
+            if time.time() - self.start_time < 2.5:
                 # Give time to get on track after spawn
                 reward = 0
             else:
@@ -471,7 +470,6 @@ class DeepDriveEnv(gym.Env):
             if obz and obz['distance_along_route'] < 20 * 100:
                 self.start_distance_along_route = obz['distance_along_route']
                 done = True
-                log.info('Reset complete')
             time.sleep(1)
             i += 1
             if i > 5:
@@ -571,11 +569,11 @@ class DeepDriveEnv(gym.Env):
     def reset_capture(self):
         n = 10
         sleep = 0.1
-        log.info('Connecting to deepdrive...')
+        log.debug('Connecting to deepdrive...')
         while n > 0:
             # TODO: Establish some handshake so we don't hardcode size here and in Unreal project
             if deepdrive_capture.reset(SHARED_CAPTURE_MEM_NAME, SHARED_CAPTURE_MEM_SIZE):
-                log.info('Connected to deepdrive shared capture memory')
+                log.debug('Connected to deepdrive shared capture memory')
                 return
             n -= 1
             sleep *= 2
@@ -598,7 +596,7 @@ class DeepDriveEnv(gym.Env):
     def reset_control(self):
         # TODO: Establish some handshake so we don't hardcode size here and in Unreal project
         if deepdrive_control.reset(SHARED_CONTROL_MEM_NAME, SHARED_CONTROL_MEM_SIZE):
-            log.info('Connected to deepdrive shared control memory')
+            log.debug('Connected to deepdrive shared control memory')
         else:
             log.error('Could not connect to deepdrive control memory at %s', SHARED_CONTROL_MEM_NAME)
             self.raise_connect_fail()
