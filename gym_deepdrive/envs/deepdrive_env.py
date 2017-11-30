@@ -161,6 +161,8 @@ class DeepDriveEnv(gym.Env):
                 stat_value_subplot.axis('off')
                 Disp.x_lists[stat_name] = deque(np.linspace(200, 0, num=400))
                 Disp.y_lists[stat_name] = deque([-1] * 400)
+                frame1 = plt.gca()
+                frame1.axes.get_xaxis().set_visible(False)
 
             plt.subplots_adjust(hspace=0.88)
             fig = plt.gcf()
