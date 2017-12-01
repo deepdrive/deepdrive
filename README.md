@@ -1,4 +1,4 @@
-# DeepDrive Agents
+# DeepDrive Agents [![Build Status](https://travis-ci.com/crizCraig/deepdrive-agents-beta.svg?token=hcA6yn9X8yYZspyyCMpp&branch=master)](https://travis-ci.com/crizCraig/deepdrive-agents-beta)
 Run a self-driving AI from your machine in minutes
 
 ## Simulator requirements
