@@ -25,9 +25,69 @@ def tf_sess():
 def test_speed_reward():
     reward = DeepDriveRewardCalculator.get_speed_reward(cmps=833, time_passed=0.1)
     assert reward == pytest.approx(0.59976)
+    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=833, time_passed=1e8)
+    assert reward == pytest.approx(100)
+    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=0, time_passed=0.1)
+    assert reward == pytest.approx(0)
+    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=-42, time_passed=0.1)
+    assert reward == pytest.approx(-0.03024)
+    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=-42, time_passed=1e8)
+    assert reward == pytest.approx(-100)
+    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=1e8, time_passed=0.1)
+    assert reward == pytest.approx(-1e2)
+    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=-1e8, time_passed=0.1)
+    assert reward == pytest.approx(-1e2)
 
 
-# TODO: Test other reward functions
+def test_lane_deviation_penalty():
+    penalty = DeepDriveRewardCalculator.get_lane_deviation_penalty(lane_deviation=100, time_passed=0.1)
+    assert penalty == pytest.approx(0)
+    penalty = DeepDriveRewardCalculator.get_lane_deviation_penalty(lane_deviation=300, time_passed=0.1)
+    assert penalty == pytest.approx(9)
+    penalty = DeepDriveRewardCalculator.get_lane_deviation_penalty(lane_deviation=300, time_passed=1e8)
+    assert penalty == pytest.approx(100)
+    penalty = DeepDriveRewardCalculator.get_lane_deviation_penalty(lane_deviation=300, time_passed=1e-8)
+    assert penalty == pytest.approx(0, abs=1e-6)
+    penalty = DeepDriveRewardCalculator.get_lane_deviation_penalty(lane_deviation=0, time_passed=0.1)
+    assert penalty == pytest.approx(0)
+    penalty = DeepDriveRewardCalculator.get_lane_deviation_penalty(lane_deviation=1e8, time_passed=0.1)
+    assert penalty == pytest.approx(100)
+    with pytest.raises(ValueError):
+        DeepDriveRewardCalculator.get_lane_deviation_penalty(lane_deviation=-1, time_passed=0.1)
+
+
+def test_gforce_penalty():
+    penalty = DeepDriveRewardCalculator.get_gforce_penalty(gforces=1, time_passed=0.1)
+    assert penalty == pytest.approx(2.4)
+    penalty = DeepDriveRewardCalculator.get_gforce_penalty(gforces=5, time_passed=1e8)
+    assert penalty == pytest.approx(100)
+    penalty = DeepDriveRewardCalculator.get_gforce_penalty(gforces=5, time_passed=1e-8)
+    assert penalty == pytest.approx(0, abs=1e-5)
+    penalty = DeepDriveRewardCalculator.get_gforce_penalty(gforces=0, time_passed=0.1)
+    assert penalty == pytest.approx(0)
+    penalty = DeepDriveRewardCalculator.get_gforce_penalty(gforces=1e8, time_passed=0.1)
+    assert penalty == pytest.approx(100)
+    with pytest.raises(ValueError):
+        DeepDriveRewardCalculator.get_gforce_penalty(gforces=-5, time_passed=1e8)
+
+
+def test_progress_reward():
+    reward = DeepDriveRewardCalculator.get_progress_reward(progress=100, time_passed=0.1)
+    assert reward == pytest.approx(1)
+    reward = DeepDriveRewardCalculator.get_progress_reward(progress=100, time_passed=1)
+    assert reward == pytest.approx(1)
+    reward = DeepDriveRewardCalculator.get_progress_reward(progress=3, time_passed=0.1)
+    assert reward == pytest.approx(0.03)
+    reward = DeepDriveRewardCalculator.get_progress_reward(progress=3, time_passed=1e-8)
+    assert reward == pytest.approx(0.03, abs=1e-6)
+    reward = DeepDriveRewardCalculator.get_progress_reward(progress=0, time_passed=0.1)
+    assert reward == pytest.approx(0)
+    reward = DeepDriveRewardCalculator.get_progress_reward(progress=-10, time_passed=0.1)
+    assert reward == pytest.approx(-0.1)
+    reward = DeepDriveRewardCalculator.get_progress_reward(progress=1e8, time_passed=0.1)
+    assert reward == pytest.approx(100)
+    reward = DeepDriveRewardCalculator.get_progress_reward(progress=-1e8, time_passed=0.1)
+    assert reward == pytest.approx(0)  # lap complete
 
 
 def test_preprocess_image(tf_sess):

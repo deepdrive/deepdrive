@@ -291,12 +291,8 @@ class DeepDriveEnv(gym.Env):
     def get_lane_deviation_penalty(self, obz, time_passed):
         lane_deviation_penalty = 0
         if 'distance_to_center_of_lane' in obz:
-            lane_deviation = obz['distance_to_center_of_lane']
-            if time_passed is not None and lane_deviation > 200:  # Tuned for Canyons spline - change for future maps
-                lane_deviation_coeff = 0.1
-                lane_deviation_penalty = lane_deviation_coeff * time_passed * lane_deviation ** 2 / 100.
-            # self.display_stats['lane deviation']['value'] = lane_deviation
-            log.debug('distance_to_center_of_lane %r', lane_deviation)
+            lane_deviation_penalty = DeepDriveRewardCalculator.get_lane_deviation_penalty(
+                obz['distance_to_center_of_lane'], time_passed)
         self.display_stats['lane deviation penalty']['value'] = lane_deviation_penalty
         self.score.lane_deviation_penalty += lane_deviation_penalty
         return lane_deviation_penalty
@@ -308,17 +304,7 @@ class DeepDriveEnv(gym.Env):
                 a = obz['acceleration']
                 gforces = np.sqrt(a.dot(a)) / 980  # g = 980 cm/s**2
                 self.display_stats['g-forces']['value'] = gforces
-                log.debug('gforces %r', gforces)
-
-                if gforces > 0.5:
-                    # https://www.quora.com/Hyperloop-What-is-a-physically-comfortable-rate-of-acceleration-for-human-beings
-                    time_weighted_gs = time_passed * gforces
-                    time_weighted_gs = min(time_weighted_gs,
-                                           5)  # Don't allow a large frame skip to ruin the approximation
-                    balance_coeff = 24  # 24 meters of reward every second you do this
-                    gforce_penalty = time_weighted_gs * balance_coeff
-                    log.debug('accumulated_gforce %r', time_weighted_gs)
-                    log.debug('gforce_penalty %r', gforce_penalty)
+                gforce_penalty = DeepDriveRewardCalculator.get_gforce_penalty(a, time_passed)
 
         self.display_stats['gforce penalty']['value'] = gforce_penalty
         self.score.gforce_penalty += gforce_penalty
@@ -330,16 +316,7 @@ class DeepDriveEnv(gym.Env):
             dist = obz['distance_along_route'] - self.start_distance_along_route
             progress = dist - self.distance_along_route
             self.distance_along_route = dist
-            if time_passed is not None:
-                step_velocity = progress / time_passed
-                if step_velocity < -400 * 100:
-                    # Lap completed
-                    # TODO: Read the lap length on reset and
-                    log.info('assuming lap complete')
-                    progress = 0
-            progress_reward = progress / 100.  # cm=>meters
-            balance_coeff = 1.0
-            progress_reward *= balance_coeff
+            DeepDriveRewardCalculator.get_progress_reward(progress, time_passed)
         self.display_stats['progress reward']['value'] = progress_reward
         self.score.progress_reward += progress_reward
         return progress_reward
@@ -581,6 +558,11 @@ class DeepDriveEnv(gym.Env):
 
 class DeepDriveRewardCalculator(object):
     @staticmethod
+    def clip(reward):
+        # time_passed not parameter in order to set hard limits on reward magnitude
+        return min(max(reward, -1e2), 1e2)
+
+    @staticmethod
     def get_speed_reward(cmps, time_passed):
         """
         Incentivize going quickly while remaining under the speed limit.
@@ -598,6 +580,53 @@ class DeepDriveRewardCalculator(object):
         else:
             # incentivize timeliness
             speed_reward = balance_coeff * time_passed * speed_kph
+        # No slow penalty as progress already incentivizes this (plus we'll need to stop at some points anyway)
 
-            # No slow penalty as progress already incentivizes this (plus we'll need to stop at some points anyway)
+        speed_reward = DeepDriveRewardCalculator.clip(speed_reward)
         return speed_reward
+
+    @staticmethod
+    def get_lane_deviation_penalty(lane_deviation, time_passed):
+        lane_deviation_penalty = 0
+        if lane_deviation < 0:
+            raise ValueError('Lane deviation should be positive')
+        if time_passed is not None and lane_deviation > 200:  # Tuned for Canyons spline - change for future maps
+            lane_deviation_coeff = 0.1
+            lane_deviation_penalty = lane_deviation_coeff * time_passed * lane_deviation ** 2 / 100.
+        # self.display_stats['lane deviation']['value'] = lane_deviation
+        log.debug('distance_to_center_of_lane %r', lane_deviation)
+        lane_deviation_penalty = DeepDriveRewardCalculator.clip(lane_deviation_penalty)
+        return lane_deviation_penalty
+
+    @staticmethod
+    def get_gforce_penalty(gforces, time_passed):
+        log.debug('gforces %r', gforces)
+        gforce_penalty = 0
+        if gforces < 0:
+            raise ValueError('G-Force should be positive')
+        if gforces > 0.5:
+            # https://www.quora.com/Hyperloop-What-is-a-physically-comfortable-rate-of-acceleration-for-human-beings
+            time_weighted_gs = time_passed * gforces
+            time_weighted_gs = min(time_weighted_gs,
+                                   5)  # Don't allow a large frame skip to ruin the approximation
+            balance_coeff = 24  # 24 meters of reward every second you do this
+            gforce_penalty = time_weighted_gs * balance_coeff
+            log.debug('accumulated_gforce %r', time_weighted_gs)
+            log.debug('gforce_penalty %r', gforce_penalty)
+        gforce_penalty = DeepDriveRewardCalculator.clip(gforce_penalty)
+        return gforce_penalty
+
+    @staticmethod
+    def get_progress_reward(progress, time_passed):
+        if time_passed is not None:
+            step_velocity = progress / time_passed
+            if step_velocity < -400 * 100:
+                # Lap completed
+                # TODO: Read the lap length on reset and
+                log.info('assuming lap complete')
+                progress = 0
+        progress_reward = progress / 100.  # cm=>meters
+        balance_coeff = 1.0
+        progress_reward *= balance_coeff
+        progress_reward = DeepDriveRewardCalculator.clip(progress_reward)
+        return progress_reward
