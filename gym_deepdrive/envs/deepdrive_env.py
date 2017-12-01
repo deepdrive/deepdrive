@@ -304,7 +304,7 @@ class DeepDriveEnv(gym.Env):
                 a = obz['acceleration']
                 gforces = np.sqrt(a.dot(a)) / 980  # g = 980 cm/s**2
                 self.display_stats['g-forces']['value'] = gforces
-                gforce_penalty = DeepDriveRewardCalculator.get_gforce_penalty(a, time_passed)
+                gforce_penalty = DeepDriveRewardCalculator.get_gforce_penalty(gforces, time_passed)
 
         self.display_stats['gforce penalty']['value'] = gforce_penalty
         self.score.gforce_penalty += gforce_penalty
