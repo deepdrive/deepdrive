@@ -186,3 +186,5 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# Tensorflow checkpoints
+*.ckpt

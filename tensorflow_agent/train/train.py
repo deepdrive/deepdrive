@@ -9,7 +9,7 @@ import tensorflow as tf
 import config as c
 from tensorflow_agent.net import Net
 from tensorflow_agent.train.data_utils import get_dataset
-from utils import get_log
+from utils import get_log, download, has_stuff
 
 log = get_log(__name__, logging.DEBUG)
 
@@ -45,8 +45,8 @@ def run(resume_dir=None):
         date_str = resume_dir[:resume_dir.rindex('_')]
     else:
         date_str = c.DATE_STR
-    sess_train_dir = date_str + '_train'
-    sess_eval_dir = date_str + '_eval'
+    sess_train_dir = '%s/%s_train' % (c.TENSORFLOW_OUT_DIR, date_str)
+    sess_eval_dir = '%s/%s/_eval' % (c.TENSORFLOW_OUT_DIR, date_str)
     os.makedirs(sess_train_dir, exist_ok=True)
     os.makedirs(sess_eval_dir, exist_ok=True)
     batch_size = 64  # Change this to fit in your GPU's memory
@@ -95,9 +95,12 @@ def run(resume_dir=None):
     alexnet_saver = tf.train.Saver(pretrained_var_map)
 
     def init_fn(ses):
-        log.info("Initializing parameters.")
+        log.info('Initializing parameters.')
+        if not has_stuff(c.BVLC_CKPT_PATH):
+            print('\n--------- ImageNet checkpoint does not exist, downloading ~200MB of weights ----------')
+            download(c.BVLC_CKPT_URL, c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
         ses.run(init_op)
-        alexnet_saver.restore(ses, "bvlc_alexnet.ckpt")
+        alexnet_saver.restore(ses, c.BVLC_CKPT_PATH)
 
     saver = tf.train.Saver()
     sv = tf.train.Supervisor(is_chief=True,

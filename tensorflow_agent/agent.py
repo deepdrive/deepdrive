@@ -2,15 +2,13 @@ import os
 import time
 from datetime import datetime
 
-
 import gym
 import tensorflow as tf
 import numpy as np
-from gym import wrappers
 
 import config as c
 from tensorflow_agent.net import Net
-from utils import save_hdf5, get_log
+from utils import save_hdf5, get_log, download
 
 gym.undo_logger_setup()
 log = get_log(__name__)
@@ -41,6 +39,11 @@ class Agent(object):
         self.should_record = should_record
         self.sess_dir = os.path.join(c.RECORDINGS_DIR, datetime.now().strftime(c.DIR_DATE_FORMAT))
         self.obz_recording = []
+
+        if should_toggle_random_actions:
+            log.info('Mixing in random actions to increase data diversity (these are not recorded).')
+        if should_record:
+            log.info('Recording driving data to %s', self.sess_dir)
 
         # Net
         self.sess = tf_session
@@ -255,7 +258,10 @@ class Agent(object):
             self.semirandom_sequence_step += 1
 
 
-def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=False):
+def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=False,
+        run_baseline_agent=False):
+    if run_baseline_agent:
+        net_path = ensure_baseline_weights(net_path)
     reward = 0
     done = False
     render = False
@@ -271,17 +277,21 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
 
     sess = tf.Session(config=tf_config)
     env = gym.make(env_id)
-    env = wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
+    env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
     env.seed(0)
     deepdrive_env = env.env
     deepdrive_env.set_tf_session(sess)
     deepdrive_env.start_dashboard()
     if should_benchmark:
+        log.info('Benchmarking enabled - will save results to %s', c.BENCHMARK_DIR)
         deepdrive_env.init_benchmarking()
 
     # Perform random actions to reduce sampling error in the recorded dataset
     agent = Agent(env.action_space, sess, env=env.env, should_toggle_random_actions=should_record,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5)
+
+    if net_path:
+        log.info('Running tensorflow agent checkpoint: %s', net_path)
 
     def close():
         env.close()
@@ -292,7 +302,6 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
             obz = env.reset()
         else:
             obz = None
-        log.info('Imitation-learning bot driving')
         try:
             while True:
                 action = agent.act(obz, reward, done)
@@ -311,3 +320,14 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
             log.info('keyboard interrupt detected, closing')
             close()
     close()
+
+
+def ensure_baseline_weights(net_path):
+    if net_path is not None:
+        raise ValueError('Net path should not be set when running the baseline agent as it has its own weights.')
+    if not os.path.exists(c.BASELINE_WEIGHTS_DIR):
+        print('\n--------- Baseline weights not found, downloading ~700MB in weights ----------')
+        download(c.BASELINE_WEIGHTS_URL, c.WEIGHTS_DIR,
+                 warn_existing=False, overwrite=False)
+    net_path = os.path.join(c.BASELINE_WEIGHTS_DIR, c.BASELINE_WEIGHTS_VERSION)
+    return net_path

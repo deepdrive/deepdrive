@@ -17,7 +17,7 @@ from gym.utils import seeding
 
 import utils
 import config as c
-from utils import obj2dict
+from utils import obj2dict, download
 
 # TODO: Set log level based on verbosity arg
 log = utils.get_log(__name__)
@@ -74,7 +74,12 @@ class DeepDriveEnv(gym.Env):
         self.dashboard_queue = None
         self.should_exit = False
 
-        log.info('Starting simulator at %s', c.SIM_BIN_PATH)
+        if not os.path.exists(c.SIM_BIN_PATH):
+            print('\n--------- Simulator does not exist, downloading ~1GB of sim binaries ----------')
+            download(c.SIM_BIN_URL, c.SIM_PATH, warn_existing=False, overwrite=False)
+        utils.ensure_executable(c.SIM_BIN_PATH)
+
+        log.info('Starting simulator at %s (takes a few seconds the first time).', c.SIM_BIN_PATH)
         self.sim_process = Popen([c.SIM_BIN_PATH])
 
         self.control = deepdrive_control.DeepDriveControl()
@@ -132,8 +137,10 @@ class DeepDriveEnv(gym.Env):
                     q_next = dash_queue.get(block=block)
                     if q_next['should_stop']:
                         print('Stopping dashboard')
-                        anim._fig.canvas._tkcanvas.master.quit()  # Hack to avoid "Exiting Abnormally"
-                        exit()
+                        try:
+                            anim._fig.canvas._tkcanvas.master.quit()  # Hack to avoid "Exiting Abnormally"
+                        finally:
+                            exit()
                     else:
                         Disp.stats = q_next['display_stats']
                 except queue.Empty:
@@ -402,6 +409,9 @@ class DeepDriveEnv(gym.Env):
                   should_reset]
         return action
 
+    def get_noop_action_array(self):
+        return self.get_action_array()
+
     # noinspection PyAttributeOutsideInit
     def reset_forward_progress(self):
         self.last_forward_progress_time = time.time()
@@ -435,14 +445,16 @@ class DeepDriveEnv(gym.Env):
 
     def _close(self):
         log.debug('closing connection to deepdrive')
-        self.dashboard_queue.put({'should_stop': True})
-        self.dashboard_queue.close()
-        self.dashboard_process.join()
+        if self.dashboard_queue is not None:
+            self.dashboard_queue.put({'should_stop': True})
+            self.dashboard_queue.close()
+        if self.dashboard_process is not None:
+            self.dashboard_process.join()
         deepdrive_capture.close()
         deepdrive_control.close()
         if self.sess:
             self.sess.close()
-        self.sim_process.terminate()
+        self.sim_process.kill()
 
     def _render(self, mode='human', close=False):
         # TODO: Implement proper render - this is really only good for one frame - Could use our OpenGLUT viewer (on raw images) for this or PyGame on preprocessed images

@@ -1,15 +1,17 @@
 import inspect
-import platform
+import logging
+import os
+import stat
 import sys
 import threading
 import time
-import numpy as np
-import os
+import zipfile
 from logging.handlers import RotatingFileHandler
+from urllib.request import urlretrieve
 
-import deepdrive
 import h5py
-import logging
+import numpy as np
+import requests
 
 import config as c
 
@@ -77,7 +79,7 @@ def save_hdf5(out, filename):
 
 def save_hdf5_thread(out, filename):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
-    log.info('saving to %s', filename)
+    log.debug('Saving to %s', filename)
     opts = dict(compression='lzf', fletcher32=True)
     with h5py.File(filename, 'w') as f:
         for i, frame in enumerate(out):
@@ -95,7 +97,7 @@ def save_hdf5_thread(out, filename):
             del frame['cameras']
             for k, v in frame.items():
                 frame_grp.attrs[k] = v
-    log.info('done saving %s', filename)
+    log.info('Saved to %s', filename)
 
 
 def read_hdf5(filename, save_png_dir=None):
@@ -166,6 +168,79 @@ def is_debugging():
         if frame[1].endswith("pydevd.py"):
             return True
     return False
+
+
+def download(url, directory, warn_existing=True, overwrite=False):
+    """Useful for downloading a folder / zip file from dropbox/s3/cloudfront and unzipping it to path"""
+    if has_stuff(directory, warn_existing, overwrite):
+        return
+
+    log.info('Downloading %s to %s...', url, directory)
+    location = urlretrieve(url)
+    log.info('done.')
+    location = location[0]
+    zip_ref = zipfile.ZipFile(location, 'r')
+    log.info('Unzipping temp file %s to %s...', location, directory)
+    try:
+        zip_ref.extractall(directory)
+        print('done.')
+    except Exception:
+        print('You may want to close all programs that may have these files open or delete existing '
+              'folders this is trying to overwrite')
+        raise
+    finally:
+        zip_ref.close()
+        os.remove(location)
+
+
+def download_file(url, path, warn_existing=True, overwrite=False):
+    """Good for downloading large files from dropbox as it sets gzip headers and decodes automatically on download"""
+    if has_stuff(path, warn_existing, overwrite):
+        return
+
+    with open(path, "wb") as f:
+        log.info('Downloading %s', url)
+        response = requests.get(url, stream=True)
+        total_length = response.headers.get('content-length')
+
+        if total_length is None:  # no content length header
+            f.write(response.content)
+        else:
+            dl = 0
+            total_length = int(total_length)
+            for data in response.iter_content(chunk_size=4096):
+                dl += len(data)
+                f.write(data)
+                done = int(50 * dl / total_length)
+                sys.stdout.write("\r[%s%s]" % ('=' * done, ' ' * (50 - done)))
+                sys.stdout.flush()
+
+
+def dir_has_stuff(path):
+    return os.path.isdir(path) and os.listdir(path)
+
+
+def file_has_stuff(path):
+    return os.path.isfile(path) and os.path.getsize(path) > 0
+
+
+def has_stuff(path, warn_existing=False, overwrite=False):
+    if os.path.exists(path) and (dir_has_stuff(path) or file_has_stuff(path)):
+        if warn_existing:
+            print('%s exists, do you want to re-download and overwrite the existing files (y/n)?' % path, end=' ')
+            overwrite = input()
+            if 'n' in overwrite.lower():
+                print('USING EXISTING %s - Try rerunning and overwriting if you run into problems.' % path)
+                return True
+        elif not overwrite:
+            return True
+    return False
+
+
+def ensure_executable(path):
+    if c.IS_UNIX:
+        st = os.stat(path)
+        os.chmod(path, st.st_mode | stat.S_IEXEC)
 
 
 log = get_log(__name__)
