@@ -1,10 +1,13 @@
-## Simulator Requirements
+# DeepDrive Agents
+Run a self-driving AI from your machine in minutes
+
+## Simulator requirements
 - Python 3.5+
-- 15GB disk space
+- 3GB disk space
 - 8GB RAM
 
-## Baseline Agent Prerequisites (optional)
-- CUDA capable GPU (tested and developed on 970, 1070, and 1060)
+## Baseline agent requirements
+- CUDA capable GPU (tested and developed on 970, 1070, and 1060's)
 - Tensorflow 1.1+
 
 ## Install
@@ -13,15 +16,15 @@
 git clone https://github.com/deepdrive/deepdrive-agents
 ```
 
-This creates a virtualenv if you're not already in one
+###### We will create a virtualenv with [pipenv](https://github.com/kennethreitz/pipenv) if you're not  already in one.
 
-### Linux
+#### Linux
 
 ```
 ./install.sh
 ```
 
-### Windows
+#### Windows
 
 ```
 install.bat
