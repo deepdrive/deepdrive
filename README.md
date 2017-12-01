@@ -16,7 +16,7 @@ Run a self-driving AI from your machine in minutes
 git clone https://github.com/deepdrive/deepdrive-agents
 ```
 
-###### We will create a virtualenv with [pipenv](https://github.com/kennethreitz/pipenv) if you're not  already in one.
+###### We will create a virtualenv with [pipenv](https://github.com/kennethreitz/pipenv) if you're not already in one.
 
 #### Linux
 
