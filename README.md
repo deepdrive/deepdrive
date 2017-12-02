@@ -57,9 +57,9 @@ Train on the same dataset we used
 bin/train_baseline.sh
 ```
 
-[Framerate issues?](#framerate-issues-on-linux)
+[Frame rate issues?](#framerate-issues-on-linux)
 
-#### Framerate issues on Linux
+#### Frame rate issues on Linux
 
 If you experience low frame rates on Linux, you may need to install NVIDIA’s display drivers including their OpenGL drivers. We recommend installing these with CUDA which bundles the version you will need to run the baseline agent. Also, make sure to [plugin your laptop](https://help.ubuntu.com/community/PowerManagement/ReducedPower). If CUDA is installed, skip to testing [OpenGL](#opengl).
 
