@@ -1,5 +1,5 @@
-# DeepDrive Agents [![Build Status](https://travis-ci.com/crizCraig/deepdrive-agents-beta.svg?token=hcA6yn9X8yYZspyyCMpp&branch=master)](https://travis-ci.com/crizCraig/deepdrive-agents-beta)
-Run a self-driving AI from your machine in minutes
+# DeepDrive [![Build Status](https://travis-ci.com/crizCraig/deepdrive-agents-beta.svg?token=hcA6yn9X8yYZspyyCMpp&branch=master)](https://travis-ci.com/crizCraig/deepdrive-agents-beta)
+The easiest way to experiment with self-driving AI
 
 ## Simulator requirements
 - Python 3.5+
@@ -8,12 +8,12 @@ Run a self-driving AI from your machine in minutes
 
 ## Baseline agent requirements
 - CUDA capable GPU (tested and developed on 970, 1070, and 1060's)
-- Tensorflow 1.1+
+- Tensorflow 1.1+ [See CUDA tips](#cuda-install-tips)
 
 ## Install
 
 ```
-git clone https://github.com/deepdrive/deepdrive-agents
+git clone https://github.com/deepdrive/deepdrive
 ```
 
 ###### We will create a virtualenv with [pipenv](https://github.com/kennethreitz/pipenv) if you're not already in one.
@@ -32,11 +32,30 @@ install.bat
 
 ## Usage
 
-- TODO: To run the pretrained agent
-- TODO: To train an agent (get our data here)
-- TODO: To record training data
+Run baseline agent
+```
+bin/run_baseline_agent.sh
+```
 
-If control actions are not making it through, you may need to restart the sim and the agent.
+Test your own driving ability!
+```
+bin/drive_manually.sh
+```
+
+Record training data
+```
+bin/record_training_data.sh
+```
+
+Train an imitation learning agent on recorded data
+```
+bin/train.sh
+```
+
+Train on the same dataset we used
+```
+bin/train_baseline.sh
+```
 
 [Framerate issues?](#framerate-issues-on-linux)
 
@@ -47,9 +66,17 @@ If you experience low frame rates on Linux, you may need to install NVIDIA’s d
 [CUDA install tips](#cuda-and-nvidia-driver-install)
 [cuDNN install tips](#cudnn-install-tips)
 
-#### CUDA, cuDNN and NVIDIA driver Install
+#### CUDA, cuDNN and NVIDIA driver install tips
 
-Make sure to follow the [CUDA installation instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) thoroughly as you could end up with a broken video driver, login issues, and lots of frustration. We recommend the package manager installation method, i.e. deb[local], for the smoothest install of both CUDA and cuDNN. The runfile method can be fraught with pain, but if you really want to use it, make sure to follow NVIDIA’s instructions on how to disable the Nouveau drivers if you're on Ubuntu. You may want to have another computer handy (or use your mobile if you have to) to search for answers while your machine is unusable. Also, get the older CUDA 8 and cuDNN 6 for a standard tensorflow install later on (read here to see if this changes: https://github.com/tensorflow/tensorflow/issues/12052) - If you want to use CUDA 9 / cuDNN 7, you’ll need to install Tensorflow from source.
+- Install [CUDA 8](https://developer.nvidia.com/cuda-toolkit-archive) and cuDNN 6 as Tensorflow does not yet support  NVIDIA's [current downloads]( https://github.com/tensorflow/tensorflow/issues/12052) - If you want to use CUDA 9 / cuDNN 7, you will need to install Tensorflow from sources.
+- Follow [this guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) carefully
+- The packaged install is highly recommended, i.e. deb[local] on Ubuntu
+- If you don't and use the runfile method, be sure to follow [NVIDIA’s instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) on how to disable the Nouveau drivers if you're on Ubuntu.
+
+
+Make sure to follow the 
+[CUDA installation instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) 
+thoroughly as you could end up with a broken video driver, login issues, and lots of frustration. We recommend the package manager installation method, i.e. deb[local], for the smoothest install of both CUDA and cuDNN. The runfile method can be fraught with pain, but if you really want to use it, make sure to follow NVIDIA’s instructions on how to disable the Nouveau drivers if you're on Ubuntu. You may want to have another computer handy (or use your mobile if you have to) to search for answers while your machine is unusable. Also, get the older CUDA 8 and cuDNN 6 for a standard tensorflow install later on (read here to see if this changes: https://github.com/tensorflow/tensorflow/issues/12052) - If you want to use CUDA 9 / cuDNN 7, you’ll need to install Tensorflow from source.
 http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html
 
 #### OpenGL
