@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 from numpy.random import RandomState
 
-import tf_utils
 import utils
 from gym_deepdrive.envs.deepdrive_env import DeepDriveRewardCalculator
 
@@ -11,6 +10,7 @@ from gym_deepdrive.envs.deepdrive_env import DeepDriveRewardCalculator
 def tf_sess():
     try:
         import tensorflow as tf
+        import tf_utils
     except ImportError:
         print('Tensorflow not found, skipping tests')
         tf = None

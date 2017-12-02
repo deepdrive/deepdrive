@@ -49,6 +49,7 @@ def main():
                 log.info('Benchmarking enabled - will save results to %s', c.BENCHMARK_DIR)
                 deepdrive_env.init_benchmarking()
 
+            log.info('Manual drive mode')
             for episode in range(episode_count):
                 if episode == 0 or done:
                     obz = env.reset()

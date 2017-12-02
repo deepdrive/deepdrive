@@ -75,7 +75,7 @@ class DeepDriveEnv(gym.Env):
         self.should_exit = False
 
         if not os.path.exists(c.SIM_BIN_PATH):
-            print('\n--------- Simulator does not exist, downloading ~1GB of sim binaries ----------')
+            print('\n--------- Simulator does not exist, downloading ~1GB sim ----------')
             download(c.SIM_BIN_URL, c.SIM_PATH, warn_existing=False, overwrite=False)
         utils.ensure_executable(c.SIM_BIN_PATH)
 
