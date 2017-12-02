@@ -147,7 +147,10 @@ Add /Users/a/Miniconda3/Scripts and /Users/a/Miniconda3 to your user environment
 
 To run Tensorboard, navigate to your C:\Users\<YOU>\Miniconda3\envs\tensorflow\Scripts and run tensorboard --logdir=/tmp/gtanet
 
-Do this in windows to fix CUDNN paths https://stackoverflow.com/questions/42011070
+Merge your cuDNN bin, lib, and include into your CUDA install bin, lib, and include directories, i.e.
+- bin files to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin
+- lib files to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\lib\x64
+- headers to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\include
 
 Add cupti64_80.dll to user PATH environment variable, i.e.
 cupti64_80.dll

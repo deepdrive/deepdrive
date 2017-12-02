@@ -20,8 +20,3 @@ arrow = "*"
 matplotlib = "*"
 pytest-xdist = "*"
 requests = "*"
-
-
-[requires]
-
-python_version = "3.5"

@@ -17,11 +17,9 @@ pipenv run python -u install/check_tf_version.py
 tf_valid=$?
 set -e
 
-# Run quick sanity tests
 echo "Running sanity tests"
 DEEPDRIVE_DIR=/tmp/testdeepdrive pipenv run pytest tests/test_sanity.py
 echo "Tests successful"
-
 
 if [ "$tf_valid" -eq "0" ]; then
     echo "Starting baseline agent"

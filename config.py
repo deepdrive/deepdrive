@@ -29,12 +29,7 @@ IS_WINDOWS = sys.platform == 'win32'
 # Set DEEPDRIVE_DIR
 DEEPDRIVE_DIR = os.environ.get('DEEPDRIVE_DIR')
 if DEEPDRIVE_DIR is None:
-    if IS_UNIX:
-        # Unix incl OS X
-        config_dir = os.path.expanduser('~') + '/.deepdrive'
-    elif IS_WINDOWS:
-        # Windows...
-        raise NotImplementedError('Windows deepdrive path not yet implemented')
+    config_dir = os.path.expanduser('~') + '/.deepdrive'
     os.makedirs(config_dir, exist_ok=True)
     deepdrive_dir_config = os.path.join(config_dir, 'deepdrive_dir')
     if os.path.exists(deepdrive_dir_config):
@@ -49,7 +44,7 @@ if DEEPDRIVE_DIR is None:
             DEEPDRIVE_DIR = DEEPDRIVE_DIR or default_dir
             if 'deepdrive' not in DEEPDRIVE_DIR.lower():
                 DEEPDRIVE_DIR = os.path.join(DEEPDRIVE_DIR, 'DeepDrive')
-            if not DEEPDRIVE_DIR.startswith('/'):
+            if not os.path.isabs(DEEPDRIVE_DIR):
                 DEEPDRIVE_DIR = input('Path: %s is not absolute, please specify a different path [Default - %s] ' %
                                       (DEEPDRIVE_DIR, default_dir))
             if os.path.isfile(DEEPDRIVE_DIR):
@@ -90,8 +85,11 @@ SIM_BIN_URL = BASE_URL + '/sim/deepdrive-sim-2.0.20171127052011.zip'
 RNG = random.Random(42.77)
 
 # Sim
+SIM_DEV = 'DEEPDRIVE_SIM_DEV' in os.environ
 SIM_PATH = os.path.join(DEEPDRIVE_DIR, 'sim')
-if IS_LINUX:
+if SIM_DEV:
+    SIM_BIN_PATH = None
+elif IS_LINUX:
     SIM_BIN_PATH = SIM_PATH + '/DeepDrive/Binaries/Linux/DeepDrive'
 elif IS_MAC:
     raise NotImplementedError('Support for OSX not yet implemented')
