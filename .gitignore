@@ -188,3 +188,6 @@ ENV/
 
 # Tensorflow checkpoints
 *.ckpt
+
+# pipenv
+Pipfile.lock

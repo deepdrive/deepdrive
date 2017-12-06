@@ -38,7 +38,7 @@ if DEEPDRIVE_DIR is None:
     else:
         default_dir = os.path.join(os.path.expanduser('~'), 'DeepDrive')
         DEEPDRIVE_DIR = input('Where would you like to store DeepDrive files '
-                              '(i.e. sim binaries, checkpoints, recordings, and logs)? [Default - %s] ' % default_dir)
+                              '(i.e. sim binaries (1GB), checkpoints (200MB), recordings, and logs)? [Default - %s] ' % default_dir)
         deepdrive_dir_set = False
         while not deepdrive_dir_set:
             DEEPDRIVE_DIR = DEEPDRIVE_DIR or default_dir
@@ -79,19 +79,20 @@ BASE_URL = 'https://d1y4edi1yk5yok.cloudfront.net'
 BASE_WEIGHTS_URL = BASE_URL + '/weights'
 BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/baseline_agent_weights.zip'
 BVLC_CKPT_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, BVLC_CKPT_NAME)
-SIM_BIN_URL = BASE_URL + '/sim/deepdrive-sim-2.0.20171127052011.zip'
 
 # Seeded random number generator for reproducibility
 RNG = random.Random(42.77)
 
 # Sim
-SIM_DEV = 'DEEPDRIVE_SIM_DEV' in os.environ
+IS_SIM_DEV = 'DEEPDRIVE_SIM_DEV' in os.environ
 SIM_PATH = os.path.join(DEEPDRIVE_DIR, 'sim')
-if SIM_DEV:
+if IS_SIM_DEV:
     SIM_BIN_PATH = None
 elif IS_LINUX:
+    SIM_BIN_URL = BASE_URL + '/sim/deepdrive-sim-linux-2.0.20171127052011.zip'
     SIM_BIN_PATH = SIM_PATH + '/DeepDrive/Binaries/Linux/DeepDrive'
 elif IS_MAC:
-    raise NotImplementedError('Support for OSX not yet implemented')
+    raise NotImplementedError('Support for OSX not yet implemented, see FAQs')
 elif IS_WINDOWS:
-    raise NotImplementedError('Windows sim binary path not yet implemented')
+    SIM_BIN_URL = BASE_URL + '/sim/deepdrive-sim-windows-2.0.20171206173312.zip'
+    SIM_BIN_PATH = os.path.join(SIM_PATH, 'WindowsNoEditor', 'DeepDrive.exe')

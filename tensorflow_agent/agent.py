@@ -262,6 +262,9 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
         run_baseline_agent=False):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
+        if c.IS_SIM_DEV:
+            log.warning('****\n Baseline agent performs poorly in the Unreal editor as it was not trained '
+                        'there.\n\n****')
     reward = 0
     done = False
     render = False
@@ -326,7 +329,7 @@ def ensure_baseline_weights(net_path):
     if net_path is not None:
         raise ValueError('Net path should not be set when running the baseline agent as it has its own weights.')
     if not os.path.exists(c.BASELINE_WEIGHTS_DIR):
-        print('\n--------- Baseline weights not found, downloading ~700MB in weights ----------')
+        print('\n--------- Baseline weights not found, downloading now ----------')
         download(c.BASELINE_WEIGHTS_URL, c.WEIGHTS_DIR,
                  warn_existing=False, overwrite=False)
     net_path = os.path.join(c.BASELINE_WEIGHTS_DIR, c.BASELINE_WEIGHTS_VERSION)

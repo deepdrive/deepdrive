@@ -1,6 +1,6 @@
-@ECHO OFF
+REM @ECHO OFF
 
-pip install pipenv
+python -m pip install pipenv
 python -u install\check_py_version.py
 
-pipenv install
+python -m pipenv install

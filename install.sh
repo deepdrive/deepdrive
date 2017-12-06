@@ -9,7 +9,7 @@ py_save=`which ${py}`
 # Install python dependencies
 sudo apt-get install -y python3-tk  || :  # For matplotlib dashboard (optional)
 if ! [ -x "$(command -v pipenv)" ]; then
-    sudo pip3 install pipenv || sudo pip install pipenv
+    sudo ${py_save} -m pip install pipenv
 fi
 pipenv install
 set +e

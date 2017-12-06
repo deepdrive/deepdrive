@@ -8,10 +8,12 @@ import time
 import zipfile
 from logging.handlers import RotatingFileHandler
 from urllib.request import urlretrieve
+import tempfile
 
 import h5py
 import numpy as np
 import requests
+from clint.textui import progress
 
 import config as c
 
@@ -174,11 +176,21 @@ def download(url, directory, warn_existing=True, overwrite=False):
     """Useful for downloading a folder / zip file from dropbox/s3/cloudfront and unzipping it to path"""
     if has_stuff(directory, warn_existing, overwrite):
         return
+    else:
+        os.makedirs(directory, exist_ok=True)
 
     log.info('Downloading %s to %s...', url, directory)
-    location = urlretrieve(url)
+
+    request = requests.get(url, stream=True)
+    location = os.path.join(tempfile.gettempdir(), url.split('/')[-1])
+    with open(location, 'wb') as f:
+        total_length = int(request.headers.get('content-length'))
+        for chunk in progress.bar(request.iter_content(chunk_size=1024), expected_size=(total_length / 1024) + 1):
+            if chunk:
+                f.write(chunk)
+                f.flush()
+
     log.info('done.')
-    location = location[0]
     zip_ref = zipfile.ZipFile(location, 'r')
     log.info('Unzipping temp file %s to %s...', location, directory)
     try:
@@ -191,29 +203,6 @@ def download(url, directory, warn_existing=True, overwrite=False):
     finally:
         zip_ref.close()
         os.remove(location)
-
-
-def download_file(url, path, warn_existing=True, overwrite=False):
-    """Good for downloading large files from dropbox as it sets gzip headers and decodes automatically on download"""
-    if has_stuff(path, warn_existing, overwrite):
-        return
-
-    with open(path, "wb") as f:
-        log.info('Downloading %s', url)
-        response = requests.get(url, stream=True)
-        total_length = response.headers.get('content-length')
-
-        if total_length is None:  # no content length header
-            f.write(response.content)
-        else:
-            dl = 0
-            total_length = int(total_length)
-            for data in response.iter_content(chunk_size=4096):
-                dl += len(data)
-                f.write(data)
-                done = int(50 * dl / total_length)
-                sys.stdout.write("\r[%s%s]" % ('=' * done, ' ' * (50 - done)))
-                sys.stdout.flush()
 
 
 def dir_has_stuff(path):
@@ -246,4 +235,4 @@ def ensure_executable(path):
 log = get_log(__name__)
 
 if __name__ == '__main__':
-    log_manual()
+    download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')

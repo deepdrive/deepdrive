@@ -73,14 +73,12 @@ class DeepDriveEnv(gym.Env):
         self.dashboard_process = None
         self.dashboard_queue = None
         self.should_exit = False
+        self.sim_process = None
 
-        if c.SIM_DEV:
-            # Sim opening and closing managed manually
-            self.sim_process = None
-        else:
+        if not c.IS_SIM_DEV:
             if not os.path.exists(c.SIM_BIN_PATH):
-                print('\n--------- Simulator does not exist, downloading ~1GB sim ----------')
-                if c.IS_LINUX:
+                print('\n--------- Simulator does not exist, downloading now ----------')
+                if c.IS_LINUX or c.IS_WINDOWS:
                     download(c.SIM_BIN_URL, c.SIM_PATH, warn_existing=False, overwrite=False)
                 else:
                     raise NotImplementedError('Sim download not yet implemented for this OS')

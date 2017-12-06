@@ -8,7 +8,7 @@ The easiest way to experiment with self-driving AI
 
 ## Baseline agent requirements
 - CUDA capable GPU (tested and developed on 970, 1070, and 1060's)
-- Tensorflow 1.1+ [See CUDA tips](#cuda-install-tips)
+- Tensorflow 1.1+ [NVIDIA install tips](#nvidia-install-tips)
 
 ## Install
 
@@ -16,7 +16,7 @@ The easiest way to experiment with self-driving AI
 git clone https://github.com/deepdrive/deepdrive
 ```
 
-###### We will create a virtualenv with [pipenv](https://github.com/kennethreitz/pipenv) if you're not already in one.
+###### Optional - Activate the Python / virtualenv where your Tensorflow is installed
 
 #### Linux
 
@@ -26,8 +26,10 @@ git clone https://github.com/deepdrive/deepdrive
 
 #### Windows
 
+Make sure the Python you want to use is in your **system** path, then
+
 ```
-install.bat
+install
 ```
 
 ## Usage
@@ -66,7 +68,7 @@ If you experience low frame rates on Linux, you may need to install NVIDIA’s d
 [CUDA install tips](#cuda-and-nvidia-driver-install)
 [cuDNN install tips](#cudnn-install-tips)
 
-#### CUDA, cuDNN and NVIDIA driver install tips
+#### NVIDIA install tips
 
 - Install [CUDA 8](https://developer.nvidia.com/cuda-toolkit-archive) and cuDNN 6 as Tensorflow does not yet support  NVIDIA's [current downloads]( https://github.com/tensorflow/tensorflow/issues/12052) - If you want to use CUDA 9 / cuDNN 7, you will need to install Tensorflow from sources.
 - Follow [this guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) carefully
