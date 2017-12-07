@@ -21,7 +21,7 @@ git clone https://github.com/deepdrive/deepdrive
 #### Linux
 
 ```
-./install.sh
+python install.py
 ```
 
 #### Windows
@@ -29,7 +29,7 @@ git clone https://github.com/deepdrive/deepdrive
 Make sure the Python you want to use is in your **system** path, then
 
 ```
-install
+python install.py
 ```
 
 ## Usage
