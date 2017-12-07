@@ -19,7 +19,8 @@ def main():
                                                                         allow_growth=True))) as sess:
             if not get_available_gpus():
                 print('\n\n*** Warning: %s \n\n' %
-                      'Tensorflow could not find a GPU, performance will be severely degraded on CPU.')
+                      'Tensorflow could not find a GPU, performance will be severely degraded on CPU. '
+                      'HINT: Have you installed the gpu version of Tensorflow?, i.e. pipenv install tensorflow-gpu')
                 exit(1)
             sess.run(check)
             print('Tensorflow is working.')

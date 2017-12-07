@@ -72,7 +72,8 @@ def _run_op(sess, op, X, x, trace=False, op_name='tf_op'):
     log.debug('%r took %rms', op_name, (end - start) * 1000)
     return ret
 
-if __name__ == '__main__':
+
+def _main():
     h = w = 227
     import sys
     log.basicConfig(level=log.DEBUG, stream=sys.stdout, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -83,3 +84,7 @@ if __name__ == '__main__':
         preprocess_depth(np.random.rand(h, w,), sess)
         preprocess_depth(np.random.rand(h, w,), sess)
         preprocess_depth(np.random.rand(h, w,), sess)
+
+
+if __name__ == '__main__':
+    _main()

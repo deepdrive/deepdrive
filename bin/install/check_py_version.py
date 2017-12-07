@@ -8,7 +8,7 @@ version = sys.version_info[:]
 
 if version[0] == 3 and version[1] >= 5:
     if 'try3' not in sys.argv:
-        print('python')
+        print(find_executable('python'))
     exit(0)
 elif version[0] < 3:
         py3 = find_executable('python3')

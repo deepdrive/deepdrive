@@ -1,20 +1,25 @@
 import numpy as np
 import pytest
 from numpy.random import RandomState
+import tempfile
+import os
+
+os.environ['DEEPDRIVE_DIR'] = os.path.join(tempfile.gettempdir(), 'testdeepdrive')
 
 import utils
 from gym_deepdrive.envs.deepdrive_env import DeepDriveRewardCalculator
 
+try:
+    import tensorflow as tf
+    import tf_utils
+except ImportError:
+    print('Tensorflow not found, skipping tests')
+    tf = None
+    tf_utils = None
+
 
 @pytest.fixture()
 def tf_sess():
-    try:
-        import tensorflow as tf
-        import tf_utils
-    except ImportError:
-        print('Tensorflow not found, skipping tests')
-        tf = None
-
     if tf:
         with tf.Session() as sess:
             yield sess
