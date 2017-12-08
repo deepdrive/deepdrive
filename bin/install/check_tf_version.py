@@ -20,10 +20,10 @@ def main():
             if not get_available_gpus():
                 print('\n\n*** Warning: %s \n\n' %
                       'Tensorflow could not find a GPU, performance will be severely degraded on CPU. '
-                      'HINT: Have you installed the gpu version of Tensorflow?, i.e. pipenv install tensorflow-gpu')
+                      'HINT: Try "pipenv install tensorflow-gpu"')
                 exit(1)
             sess.run(check)
-            print('Tensorflow is working.')
+            print('Tensorflow is working on the GPU.')
 
     except ImportError:
         print(error_msg % 'Tensorflow not installed', file=sys.stderr)
@@ -34,11 +34,11 @@ def main():
 
     min_version = '1.1'
     if semvar(tf.__version__) < semvar(min_version):
-        warn_msg = 'Tensorflow %s is less than the minimum required version of %s' % (tf.__version__, min_version, )
+        warn_msg = 'Tensorflow %s is less than the minimum required version (%s)' % (tf.__version__, min_version)
         print(error_msg % warn_msg, file=sys.stderr)
         exit(1)
     else:
-        print('Tensorflow %s detected - meets min version of %s' % (tf.__version__, min_version, ))
+        print('Tensorflow %s detected - meets min version (%s)' % (tf.__version__, min_version))
 
 
 def get_available_gpus():

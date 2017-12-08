@@ -17,27 +17,35 @@ IS_UNIX = IS_LINUX or IS_MAC or 'bsd' in sys.platform.lower()
 IS_WINDOWS = sys.platform == 'win32'
 
 
-def run_command(cmd, cwd=None, env=None, throw=True):
-    print('running %s' % cmd)
+def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors=True):
+    def say(*args):
+        if verbose:
+            print(*args)
+    say(cmd)
     if not isinstance(cmd, list):
         cmd = cmd.split()
-    p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd, env=env)
-    result, err = p.communicate()
+    process = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd, env=env)
+    result, err = process.communicate()
     if not isinstance(result, str):
-        result = ''.join(map(chr, result)).strip()
-    if p.returncode != 0 and throw:
+        result = ''.join(map(chr, result))
+    result = result.strip()
+    say(result)
+    if process.returncode != 0:
         if not isinstance(err, str):
-            err = ''.join(map(chr, err)).strip()
-        print(result)
-        raise RuntimeError(' '.join(cmd) + ' finished with error ' + err)
-    return result, p.returncode
+            err = ''.join(map(chr, err))
+        err_msg = ' '.join(cmd) + ' finished with error ' + err.strip()
+        if throw:
+            raise RuntimeError(err_msg)
+        elif print_errors:
+            print(err_msg)
+    return result, process.returncode
 
 
 def main():
     py, _ = run_command('python -u bin/install/check_py_version.py')
-    _, exit_code = run_command('%s -u bin/install/check_tf_version.py' % py, throw=False)
-    tf_valid = exit_code == 0
+    tf_valid_outside = get_tf_valid(py, verbose=False)  # Could still be in existing pipenv...
     if 'ubuntu' in platform.platform().lower():
+        # Install tk for dashboard
         run_command('sudo apt-get install -y python3-tk', throw=False)
     if not find_executable('pipenv'):
         install_pipenv = '%s -m pip install pipenv' % py
@@ -46,15 +54,24 @@ def main():
         else:
             run_command(install_pipenv)
     os.system('pipenv install')
-    print('Running sanity tests')
-    os.system('pipenv run pytest tests/test_sanity.py')
-    print('Tests successful')
+    tf_valid_inside = get_tf_valid(py='pipenv run python')
+    if tf_valid_outside and not tf_valid_inside:
+        print('Installing Tensorflow to your virtualenv')
+        os.system('pipenv run pip install tensorflow-gpu')
+    tf_valid = get_tf_valid(py='pipenv run python', verbose=True, print_errors=True)  # Confirm
     if tf_valid:
         print('Starting baseline agent')
         os.system('bin/run_baseline_agent.sh')
     else:
         print('Starting sim in manual mode')
         os.system('bin/drive_manually.sh')
+
+
+def get_tf_valid(py, verbose=False, print_errors=False):
+    _, exit_code = run_command('%s -u bin/install/check_tf_version.py' % py, throw=False, verbose=verbose,
+                               print_errors=print_errors)
+    tf_valid = exit_code == 0
+    return tf_valid
 
 
 if __name__ == '__main__':

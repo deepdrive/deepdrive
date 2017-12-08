@@ -77,7 +77,7 @@ class DeepDriveEnv(gym.Env):
 
         if not c.IS_SIM_DEV:
             if not os.path.exists(c.SIM_BIN_PATH):
-                print('\n--------- Simulator does not exist, downloading now ----------')
+                print('\n--------- Simulator not found, downloading ----------')
                 if c.IS_LINUX or c.IS_WINDOWS:
                     download(c.SIM_BIN_URL, c.SIM_PATH, warn_existing=False, overwrite=False)
                 else:

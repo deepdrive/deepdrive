@@ -329,7 +329,7 @@ def ensure_baseline_weights(net_path):
     if net_path is not None:
         raise ValueError('Net path should not be set when running the baseline agent as it has its own weights.')
     if not os.path.exists(c.BASELINE_WEIGHTS_DIR):
-        print('\n--------- Baseline weights not found, downloading now ----------')
+        print('\n--------- Baseline weights not found, downloading ----------')
         download(c.BASELINE_WEIGHTS_URL, c.WEIGHTS_DIR,
                  warn_existing=False, overwrite=False)
     net_path = os.path.join(c.BASELINE_WEIGHTS_DIR, c.BASELINE_WEIGHTS_VERSION)
