@@ -1,5 +1,7 @@
 import os
 import csv
+import random
+
 import deepdrive as deepdrive_capture
 import deepdrive_control
 import deepdrive_client
@@ -415,7 +417,21 @@ class DeepDriveEnv(gym.Env):
                                             brake=action[2][0], handbrake=action[3][0])
 
     def setup_client(self):
-        self.client_id = deepdrive_client.create('127.0.0.1', 9876)
+        def _connect():
+            self.client_id = deepdrive_client.create('127.0.0.1', 9876)
+        _connect()
+        cxn_attempts = 0
+        max_cxn_attempts = 4
+        while not self.client_id:
+            cxn_attempts += 1
+            sleep = cxn_attempts + random.random() * 2  # splay to avoid thundering herd
+            log.warning('Connection to environment failed, retrying attempt (%d/%d) in %d seconds',
+                        cxn_attempts, max_cxn_attempts, round(sleep, 0))
+            time.sleep(sleep)
+            _connect()
+            if cxn_attempts >= max_cxn_attempts:
+                raise RuntimeError('Could not connect to the environment')
+
         if self.client_id > 0:
             self.front_camera_id = deepdrive_client.register_camera(self.client_id, field_of_view=60, capture_width=227,
                                                                     capture_height=227,
