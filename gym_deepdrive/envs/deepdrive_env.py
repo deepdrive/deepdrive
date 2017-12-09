@@ -2,6 +2,7 @@ import os
 import csv
 import deepdrive as deepdrive_capture
 import deepdrive_control
+import deepdrive_client
 import platform
 import time
 from collections import deque, OrderedDict
@@ -22,15 +23,7 @@ from utils import obj2dict, download
 # TODO: Set log level based on verbosity arg
 log = utils.get_log(__name__)
 
-if platform.system() == 'Linux':
-    SHARED_CAPTURE_MEM_NAME = '/tmp/deepdrive_shared_memory'  # TODO: Change to deepdrive_capture
-    SHARED_CONTROL_MEM_NAME = '/tmp/deepdrive_control'
-elif platform.system() == 'Windows':
-    SHARED_CAPTURE_MEM_NAME = 'Local\DeepDriveCapture'
-    SHARED_CONTROL_MEM_NAME = 'Local\DeepDriveControl'
 
-SHARED_CAPTURE_MEM_SIZE = 157286400
-SHARED_CONTROL_MEM_SIZE = 1048580
 SPEED_LIMIT_KPH = 64.
 
 
@@ -87,9 +80,7 @@ class DeepDriveEnv(gym.Env):
             log.info('Starting simulator at %s (takes a few seconds the first time).', c.SIM_BIN_PATH)
             self.sim_process = Popen([c.SIM_BIN_PATH])
 
-        self.control = deepdrive_control.DeepDriveControl()
-        self.reset_capture()
-        self.reset_control()
+        self.setup_client()
         log.debug('Connected to the environment')
 
         # collision detection  # TODO: Remove in favor of in-game detection
@@ -311,7 +302,7 @@ class DeepDriveEnv(gym.Env):
         done = False
         i = 0
         while not done:
-            self.send_control(self.get_action_array(should_reset=True, is_game_driving=False))
+            self.reset_agent()
             obz = self.get_observation()
             if obz and obz['distance_along_route'] < 20 * 100:
                 self.start_distance_along_route = obz['distance_along_route']
@@ -339,7 +330,9 @@ class DeepDriveEnv(gym.Env):
         if self.dashboard_process is not None:
             self.dashboard_process.join()
         deepdrive_capture.close()
-        deepdrive_control.close()
+        deepdrive_client.release_agent_control(self.client_id)
+        deepdrive_client.close(self.client_id)
+        self.client_id = 0
         if self.sess:
             self.sess.close()
         if self.sim_process is not None:
@@ -406,29 +399,42 @@ class DeepDriveEnv(gym.Env):
         self.prev_observation = ret
         return ret
 
-    def send_control(self, action):
-        self.control.steering = action[0][0]
-        self.control.throttle = action[1][0]
-        self.control.brake = action[2][0]
-        self.control.handbrake = action[3][0]
-        self.control.is_game_driving = action[4]
-        self.control.should_reset = action[5]
-        deepdrive_control.send_control(self.control)
+    def reset_agent(self):
+        if self.has_control == False:
+            self.has_control = deepdrive_client.request_agent_control(self.client_id)
+        if self.has_control:
+            deepdrive_client.reset_agent(self.client_id)
 
-    def reset_capture(self):
+    def send_control(self, action):
+        if self.has_control == False:
+            self.has_control = deepdrive_client.request_agent_control(self.client_id)
+        deepdrive_client.set_control_values(self.client_id, steering = action[0][0], throttle = action[1][0], brake = action[2][0], handbrake = action[3][0])
+
+    def setup_client(self):
+        self.client_id = deepdrive_client.create('127.0.0.1', 9876)
+        if self.client_id > 0:
+            self.front_camera_id = deepdrive_client.register_camera(self.client_id, field_of_view = 60, capture_width = 227, capture_height = 227, relative_position = [0.0, 0.0, 0.0], relative_rotation = [0.0, 0.0, 0.0])
+            sharedMem = deepdrive_client.get_shared_memory(self.client_id)
+            self.reset_capture(sharedMem[0], sharedMem[1])
+        else:
+            self.raise_connect_fail()
+        self.has_control = False
+
+
+    def reset_capture(self, sharedMemName, sharedMemSize):
         n = 10
         sleep = 0.1
         log.debug('Connecting to deepdrive...')
         while n > 0:
             # TODO: Establish some handshake so we don't hardcode size here and in Unreal project
-            if deepdrive_capture.reset(SHARED_CAPTURE_MEM_NAME, SHARED_CAPTURE_MEM_SIZE):
+            if deepdrive_capture.reset(sharedMemName, sharedMemSize):
                 log.debug('Connected to deepdrive shared capture memory')
                 return
             n -= 1
             sleep *= 2
             log.debug('Sleeping %r', sleep)
             time.sleep(sleep)
-        log.error('Could not connect to deepdrive capture memory at %s', SHARED_CAPTURE_MEM_NAME)
+        log.error('Could not connect to deepdrive capture memory at %s', sharedMemName)
         self.raise_connect_fail()
 
     @staticmethod
@@ -441,14 +447,6 @@ class DeepDriveEnv(gym.Env):
                         '****                                                              ****\n'
                         '**********************************************************************\n'
                         '**********************************************************************\n\n')
-
-    def reset_control(self):
-        # TODO: Establish some handshake so we don't hardcode size here and in Unreal project
-        if deepdrive_control.reset(SHARED_CONTROL_MEM_NAME, SHARED_CONTROL_MEM_SIZE):
-            log.debug('Connected to deepdrive shared control memory')
-        else:
-            log.error('Could not connect to deepdrive control memory at %s', SHARED_CONTROL_MEM_NAME)
-            self.raise_connect_fail()
 
     def _init_action_space(self):
         steering_space = spaces.Box(low=-1, high=1, shape=1)
