@@ -417,7 +417,10 @@ class DeepDriveEnv(gym.Env):
     def setup_client(self):
         self.client_id = deepdrive_client.create('127.0.0.1', 9876)
         if self.client_id > 0:
-            self.front_camera_id = deepdrive_client.register_camera(self.client_id, field_of_view = 60, capture_width = 227, capture_height = 227, relative_position = [0.0, 0.0, 0.0], relative_rotation = [0.0, 0.0, 0.0])
+            self.front_camera_id = deepdrive_client.register_camera(self.client_id, field_of_view=60, capture_width=227,
+                                                                    capture_height=227,
+                                                                    relative_position=[0.0, 0.0, 0.0],
+                                                                    relative_rotation=[0.0, 0.0, 0.0])
             shared_mem = deepdrive_client.get_shared_memory(self.client_id)
             self.reset_capture(shared_mem[0], shared_mem[1])
         else:
@@ -446,7 +449,7 @@ class DeepDriveEnv(gym.Env):
                         '**********************************************************************\n'
                         '**********************************************************************\n'
                         '****                                                              ****\n\n'
-                        '|   Could not connect to the environment. Is the simulator running?  |\n\n'
+                        '|               Could not connect to the environment.                |\n\n'
                         '****                                                              ****\n'
                         '**********************************************************************\n'
                         '**********************************************************************\n\n')
@@ -543,6 +546,7 @@ class DeepDriveRewardCalculator(object):
         progress_reward *= balance_coeff
         progress_reward = DeepDriveRewardCalculator.clip(progress_reward)
         return progress_reward
+
 
 def dashboard(dash_queue):
     import matplotlib.animation as animation
