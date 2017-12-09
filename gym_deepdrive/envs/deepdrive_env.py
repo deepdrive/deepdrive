@@ -67,6 +67,9 @@ class DeepDriveEnv(gym.Env):
         self.dashboard_queue = None
         self.should_exit = False
         self.sim_process = None
+        self.client_id = None
+        self.front_camera_id = None
+        self.has_control = None
 
         if not c.IS_SIM_DEV:
             if not os.path.exists(c.SIM_BIN_PATH):
@@ -400,41 +403,41 @@ class DeepDriveEnv(gym.Env):
         return ret
 
     def reset_agent(self):
-        if self.has_control == False:
+        if not self.has_control:
             self.has_control = deepdrive_client.request_agent_control(self.client_id)
         if self.has_control:
             deepdrive_client.reset_agent(self.client_id)
 
     def send_control(self, action):
-        if self.has_control == False:
+        if not self.has_control:
             self.has_control = deepdrive_client.request_agent_control(self.client_id)
-        deepdrive_client.set_control_values(self.client_id, steering = action[0][0], throttle = action[1][0], brake = action[2][0], handbrake = action[3][0])
+        deepdrive_client.set_control_values(self.client_id, steering=action[0][0], throttle=action[1][0],
+                                            brake=action[2][0], handbrake=action[3][0])
 
     def setup_client(self):
         self.client_id = deepdrive_client.create('127.0.0.1', 9876)
         if self.client_id > 0:
             self.front_camera_id = deepdrive_client.register_camera(self.client_id, field_of_view = 60, capture_width = 227, capture_height = 227, relative_position = [0.0, 0.0, 0.0], relative_rotation = [0.0, 0.0, 0.0])
-            sharedMem = deepdrive_client.get_shared_memory(self.client_id)
-            self.reset_capture(sharedMem[0], sharedMem[1])
+            shared_mem = deepdrive_client.get_shared_memory(self.client_id)
+            self.reset_capture(shared_mem[0], shared_mem[1])
         else:
             self.raise_connect_fail()
         self.has_control = False
 
-
-    def reset_capture(self, sharedMemName, sharedMemSize):
+    def reset_capture(self, shared_mem_name, shared_mem_size):
         n = 10
         sleep = 0.1
         log.debug('Connecting to deepdrive...')
         while n > 0:
             # TODO: Establish some handshake so we don't hardcode size here and in Unreal project
-            if deepdrive_capture.reset(sharedMemName, sharedMemSize):
+            if deepdrive_capture.reset(shared_mem_name, shared_mem_size):
                 log.debug('Connected to deepdrive shared capture memory')
                 return
             n -= 1
             sleep *= 2
             log.debug('Sleeping %r', sleep)
             time.sleep(sleep)
-        log.error('Could not connect to deepdrive capture memory at %s', sharedMemName)
+        log.error('Could not connect to deepdrive capture memory at %s', shared_mem_name)
         self.raise_connect_fail()
 
     @staticmethod
