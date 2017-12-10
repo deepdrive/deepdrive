@@ -61,10 +61,10 @@ def main():
     tf_valid = get_tf_valid(py='pipenv run python', verbose=True, print_errors=True)  # Confirm
     if tf_valid:
         print('Starting baseline agent')
-        os.system('bin/run_baseline_agent.sh')
+        os.system('pipenv run python main.py --baseline --benchmark')
     else:
         print('Starting sim in manual mode')
-        os.system('bin/drive_manually.sh')
+        os.system('pipenv run python main.py --manual --benchmark')
 
 
 def get_tf_valid(py, verbose=False, print_errors=False):

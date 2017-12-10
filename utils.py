@@ -1,13 +1,10 @@
 import inspect
-import logging
 import os
 import stat
 import sys
 import threading
 import time
 import zipfile
-from logging.handlers import RotatingFileHandler
-from urllib.request import urlretrieve
 import tempfile
 
 import h5py
@@ -16,6 +13,7 @@ import requests
 from clint.textui import progress
 
 import config as c
+import logs
 
 
 def normalize(a):
@@ -135,34 +133,10 @@ def show_camera(image, depth):
     input('Enter any key to continue')
 
 
-os.makedirs(c.LOG_DIR, exist_ok=True)
-log_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-log_rotator = RotatingFileHandler(os.path.join(c.LOG_DIR, 'log.txt'), maxBytes=(1048576 * 5), backupCount=7)
-log_rotator.setFormatter(log_format)
-
-
-def get_log(namespace, level=logging.INFO, rotator=log_rotator):
-    ret = logging.getLogger(namespace)
-    ret.setLevel(level)
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setFormatter(log_format)
-    ret.addHandler(ch)
-    ret.addHandler(rotator)
-    return ret
-
-
 def read_hdf5_manual():
     save_png_dir = os.path.join(c.RECORDINGS_DIR, 'test_view')
     os.makedirs(save_png_dir)
     read_hdf5(os.path.join(c.RECORDINGS_DIR, '2017-11-22_0105_26AM', '0000000001.hdf5'), save_png_dir=save_png_dir)
-
-
-def log_manual():
-    test_log_rotator = RotatingFileHandler(os.path.join(c.LOG_DIR, 'test.txt'), maxBytes=3, backupCount=7)
-    log1 = get_log('log1', rotator=test_log_rotator)
-    log2 = get_log('log2', rotator=test_log_rotator)
-    log1.info('asdf')
-    log2.info('zxcv')
 
 
 def is_debugging():
@@ -232,7 +206,7 @@ def ensure_executable(path):
         os.chmod(path, st.st_mode | stat.S_IEXEC)
 
 
-log = get_log(__name__)
+log = logs.get_log(__name__)
 
 if __name__ == '__main__':
     download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')

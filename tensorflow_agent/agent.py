@@ -8,16 +8,17 @@ import numpy as np
 
 import config as c
 from tensorflow_agent.net import Net
-from utils import save_hdf5, get_log, download
+from utils import save_hdf5, download
+import logs
 
 gym.undo_logger_setup()
-log = get_log(__name__)
+log = logs.get_log(__name__)
 
 
 class Agent(object):
     def __init__(self, action_space, tf_session, env, fps=8, should_toggle_random_actions=True, should_record=False,
                  net_path=None, use_frozen_net=False, random_action_count=0, non_random_action_count=5):
-        np.random.seed(42)
+        np.random.seed(c.RNG_SEED)
         self.action_space = action_space
         self.previous_action_time = None
         self.fps = fps

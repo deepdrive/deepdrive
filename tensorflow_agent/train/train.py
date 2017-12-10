@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import logging
 import os
 
 import numpy as np
@@ -9,9 +8,10 @@ import tensorflow as tf
 import config as c
 from tensorflow_agent.net import Net
 from tensorflow_agent.train.data_utils import get_dataset
-from utils import get_log, download, has_stuff
+from utils import download, has_stuff
+import logs
 
-log = get_log(__name__, logging.DEBUG)
+log = logs.get_log(__name__)
 
 
 def visualize_model(model, y):

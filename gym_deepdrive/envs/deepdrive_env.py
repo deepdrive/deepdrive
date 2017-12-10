@@ -15,19 +15,16 @@ import queue
 import numpy as np
 import arrow
 import gym
-from gym import spaces, utils
+from gym import spaces
 from gym.utils import seeding
 
 import utils
 import config as c
 from utils import obj2dict, download
+import logs
 
-# TODO: Set log level based on verbosity arg
-log = utils.get_log(__name__)
-
-
+log = logs.get_log(__name__)
 SPEED_LIMIT_KPH = 64.
-
 
 class Score(object):
     total = 0
@@ -285,6 +282,12 @@ class DeepDriveEnv(gym.Env):
 
     def get_action_array(self, steering=0, throttle=0, brake=0, handbrake=0, is_game_driving=False, should_reset=False):
         log.debug('steering %f', steering)
+        log.debug('is_game_driving %r', is_game_driving)
+        if not is_game_driving:
+            self.has_control = deepdrive_client.release_agent_control(self.client_id)
+        else:
+            self.has_control = deepdrive_client.request_agent_control(self.client_id)
+
         action = [np.array([steering]),
                   np.array([throttle]),
                   np.array([brake]),
@@ -411,8 +414,6 @@ class DeepDriveEnv(gym.Env):
             deepdrive_client.reset_agent(self.client_id)
 
     def send_control(self, action):
-        if not self.has_control:
-            self.has_control = deepdrive_client.request_agent_control(self.client_id)
         deepdrive_client.set_control_values(self.client_id, steering=action[0][0], throttle=action[1][0],
                                             brake=action[2][0], handbrake=action[3][0])
 
@@ -425,7 +426,7 @@ class DeepDriveEnv(gym.Env):
         while not self.client_id:
             cxn_attempts += 1
             sleep = cxn_attempts + random.random() * 2  # splay to avoid thundering herd
-            log.warning('Connection to environment failed, retrying attempt (%d/%d) in %d seconds',
+            log.warning('Connection to environment failed, retry (%d/%d) in %d seconds',
                         cxn_attempts, max_cxn_attempts, round(sleep, 0))
             time.sleep(sleep)
             _connect()

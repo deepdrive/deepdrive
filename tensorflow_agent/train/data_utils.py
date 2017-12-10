@@ -1,17 +1,10 @@
-import glob
-import threading
-from collections import deque
 import logging as log
 
-from utils import read_hdf5
-from config import *
 import glob
-import logging as log
 import threading
 from collections import deque
 
 from utils import read_hdf5
-
 from config import *
 
 

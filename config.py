@@ -81,7 +81,8 @@ BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/baseline_agent_weights.zip'
 BVLC_CKPT_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, BVLC_CKPT_NAME)
 
 # Seeded random number generator for reproducibility
-RNG = random.Random(42.77)
+RNG_SEED = 0
+RNG = random.Random(0)
 
 # Sim
 IS_SIM_DEV = 'DEEPDRIVE_SIM_DEV' in os.environ

@@ -1,11 +1,11 @@
 import argparse
 
 import gym
+import logging
 
 import gym_deepdrive  # forward register gym enviornment
-from utils import get_log
 import config as c
-
+import logs
 
 def main():
     parser = argparse.ArgumentParser(description=None)
@@ -26,11 +26,16 @@ def main():
     parser.add_argument('-c', '--resume-train', nargs='?', default=None,
                         help='Path to the tensorflow training session you want to resume, '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train')
+    parser.add_argument('-v', '--verbose', help='Increase output verbosity',
+                        action='store_true')
     args = parser.parse_args()
+    if args.verbose:
+        logs.set_level(logging.DEBUG)
+
     if args.train:
         from tensorflow_agent.train import train
         train.run(resume_dir=args.resume_train)
-    elif args.net_path or args.baseline:
+    elif args.net_path or args.baseline or args.record:
         from tensorflow_agent import agent
 
         agent.run(should_record=args.record, net_path=args.net_path, env_id=args.env_id,
@@ -73,7 +78,7 @@ def main():
         log.info('Last episode complete, closing')
 
 
-log = get_log(__name__)
+log = logs.get_log(__name__)
 
 if __name__ == '__main__':
     main()

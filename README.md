@@ -35,29 +35,31 @@ python install.py
 
 ## Usage
 
+###### Use `pipenv shell` once or `pipenv run` before each to run these in your virtualenv
+
 Run baseline agent
 ```
-bin/run_baseline_agent.sh
+python main.py --baseline --benchmark
 ```
 
 Test your own driving ability!
 ```
-bin/drive_manually.sh
+python main.py --manual --benchmark
 ```
 
 Record training data
 ```
-bin/record_training_data.sh
+python main.py --record
 ```
 
 Train an imitation learning agent on recorded data
 ```
-bin/train.sh
+python main.py --train
 ```
 
 Train on the same dataset we used
 ```
-bin/train_baseline.sh
+python main.py --train --dataset baseline
 ```
 
 [Frame rate issues?](#framerate-issues-on-linux)
