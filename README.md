@@ -1,13 +1,16 @@
 # DeepDrive [![Build Status](https://travis-ci.com/crizCraig/deepdrive-agents-beta.svg?token=hcA6yn9X8yYZspyyCMpp&branch=master)](https://travis-ci.com/crizCraig/deepdrive-agents-beta)
+
 The easiest way to experiment with self-driving AI
 
 ## Simulator requirements
+
 - Linux or Windows
 - Python 3.5+
 - 3GB disk space
 - 8GB RAM
 
 ## Baseline agent requirements
+
 - CUDA capable GPU (tested and developed on 970, 1070, and 1060's)
 - Tensorflow 1.1+ [NVIDIA install tips](#nvidia-install-tips)
 
@@ -20,13 +23,11 @@ git clone https://github.com/deepdrive/deepdrive
 ###### Optional - Activate the Python / virtualenv where your Tensorflow is installed
 
 #### Linux
-
 ```
 python install.py
 ```
 
 #### Windows
-
 Make sure the Python you want to use is in your **system** path, then
 
 ```
@@ -37,27 +38,27 @@ python install.py
 
 ###### Use `pipenv shell` once or `pipenv run` before each to run these in your virtualenv
 
-Run baseline agent
+Run the baseline agent
 ```
 python main.py --baseline --benchmark
 ```
 
-Test your own driving ability!
+Benchmark your own driving
 ```
 python main.py --manual --benchmark
 ```
 
-Record training data
+Record training data for imitation learning / behavioral cloning
 ```
 python main.py --record
 ```
 
-Train an imitation learning agent on recorded data
+Train on recorded data
 ```
 python main.py --train
 ```
 
-Train on the same dataset we used
+Train the same dataset we collected [TODO link with README  (includes play-in-editor and standalone data)]
 ```
 python main.py --train --dataset baseline
 ```
@@ -216,7 +217,8 @@ Key binds (Set these in Unreal->Project Settings->Input->Action Mappings or in b
 
 Escape - Pause
 P - Pause (useful in Unreal Editor)
-J - Shared mem stats
+J - Toggle shared mem stats
+; - Toggle FPS
 1 - Chase cam
 2 - Orbit (side) cam
 3 - Interior cam

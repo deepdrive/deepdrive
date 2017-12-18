@@ -108,10 +108,6 @@ def file_loader(file_stream):
 
 def batch_gen(file_stream, batch_size):
     gen = BackgroundGenerator(file_loader(file_stream), should_shuffle=False)
-    # test_gen = list(gen)
-    # print('length of gen', len(test_gen))
-    # test_gen = list(gen)
-    # print('length of gen2', len(test_gen))
     for images, targets in gen:
         num_iters = len(images) // batch_size
         print('num iters', num_iters)

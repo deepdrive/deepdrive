@@ -4,7 +4,7 @@ from gym.envs.registration import register
 
 register(
     id='DeepDrive-v0',
-    entry_point='gym_deepdrive.envs.deepdrive_env:DeepDriveEnv',
+    entry_point='gym_deepdrive.envs.deepdrive_gym_env:DeepDriveEnv',
     kwargs=dict(
         cameras=[dict(img_shape=(227, 227, 3))],
         preprocess_with_tensorflow=False,
@@ -13,7 +13,7 @@ register(
 
 register(
     id='DeepDrivePreproTensorflow-v0',
-    entry_point='gym_deepdrive.envs.deepdrive_env:DeepDriveEnv',
+    entry_point='gym_deepdrive.envs.deepdrive_gym_env:DeepDriveEnv',
     kwargs=dict(
         cameras=[dict(img_shape=(227, 227, 3))],
         preprocess_with_tensorflow=True,

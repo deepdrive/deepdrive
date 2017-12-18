@@ -1,27 +1,25 @@
-import os
 import csv
-import random
-
 import deepdrive as deepdrive_capture
-import deepdrive_control
 import deepdrive_client
-import platform
+import os
+import queue
+import random
 import time
 from collections import deque, OrderedDict
-from subprocess import Popen
 from multiprocessing import Process, Queue
-import queue
+from subprocess import Popen
 
-import numpy as np
 import arrow
 import gym
+import numpy as np
 from gym import spaces
 from gym.utils import seeding
+from boto.s3.connection import S3Connection
 
-import utils
 import config as c
-from utils import obj2dict, download
 import logs
+import utils
+from utils import obj2dict, download
 
 log = logs.get_log(__name__)
 SPEED_LIMIT_KPH = 64.
@@ -38,6 +36,33 @@ class Score(object):
         self.start_time = time.time()
         self.end_time = None
 
+
+class Action(object):
+    def __init__(self, steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
+        self.steering = steering
+        self.throttle = throttle
+        self.brake = brake
+        self.handbrake = handbrake
+        self.has_control = has_control
+
+    def as_gym(self):
+        ret = gym_action(steering=self.steering, throttle=self.throttle, brake=self.brake,
+                         handbrake=self.handbrake, has_control=self.has_control)
+        return ret
+
+    @classmethod
+    def from_gym(cls, action):
+        ret = cls(steering=action[0][0], throttle=action[1][0],
+                  brake=action[2][0], handbrake=action[3][0], has_control=action[4])
+        return ret
+
+def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
+    action = [np.array([steering]),
+              np.array([throttle]),
+              np.array([brake]),
+              np.array([handbrake]),
+              has_control]
+    return action
 
 # noinspection PyMethodMayBeStatic
 class DeepDriveEnv(gym.Env):
@@ -73,8 +98,10 @@ class DeepDriveEnv(gym.Env):
         if not c.IS_SIM_DEV:
             if not os.path.exists(c.SIM_BIN_PATH):
                 print('\n--------- Simulator not found, downloading ----------')
+                from boto.s3.connection import S3Connection
                 if c.IS_LINUX or c.IS_WINDOWS:
-                    download(c.SIM_BIN_URL, c.SIM_PATH, warn_existing=False, overwrite=False)
+                    url = c.BASE_URL + self.get_latest_sim_file()
+                    download(url, c.SIM_PATH, warn_existing=False, overwrite=False)
                 else:
                     raise NotImplementedError('Sim download not yet implemented for this OS')
             utils.ensure_executable(c.SIM_BIN_PATH)
@@ -102,6 +129,21 @@ class DeepDriveEnv(gym.Env):
         self.done_benchmarking = False
         self.trial_scores = []
 
+    @staticmethod
+    def get_latest_sim_file():
+        if c.IS_WINDOWS:
+            os_name = 'windows'
+        elif c.IS_LINUX:
+            os_name = 'linux'
+        else:
+            raise RuntimeError('Unexpected OS')
+        sim_prefix = 'sim/deepdrive-sim-'
+        conn = S3Connection()
+        bucket = conn.get_bucket('deepdrive')
+        latest_sim_file, version = sorted([(x.name, x.name.split('.')[-2])
+                                           for x in bucket.list(sim_prefix + os_name)], key=lambda y: y[1])[-1]
+        return '/' + latest_sim_file
+
     def init_benchmarking(self):
         self.should_benchmark = True
         os.makedirs(c.BENCHMARK_DIR, exist_ok=True)
@@ -121,7 +163,7 @@ class DeepDriveEnv(gym.Env):
         self.sess = session
 
     def _step(self, action):
-        self.send_control(action)
+        self.send_control(Action.from_gym(action))
         obz = self.get_observation()
         reward = self.get_reward(obz)
         if self.is_stuck(obz):  # TODO: derive this from collision, time elapsed, and distance as well
@@ -280,24 +322,11 @@ class DeepDriveEnv(gym.Env):
             writer.writerow(['low score', low])
         log.info('wrote results to %r', filename)
 
-    def get_action_array(self, steering=0, throttle=0, brake=0, handbrake=0, is_game_driving=False, should_reset=False):
-        log.debug('steering %f', steering)
-        log.debug('is_game_driving %r', is_game_driving)
-        if not is_game_driving:
-            self.has_control = deepdrive_client.release_agent_control(self.client_id)
-        else:
-            self.has_control = deepdrive_client.request_agent_control(self.client_id)
+    def release_agent_control(self):
+        self.has_control = deepdrive_client.release_agent_control(self.client_id) is not None
 
-        action = [np.array([steering]),
-                  np.array([throttle]),
-                  np.array([brake]),
-                  np.array([handbrake]),
-                  is_game_driving,
-                  should_reset]
-        return action
-
-    def get_noop_action_array(self):
-        return self.get_action_array()
+    def request_agent_control(self):
+        self.has_control = deepdrive_client.request_agent_control(self.client_id) == 1
 
     # noinspection PyAttributeOutsideInit
     def reset_forward_progress(self):
@@ -320,7 +349,7 @@ class DeepDriveEnv(gym.Env):
             if i > 5:
                 log.error('Unable to reset, try restarting the sim.')
                 raise Exception('Unable to reset, try restarting the sim.')
-        self.send_control(self.get_action_array(is_game_driving=True))
+        self.send_control(Action(handbrake=True))
         self.step_num = 0
         self.distance_along_route = 0
         self.start_distance_along_route = 0
@@ -348,9 +377,9 @@ class DeepDriveEnv(gym.Env):
 
     def _render(self, mode='human', close=False):
         # TODO: Implement proper render - this is really only good for one frame - Could use our OpenGLUT viewer (on raw images) for this or PyGame on preprocessed images
-        # if self._previous_observation is not None:
-        #     for camera in self._previous_observation['cameras']:
-        #         utils.show_camera(camera['image'], camera['depth'])
+        if self.prev_observation is not None:
+            for camera in self.prev_observation['cameras']:
+                utils.show_camera(camera['image'], camera['depth'])
         pass
 
     def _seed(self, seed=None):
@@ -408,14 +437,14 @@ class DeepDriveEnv(gym.Env):
         return ret
 
     def reset_agent(self):
-        if not self.has_control:
-            self.has_control = deepdrive_client.request_agent_control(self.client_id)
-        if self.has_control:
-            deepdrive_client.reset_agent(self.client_id)
+        self.request_agent_control()
+        deepdrive_client.reset_agent(self.client_id)
 
     def send_control(self, action):
-        deepdrive_client.set_control_values(self.client_id, steering=action[0][0], throttle=action[1][0],
-                                            brake=action[2][0], handbrake=action[3][0])
+        if self.has_control != action.has_control:
+            self.change_has_control(action.has_control)
+        deepdrive_client.set_control_values(self.client_id, steering=action.steering, throttle=action.throttle,
+                                            brake=action.brake, handbrake=action.handbrake)
 
     def setup_client(self):
         def _connect():
@@ -436,9 +465,11 @@ class DeepDriveEnv(gym.Env):
         if self.client_id > 0:
             self.front_camera_id = deepdrive_client.register_camera(self.client_id, field_of_view=60, capture_width=227,
                                                                     capture_height=227,
-                                                                    relative_position=[0.0, 0.0, 0.0],
+                                                                    relative_position=[0, 0, 10],
                                                                     relative_rotation=[0.0, 0.0, 0.0])
+
             shared_mem = deepdrive_client.get_shared_memory(self.client_id)
+
             self.reset_capture(shared_mem[0], shared_mem[1])
         else:
             self.raise_connect_fail()
@@ -487,6 +518,12 @@ class DeepDriveEnv(gym.Env):
             obz_spaces.append(spaces.Box(low=0, high=255, shape=camera['img_shape']))
         observation_space = spaces.Tuple(tuple(obz_spaces))
         return observation_space
+
+    def change_has_control(self, has_control):
+        if has_control:
+            self.request_agent_control()
+        else:
+            self.release_agent_control()
 
 
 class DeepDriveRewardCalculator(object):

@@ -3,9 +3,12 @@ import argparse
 import gym
 import logging
 
-import gym_deepdrive  # forward register gym enviornment
+import gym_deepdrive  # forward registers gym enviornment
 import config as c
 import logs
+from gym_deepdrive.envs.deepdrive_gym_env import gym_action
+import deepdrive_env
+
 
 def main():
     parser = argparse.ArgumentParser(description=None)
@@ -44,15 +47,15 @@ def main():
         done = False
         render = False
         episode_count = 1
-        env = gym.make(args.env_id)
+        env = deepdrive_env.start(args.env_id)
         env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
         env.seed(0)
         try:
-            deepdrive_env = env.env
-            deepdrive_env.start_dashboard()
+            innert_env = env.env
+            innert_env.start_dashboard()
             if args.benchmark:
                 log.info('Benchmarking enabled - will save results to %s', c.BENCHMARK_DIR)
-                deepdrive_env.init_benchmarking()
+                innert_env.init_benchmarking()
 
             log.info('Manual drive mode')
             for episode in range(episode_count):
@@ -62,7 +65,7 @@ def main():
                     obz = None
 
                 while True:
-                    action = deepdrive_env.get_noop_action_array()
+                    action = gym_action()
                     obz, reward, done, _ = env.step(action)
                     if render:
                         env.render()

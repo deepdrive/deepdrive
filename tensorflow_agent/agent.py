@@ -7,6 +7,8 @@ import tensorflow as tf
 import numpy as np
 
 import config as c
+import deepdrive_env
+from gym_deepdrive.envs.deepdrive_gym_env import Action
 from tensorflow_agent.net import Net
 from utils import save_hdf5, download
 import logs
@@ -83,7 +85,7 @@ class Agent(object):
                 y = self.get_net_out(image)
             action = self.get_next_action(obz, y)
         else:
-            action = self.env.get_action_array(is_game_driving=True)
+            action = Action()
 
         self.previous_action_time = now
         self.previous_action = action
@@ -97,14 +99,14 @@ class Agent(object):
 
         self.maybe_save()
 
+        action = Action.as_gym(action)
         return action
 
     def get_next_action(self, obz, y):
-        is_game_driving = False
         log.debug('getting next action')
         if y is None:
             log.debug('net out is None')
-            return self.previous_action or self.env.get_action_array(is_game_driving=True)
+            return self.previous_action  # or Action(has_control=False)
 
         desired_spin, desired_direction, desired_speed, desired_speed_change, desired_steering, desired_throttle = y[0]
 
@@ -138,7 +140,7 @@ class Agent(object):
         log.debug('desired_throttle %f', desired_throttle)
         smoothed_steering = 0.2 * self.previous_action[0][0] + 0.5 * desired_steering
         # desired_throttle = desired_throttle * 1.1
-        action = self.env.get_action_array(smoothed_steering, desired_throttle, is_game_driving=is_game_driving)
+        action = Action(smoothed_steering, desired_throttle)
         return action
 
     def maybe_save(self):
@@ -159,7 +161,7 @@ class Agent(object):
                 action = self.previous_action
             else:
                 # switch to non-random
-                action = self.env.get_action_array(is_game_driving=True)
+                action = Action(has_control=False)
                 self.action_count = 0
                 self.performing_random_actions = False
         else:
@@ -167,10 +169,10 @@ class Agent(object):
                 action = self.previous_action
             else:
                 # switch to random
-                steering = np.random.uniform(-0.5, 0.5, 1)  # Going too large here gets us stuck
+                steering = np.random.uniform(-0.5, 0.5, 1)[0]  # Going too large here gets us stuck
                 log.debug('random steering %f', steering)
                 throttle = 0.65  # TODO: Make throttle random to get better variation here
-                action = self.env.get_action_array(steering, throttle)
+                action = Action(steering, throttle)
                 self.action_count = 0
                 self.performing_random_actions = True
         return action
@@ -268,7 +270,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                         'there.\n\n****')
     reward = 0
     done = False
-    render = False
+    render = True
     episode_count = 1
     tf_config = tf.ConfigProto(
         gpu_options=tf.GPUOptions(
@@ -280,15 +282,15 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
     )
 
     sess = tf.Session(config=tf_config)
-    env = gym.make(env_id)
+    env = deepdrive_env.start(env_id)
     env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
     env.seed(0)
-    deepdrive_env = env.env
-    deepdrive_env.set_tf_session(sess)
-    deepdrive_env.start_dashboard()
+    inner_env = env.env
+    inner_env.set_tf_session(sess)
+    inner_env.start_dashboard()
     if should_benchmark:
         log.info('Benchmarking enabled - will save results to %s', c.BENCHMARK_DIR)
-        deepdrive_env.init_benchmarking()
+        inner_env.init_benchmarking()
 
     # Perform random actions to reduce sampling error in the recorded dataset
     agent = Agent(env.action_space, sess, env=env.env, should_toggle_random_actions=should_record,
@@ -318,7 +320,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                     agent.perform_semirandom_action()
                 if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:
                     break
-                if should_benchmark and deepdrive_env.done_benchmarking:
+                if should_benchmark and inner_env.done_benchmarking:
                     break
         except KeyboardInterrupt:
             log.info('keyboard interrupt detected, closing')
