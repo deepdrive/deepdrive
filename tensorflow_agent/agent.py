@@ -282,45 +282,38 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
     )
 
     sess = tf.Session(config=tf_config)
-    env = deepdrive_env.start(env_id)
-    env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
-    env.seed(0)
-    inner_env = env.env
-    inner_env.set_tf_session(sess)
-    inner_env.start_dashboard()
-    if should_benchmark:
-        log.info('Benchmarking enabled - will save results to %s', c.BENCHMARK_DIR)
-        inner_env.init_benchmarking()
+    gym_env = deepdrive_env.start(env_id, should_benchmark=True)
+    dd_env = gym_env.env
 
     # Perform random actions to reduce sampling error in the recorded dataset
-    agent = Agent(env.action_space, sess, env=env.env, should_toggle_random_actions=should_record,
+    agent = Agent(gym_env.action_space, sess, env=gym_env.env, should_toggle_random_actions=should_record,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5)
 
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
 
     def close():
-        env.close()
+        gym_env.close()
         agent.close()
 
     for episode in range(episode_count):
         if episode == 0 or done:
-            obz = env.reset()
+            obz = gym_env.reset()
         else:
             obz = None
         try:
             while True:
                 action = agent.act(obz, reward, done)
-                obz, reward, done, _ = env.step(action)
+                obz, reward, done, _ = gym_env.step(action)
                 if render:
-                    env.render()
+                    gym_env.render()
                 if done:
-                    env.reset()
+                    gym_env.reset()
                 if should_record:
                     agent.perform_semirandom_action()
                 if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:
                     break
-                if should_benchmark and inner_env.done_benchmarking:
+                if should_benchmark and dd_env.done_benchmarking:
                     break
         except KeyboardInterrupt:
             log.info('keyboard interrupt detected, closing')

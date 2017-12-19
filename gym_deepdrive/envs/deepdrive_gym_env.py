@@ -12,9 +12,9 @@ from subprocess import Popen
 import arrow
 import gym
 import numpy as np
+from boto.s3.connection import S3Connection
 from gym import spaces
 from gym.utils import seeding
-from boto.s3.connection import S3Connection
 
 import config as c
 import logs
@@ -56,6 +56,22 @@ class Action(object):
                   brake=action[2][0], handbrake=action[3][0], has_control=action[4])
         return ret
 
+
+class Camera(object):
+    def __init__(self, name, field_of_view, capture_width, capture_height, relative_position, relative_rotation):
+        self.name = name
+        self.field_of_view = field_of_view
+        self.capture_width = capture_width
+        self.capture_height = capture_height
+        self.relative_position = relative_position
+        self.relative_rotation = relative_rotation
+        self.connection_id = None
+
+
+default_cam = Camera(name='front_cam', field_of_view=90, capture_width=512, capture_height=256,
+                     relative_position=[1.0, 1.0, 1.0],
+                     relative_rotation=[0.0, 0.0, 0.0])
+
 def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
     action = [np.array([steering]),
               np.array([throttle]),
@@ -68,8 +84,7 @@ def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
 class DeepDriveEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, cameras, preprocess_with_tensorflow=False):
-        self.observation_space = self._init_observation_space(cameras)
+    def __init__(self, preprocess_with_tensorflow=False):
         self.action_space = self._init_action_space()
         self.preprocess_with_tensorflow = preprocess_with_tensorflow
         self.sess = None
@@ -92,8 +107,8 @@ class DeepDriveEnv(gym.Env):
         self.should_exit = False
         self.sim_process = None
         self.client_id = None
-        self.front_camera_id = None
         self.has_control = None
+        self.cameras = None
 
         if not c.IS_SIM_DEV:
             if not os.path.exists(c.SIM_BIN_PATH):
@@ -108,9 +123,6 @@ class DeepDriveEnv(gym.Env):
 
             log.info('Starting simulator at %s (takes a few seconds the first time).', c.SIM_BIN_PATH)
             self.sim_process = Popen([c.SIM_BIN_PATH])
-
-        self.setup_client()
-        log.debug('Connected to the environment')
 
         # collision detection  # TODO: Remove in favor of in-game detection
         self.reset_forward_progress()
@@ -446,7 +458,7 @@ class DeepDriveEnv(gym.Env):
         deepdrive_client.set_control_values(self.client_id, steering=action.steering, throttle=action.throttle,
                                             brake=action.brake, handbrake=action.handbrake)
 
-    def setup_client(self):
+    def connect(self, cameras=None):
         def _connect():
             self.client_id = deepdrive_client.create('127.0.0.1', 9876)
         _connect()
@@ -462,15 +474,20 @@ class DeepDriveEnv(gym.Env):
             if cxn_attempts >= max_cxn_attempts:
                 raise RuntimeError('Could not connect to the environment')
 
+        if cameras is None:
+            cameras = [default_cam]
+        self.cameras = cameras
         if self.client_id > 0:
-            self.front_camera_id = deepdrive_client.register_camera(self.client_id, field_of_view=60, capture_width=227,
-                                                                    capture_height=227,
-                                                                    relative_position=[0, 0, 10],
-                                                                    relative_rotation=[0.0, 0.0, 0.0])
+            for cam in self.cameras:
+                cam.cxn_id = deepdrive_client.register_camera(self.client_id, cam.field_of_view,
+                                                              cam.capture_width,
+                                                              cam.capture_height,
+                                                              cam.relative_position,
+                                                              cam.relative_rotation)
 
             shared_mem = deepdrive_client.get_shared_memory(self.client_id)
-
             self.reset_capture(shared_mem[0], shared_mem[1])
+            self._init_observation_space()
         else:
             self.raise_connect_fail()
         self.has_control = False
@@ -512,11 +529,12 @@ class DeepDriveEnv(gym.Env):
             (steering_space, throttle_space, brake_space, handbrake_space, is_game_driving_space))
         return action_space
 
-    def _init_observation_space(self, cameras):
+    def _init_observation_space(self):
         obz_spaces = []
-        for camera in cameras:
-            obz_spaces.append(spaces.Box(low=0, high=255, shape=camera['img_shape']))
+        for camera in self.cameras:
+            obz_spaces.append(spaces.Box(low=0, high=255, shape=(camera.capture_width, camera.capture_height)))
         observation_space = spaces.Tuple(tuple(obz_spaces))
+        self.observation_space = observation_space
         return observation_space
 
     def change_has_control(self, has_control):

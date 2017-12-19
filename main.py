@@ -47,16 +47,9 @@ def main():
         done = False
         render = False
         episode_count = 1
-        env = deepdrive_env.start(args.env_id)
-        env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
-        env.seed(0)
+        env = None
         try:
-            innert_env = env.env
-            innert_env.start_dashboard()
-            if args.benchmark:
-                log.info('Benchmarking enabled - will save results to %s', c.BENCHMARK_DIR)
-                innert_env.init_benchmarking()
-
+            env = deepdrive_env.start(args.env_id, should_benchmark=args.benchmark)
             log.info('Manual drive mode')
             for episode in range(episode_count):
                 if episode == 0 or done:
@@ -73,11 +66,11 @@ def main():
                         env.reset()
         except KeyboardInterrupt:
             log.info('keyboard interrupt detected, closing')
-            env.close()
         except Exception as e:
-            env.close()
             raise e
-        env.close()
+        finally:
+            if env:
+                env.close()
         log.info('Last episode complete, closing')
 
 
