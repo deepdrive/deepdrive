@@ -8,6 +8,7 @@ import time
 from collections import deque, OrderedDict
 from multiprocessing import Process, Queue
 from subprocess import Popen
+import pkg_resources
 
 import arrow
 import gym
@@ -68,8 +69,8 @@ class Camera(object):
         self.connection_id = None
 
 
-default_cam = Camera(name='front_cam', field_of_view=90, capture_width=512, capture_height=256,
-                     relative_position=[1.0, 1.0, 1.0],
+default_cam = Camera(name='front_cam', field_of_view=60, capture_width=227, capture_height=227,
+                     relative_position=[150, 1.0, 200],
                      relative_rotation=[0.0, 0.0, 0.0])
 
 def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
@@ -113,7 +114,6 @@ class DeepDriveEnv(gym.Env):
         if not c.IS_SIM_DEV:
             if not os.path.exists(c.SIM_BIN_PATH):
                 print('\n--------- Simulator not found, downloading ----------')
-                from boto.s3.connection import S3Connection
                 if c.IS_LINUX or c.IS_WINDOWS:
                     url = c.BASE_URL + self.get_latest_sim_file()
                     download(url, c.SIM_PATH, warn_existing=False, overwrite=False)
@@ -123,6 +123,9 @@ class DeepDriveEnv(gym.Env):
 
             log.info('Starting simulator at %s (takes a few seconds the first time).', c.SIM_BIN_PATH)
             self.sim_process = Popen([c.SIM_BIN_PATH])
+
+        self.client_version = pkg_resources.get_distribution("deepdrive").version
+        # TODO: Check with connection version
 
         # collision detection  # TODO: Remove in favor of in-game detection
         self.reset_forward_progress()
@@ -348,19 +351,21 @@ class DeepDriveEnv(gym.Env):
 
     def _reset(self):
         self.prev_observation = None
-        done = False
-        i = 0
-        while not done:
-            self.reset_agent()
-            obz = self.get_observation()
-            if obz and obz['distance_along_route'] < 20 * 100:
-                self.start_distance_along_route = obz['distance_along_route']
-                done = True
-            time.sleep(1)
-            i += 1
-            if i > 5:
-                log.error('Unable to reset, try restarting the sim.')
-                raise Exception('Unable to reset, try restarting the sim.')
+        # done = False
+        # i = 0
+
+        self.reset_agent()
+        # while not done:
+        #
+        #     obz = self.get_observation()
+        #     if obz and obz['distance_along_route'] < 20 * 100:
+        #         self.start_distance_along_route = obz['distance_along_route']
+        #         done = True
+        #     time.sleep(1)
+        #     i += 1
+        #     if i > 5:
+        #         log.error('Unable to reset, try restarting the sim.')
+        #         raise Exception('Unable to reset, try restarting the sim.')
         self.send_control(Action(handbrake=True))
         self.step_num = 0
         self.distance_along_route = 0
@@ -460,7 +465,12 @@ class DeepDriveEnv(gym.Env):
 
     def connect(self, cameras=None):
         def _connect():
-            self.client_id = deepdrive_client.create('127.0.0.1', 9876)
+            self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
+            self.client_id = self.connection_props['client_id']
+            server_version = self.connection_props['server_protocol_version']
+            if self.client_version != self.connection_props['server_protocol_version']:
+                raise RuntimeError('Server and client version do not match - server is %s and client is %s' %
+                                   (server_version, self.client_version))
         _connect()
         cxn_attempts = 0
         max_cxn_attempts = 4

@@ -270,7 +270,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                         'there.\n\n****')
     reward = 0
     done = False
-    render = True
+    render = False
     episode_count = 1
     tf_config = tf.ConfigProto(
         gpu_options=tf.GPUOptions(
