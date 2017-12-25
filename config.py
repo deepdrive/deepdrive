@@ -31,6 +31,9 @@ DEEPDRIVE_DIR = os.environ.get('DEEPDRIVE_DIR')
 if DEEPDRIVE_DIR is None:
     config_dir = os.path.expanduser('~') + '/.deepdrive'
     os.makedirs(config_dir, exist_ok=True)
+    deepdrive_python_bin = os.path.join(config_dir, 'python_bin')
+    with open(deepdrive_python_bin, 'w') as f:
+        f.write(sys.executable)
     deepdrive_dir_config = os.path.join(config_dir, 'deepdrive_dir')
     if os.path.exists(deepdrive_dir_config):
         with open(deepdrive_dir_config) as f:
@@ -85,9 +88,13 @@ RNG_SEED = 0
 RNG = random.Random(0)
 
 # Sim
-IS_SIM_DEV = 'DEEPDRIVE_SIM_DEV' in os.environ
+if 'DEEPDRIVE_START_COMMAND' in os.environ:
+    # Can do something like `<your-unreal-path>\Engine\Binaries\Win32\UE4Editor.exe <your-deepdrive-sim-path>\DeepDrive.uproject -game ResX=640 ResY=480`
+    SIM_START_COMMAND = os.environ['DEEPDRIVE_START_COMMAND']
+
+REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
 SIM_PATH = os.path.join(DEEPDRIVE_DIR, 'sim')
-if IS_SIM_DEV:
+if REUSE_OPEN_SIM:
     SIM_BIN_PATH = None
 elif IS_LINUX:
     SIM_BIN_URL = BASE_URL + '/sim/deepdrive-sim-linux-2.0.20171127052011.zip'

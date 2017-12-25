@@ -102,7 +102,6 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['progress reward']               = {'value': 0, 'ymin': 0,     'ymax': 5,   'units': ''}
         self.display_stats['reward']                        = {'value': 0, 'ymin': -20,   'ymax': 20,    'units': ''}
         self.display_stats['score']                         = {'value': 0, 'ymin': -500,  'ymax': 10000, 'units': ''}
-        self.dashboard_thread = None
         self.dashboard_process = None
         self.dashboard_queue = None
         self.should_exit = False
@@ -110,8 +109,10 @@ class DeepDriveEnv(gym.Env):
         self.client_id = None
         self.has_control = None
         self.cameras = None
+        self.use_sim_start_command = None
+        self.connection_props = None
 
-        if not c.IS_SIM_DEV:
+        if not c.REUSE_OPEN_SIM:
             if not os.path.exists(c.SIM_BIN_PATH):
                 print('\n--------- Simulator not found, downloading ----------')
                 if c.IS_LINUX or c.IS_WINDOWS:
@@ -120,9 +121,6 @@ class DeepDriveEnv(gym.Env):
                 else:
                     raise NotImplementedError('Sim download not yet implemented for this OS')
             utils.ensure_executable(c.SIM_BIN_PATH)
-
-            log.info('Starting simulator at %s (takes a few seconds the first time).', c.SIM_BIN_PATH)
-            self.sim_process = Popen([c.SIM_BIN_PATH])
 
         self.client_version = pkg_resources.get_distribution("deepdrive").version
         # TODO: Check with connection version
@@ -136,13 +134,34 @@ class DeepDriveEnv(gym.Env):
         # reward
         self.score = Score()
 
+        # laps
         self.lap_number = None
         self.prev_lap_score = 0
+        self.should_end_on_lap = None
 
         # benchmarking - carries over across resets
         self.should_benchmark = False
         self.done_benchmarking = False
         self.trial_scores = []
+
+    def open_sim(self):
+        if c.REUSE_OPEN_SIM:
+            return
+        if self.use_sim_start_command:
+            log.info('Starting simulator with command %s - this will take a few seconds.',
+                     c.SIM_START_COMMAND)
+
+            self.sim_process = Popen(c.SIM_START_COMMAND)
+        else:
+            log.info('Starting simulator at %s (takes a few seconds the first time).', c.SIM_BIN_PATH)
+            self.sim_process = Popen([c.SIM_BIN_PATH])
+
+    def close_sim(self):
+        if self.sim_process is not None:
+            self.sim_process.kill()
+
+    def set_use_sim_start_command(self, use_sim_start_command):
+        self.use_sim_start_command = use_sim_start_command
 
     @staticmethod
     def get_latest_sim_file():
@@ -177,24 +196,47 @@ class DeepDriveEnv(gym.Env):
     def set_tf_session(self, session):
         self.sess = session
 
+    def set_to_end_on_lap(self, should_end_on_lap):
+        self.should_end_on_lap = should_end_on_lap
+
     def _step(self, action):
         self.send_control(Action.from_gym(action))
         obz = self.get_observation()
-        reward = self.get_reward(obz)
+        now = time.time()
+        done = False
+        reward = self.get_reward(obz, now)
+        done = self.compute_lap_statistics(done, obz)
+        self.prev_step_time = now
+
+        if self.dashboard_queue is not None:
+            self.dashboard_queue.put({'display_stats': self.display_stats, 'should_stop': False})
         if self.is_stuck(obz):  # TODO: derive this from collision, time elapsed, and distance as well
             done = True
             reward -= -10000  # reward is in scale of meters
-        else:
-            done = False
         info = {}
         self.step_num += 1
         return obz, reward, done, info
 
-    def get_reward(self, obz):
-        reward = 0
+    def compute_lap_statistics(self, done, obz):
+        lap_number = obz.get('lap_number')
+        if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
+            lap_score = self.score.total - self.prev_lap_score
+            log.info('lap %d complete with score of %f, speed reward', lap_number, lap_score)
+            self.prev_lap_score = self.score.total
+            if self.should_benchmark:
+                self.log_benchmark_trial()
+                if len(self.trial_scores) == 1000:
+                    self.done_benchmarking = True
+                done = True
+            if self.should_end_on_lap:
+                done = True
+            self.log_up_time()
+        self.lap_number = lap_number
+        return done
 
+    def get_reward(self, obz, now):
+        reward = 0
         if obz:
-            now = time.time()
             if self.prev_step_time is not None:
                 time_passed = now - self.prev_step_time
             else:
@@ -216,23 +258,6 @@ class DeepDriveEnv(gym.Env):
 
             log.debug('reward %r', reward)
             log.debug('score %r', self.score.total)
-
-            lap_number = obz.get('lap_number')
-            if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
-                lap_score = self.score.total - self.prev_lap_score
-                log.info('lap %d complete with score of %f, speed reward', lap_number, lap_score)
-                self.prev_lap_score = self.score.total
-                if self.should_benchmark:
-                    self.log_benchmark_trial()
-                    if len(self.trial_scores) == 1000:
-                        self.done_benchmarking = True
-                    self.reset()
-                self.log_up_time()
-            self.lap_number = lap_number
-            self.prev_step_time = now
-
-            if self.dashboard_queue is not None:
-                self.dashboard_queue.put({'display_stats': self.display_stats, 'should_stop': False})
 
         return reward
 
@@ -376,8 +401,16 @@ class DeepDriveEnv(gym.Env):
         self.score = Score()
         self.start_time = time.time()
 
+    def change_viewpoint(self, cameras, use_sim_start_command):
+        self.use_sim_start_command = use_sim_start_command
+        deepdrive_capture.close()
+        deepdrive_client.close(self.client_id)
+        self.client_id = 0
+        self.close_sim()  # Need to restart process now to change cameras
+        self.open_sim()
+        self.connect(cameras)
+
     def _close(self):
-        log.debug('closing connection to deepdrive')
         if self.dashboard_queue is not None:
             self.dashboard_queue.put({'should_stop': True})
             self.dashboard_queue.close()
@@ -389,8 +422,7 @@ class DeepDriveEnv(gym.Env):
         self.client_id = 0
         if self.sess:
             self.sess.close()
-        if self.sim_process is not None:
-            self.sim_process.kill()
+        self.close_sim()
 
     def _render(self, mode='human', close=False):
         # TODO: Implement proper render - this is really only good for one frame - Could use our OpenGLUT viewer (on raw images) for this or PyGame on preprocessed images
@@ -466,15 +498,25 @@ class DeepDriveEnv(gym.Env):
     def connect(self, cameras=None):
         def _connect():
             self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
+            if not self.connection_props or not self.connection_props['max_capture_resolution']:
+                return
             self.client_id = self.connection_props['client_id']
             server_version = self.connection_props['server_protocol_version']
+            # TODO: Restore git commit timestamp version for release - this does hashing for free, once
+            # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
+            #   connecting, compute same hash and compare. (Need to figure out what to do on dev packaged version as files may change - maybe ignore as it's uncommon).
+            #   Currently, we timestamp the build, and set that as the version in the extension. Problem with this is
+            #   that if you change shared code and build the extension only, the versions won't change, and you could
+            #   see incompatibilities.
+            # TODO: We should also auto-build the extension when building the extension if they set their python virtualenv
+            #   path somewhere
             if self.client_version != self.connection_props['server_protocol_version']:
                 raise RuntimeError('Server and client version do not match - server is %s and client is %s' %
                                    (server_version, self.client_version))
         _connect()
         cxn_attempts = 0
         max_cxn_attempts = 4
-        while not self.client_id:
+        while not self.connection_props:
             cxn_attempts += 1
             sleep = cxn_attempts + random.random() * 2  # splay to avoid thundering herd
             log.warning('Connection to environment failed, retry (%d/%d) in %d seconds',

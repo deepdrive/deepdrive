@@ -1,12 +1,8 @@
 import argparse
-
-import gym
 import logging
 
-import gym_deepdrive  # forward registers gym enviornment
 import config as c
 import logs
-from gym_deepdrive.envs.deepdrive_gym_env import gym_action
 import deepdrive_env
 
 
@@ -58,7 +54,7 @@ def main():
                     obz = None
 
                 while True:
-                    action = gym_action()
+                    action = deepdrive_env.action()
                     obz, reward, done, _ = env.step(action)
                     if render:
                         env.render()

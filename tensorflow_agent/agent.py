@@ -9,6 +9,7 @@ import numpy as np
 import config as c
 import deepdrive_env
 from gym_deepdrive.envs.deepdrive_gym_env import Action
+from tensorflow_agent import camera_config
 from tensorflow_agent.net import Net
 from utils import save_hdf5, download
 import logs
@@ -265,13 +266,13 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
         run_baseline_agent=False):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
-        if c.IS_SIM_DEV:
+        if c.REUSE_OPEN_SIM:
             log.warning('****\n Baseline agent performs poorly in the Unreal editor as it was not trained '
                         'there.\n\n****')
     reward = 0
-    done = False
+    episode_done = False
     render = False
-    episode_count = 1
+    max_episodes = 1000
     tf_config = tf.ConfigProto(
         gpu_options=tf.GPUOptions(
             per_process_gpu_memory_fraction=0.8,
@@ -280,15 +281,23 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
             allow_growth=True
         ),
     )
-
     sess = tf.Session(config=tf_config)
-    gym_env = deepdrive_env.start(env_id, should_benchmark=True)
+    should_end_on_lap = should_record
+    should_rotate_camera_setups = should_record
+    should_rotate_sim_types = should_record
+    if should_rotate_camera_setups:
+        cameras = camera_config.rigs[0]
+    else:
+        cameras = None
+
+    use_sim_start_command = True  #  get_use_sim_start_command(should_rotate_sim_types)
+    gym_env = deepdrive_env.start(env_id, should_benchmark=True, should_end_on_lap=should_end_on_lap, cameras=cameras,
+                                  use_sim_start_command=use_sim_start_command)
     dd_env = gym_env.env
 
     # Perform random actions to reduce sampling error in the recorded dataset
     agent = Agent(gym_env.action_space, sess, env=gym_env.env, should_toggle_random_actions=should_record,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5)
-
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
 
@@ -296,29 +305,51 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
         gym_env.close()
         agent.close()
 
-    for episode in range(episode_count):
-        if episode == 0 or done:
-            obz = gym_env.reset()
-        else:
-            obz = None
-        try:
-            while True:
-                action = agent.act(obz, reward, done)
-                obz, reward, done, _ = gym_env.step(action)
+    session_done = False
+    episode = 0
+    try:
+        while not session_done:
+            if episode == 0 or episode_done:
+                obz = gym_env.reset()
+            else:
+                obz = None
+            while not episode_done:
+                action = agent.act(obz, reward, episode_done)
+                obz, reward, episode_done, _ = gym_env.step(action)
                 if render:
                     gym_env.render()
-                if done:
-                    gym_env.reset()
                 if should_record:
                     agent.perform_semirandom_action()
                 if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:
-                    break
-                if should_benchmark and dd_env.done_benchmarking:
-                    break
-        except KeyboardInterrupt:
-            log.info('keyboard interrupt detected, closing')
-            close()
+                    session_done = True
+                elif should_benchmark and dd_env.done_benchmarking:
+                    session_done = True
+            episode += 1
+            if should_rotate_camera_setups:
+                cameras = camera_config.rigs[len(camera_config.rigs) % episode]
+                for cam in cameras:
+                    # Add some randomness to the position (less than meter), rotation (less than degree), fov (less than degree),
+                    # capture height (1%), and capture width (1%)
+                    for i in enumerate(cam['relative_rotation']):
+                        cam['relative_rotation'][i] += np.random.random()
+                    for i in enumerate(cam['relative_position']):
+                        cam['relative_position'][i] += np.random.random() * 100.
+                    cam['field_of_view'] = cam['field_of_view'] + np.random.random()
+                    cam['capture_height'] += np.random.random() * 0.01 * cam['capture_height']
+                    cam['capture_width'] += np.random.random() * 0.01 * cam['capture_width']
+                dd_env.change_viewpoint(cameras,
+                                        use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
+            if episode >= max_episodes:
+                session_done = True
+    except KeyboardInterrupt:
+        log.info('keyboard interrupt detected, closing')
+        close()
     close()
+
+
+def random_use_sim_start_command(should_rotate_sim_types):
+    use_sim_start_command = should_rotate_sim_types and np.random.random() < 0.5
+    return use_sim_start_command
 
 
 def ensure_baseline_weights(net_path):
