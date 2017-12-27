@@ -152,6 +152,36 @@ class DeepDriveEnv(gym.Env):
                      c.SIM_START_COMMAND)
 
             self.sim_process = Popen(c.SIM_START_COMMAND)
+
+            import win32gui
+            import win32process
+
+            def get_hwnds_for_pid(pid):
+                def callback(hwnd, _hwnds):
+                    if win32gui.IsWindowVisible(hwnd) and win32gui.IsWindowEnabled(hwnd):
+                        _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
+                        if found_pid == pid:
+                            _hwnds.append(hwnd)
+                    return True
+
+                hwnds = []
+                win32gui.EnumWindows(callback, hwnds)
+                return hwnds
+
+            focused = False
+            while not focused:
+                time.sleep(1)
+                dd_hwnds = get_hwnds_for_pid(self.sim_process.pid)
+                if not dd_hwnds:
+                    log.info('No windows found, waiting')
+                else:
+                    try:
+                        win32gui.SetForegroundWindow(dd_hwnds[0])
+                        focused = True
+                    except:
+                        log.info('Window not ready, waiting')
+
+            pass
         else:
             log.info('Starting simulator at %s (takes a few seconds the first time).', c.SIM_BIN_PATH)
             self.sim_process = Popen([c.SIM_BIN_PATH])
@@ -159,6 +189,16 @@ class DeepDriveEnv(gym.Env):
     def close_sim(self):
         if self.sim_process is not None:
             self.sim_process.kill()
+            i = 0
+            max_tries = 5
+            while self.sim_process.poll() is None and i < max_tries:
+                log.info('Waiting for sim to close')
+                time.sleep(0.5)
+                i += 1
+            if i == max_tries:
+                self.sim_process.terminate()
+
+
 
     def set_use_sim_start_command(self, use_sim_start_command):
         self.use_sim_start_command = use_sim_start_command
@@ -218,6 +258,8 @@ class DeepDriveEnv(gym.Env):
         return obz, reward, done, info
 
     def compute_lap_statistics(self, done, obz):
+        if not obz:
+            return done
         lap_number = obz.get('lap_number')
         if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
             lap_score = self.score.total - self.prev_lap_score
@@ -498,24 +540,26 @@ class DeepDriveEnv(gym.Env):
     def connect(self, cameras=None):
         def _connect():
             self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
+            if isinstance(self.connection_props, int):
+                raise Exception('You have an old version of the deepdrive client - try uninstalling and reinstalling with pip')
             if not self.connection_props or not self.connection_props['max_capture_resolution']:
+                # Try again
                 return
             self.client_id = self.connection_props['client_id']
             server_version = self.connection_props['server_protocol_version']
             # TODO: Restore git commit timestamp version for release - this does hashing for free, once
-            # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
-            #   connecting, compute same hash and compare. (Need to figure out what to do on dev packaged version as files may change - maybe ignore as it's uncommon).
-            #   Currently, we timestamp the build, and set that as the version in the extension. Problem with this is
-            #   that if you change shared code and build the extension only, the versions won't change, and you could
+            #   Then, for dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
+            #   connecting, compute same hash and compare. (Need to figure out what to do on dev packaged version as
+            #   files may change - maybe ignore as it's uncommon).
+            #   Currently, we timestamp the build, and set that as the version in the extension. This is fine unless
+            #   you change shared code and build the extension only, then the versions won't change, and you could
             #   see incompatibilities.
-            # TODO: We should also auto-build the extension when building the extension if they set their python virtualenv
-            #   path somewhere
             if self.client_version != self.connection_props['server_protocol_version']:
                 raise RuntimeError('Server and client version do not match - server is %s and client is %s' %
                                    (server_version, self.client_version))
         _connect()
         cxn_attempts = 0
-        max_cxn_attempts = 4
+        max_cxn_attempts = 10
         while not self.connection_props:
             cxn_attempts += 1
             sleep = cxn_attempts + random.random() * 2  # splay to avoid thundering herd
@@ -526,16 +570,16 @@ class DeepDriveEnv(gym.Env):
             if cxn_attempts >= max_cxn_attempts:
                 raise RuntimeError('Could not connect to the environment')
 
-        if cameras is None:
-            cameras = [default_cam]
+            if cameras is None:
+                cameras = [default_cam]
         self.cameras = cameras
-        if self.client_id > 0:
+        if self.client_id and self.client_id > 0:
             for cam in self.cameras:
-                cam.cxn_id = deepdrive_client.register_camera(self.client_id, cam.field_of_view,
-                                                              cam.capture_width,
-                                                              cam.capture_height,
-                                                              cam.relative_position,
-                                                              cam.relative_rotation)
+                cam['cxn_id'] = deepdrive_client.register_camera(self.client_id, cam['field_of_view'],
+                                                              cam['capture_width'],
+                                                              cam['capture_height'],
+                                                              cam['relative_position'],
+                                                              cam['relative_rotation'])
 
             shared_mem = deepdrive_client.get_shared_memory(self.client_id)
             self.reset_capture(shared_mem[0], shared_mem[1])
@@ -562,7 +606,11 @@ class DeepDriveEnv(gym.Env):
 
     @staticmethod
     def raise_connect_fail():
-        raise Exception('\n\n\n'
+        if c.SIM_START_COMMAND:
+            raise Exception('Could not connect to environment. You may need to close the Unreal Editor and/or turn off '
+                            'saving CPU in background in the Editor preferences (search for CPU).')
+        else:
+            raise Exception('\n\n\n'
                         '**********************************************************************\n'
                         '**********************************************************************\n'
                         '****                                                              ****\n\n'
@@ -584,7 +632,7 @@ class DeepDriveEnv(gym.Env):
     def _init_observation_space(self):
         obz_spaces = []
         for camera in self.cameras:
-            obz_spaces.append(spaces.Box(low=0, high=255, shape=(camera.capture_width, camera.capture_height)))
+            obz_spaces.append(spaces.Box(low=0, high=255, shape=(camera['capture_width'], camera['capture_height'])))
         observation_space = spaces.Tuple(tuple(obz_spaces))
         self.observation_space = observation_space
         return observation_space

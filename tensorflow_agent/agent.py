@@ -1,6 +1,7 @@
 import os
 import time
 from datetime import datetime
+import math
 
 import gym
 import tensorflow as tf
@@ -284,15 +285,16 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
     sess = tf.Session(config=tf_config)
     should_end_on_lap = should_record
     should_rotate_camera_setups = should_record
-    should_rotate_sim_types = should_record
+    should_rotate_sim_types = False
     if should_rotate_camera_setups:
         cameras = camera_config.rigs[0]
+        randomize_cameras(cameras)
     else:
         cameras = None
 
-    use_sim_start_command = True  #  get_use_sim_start_command(should_rotate_sim_types)
+    use_sim_start_command_first_lap = False  #  get_use_sim_start_command(should_rotate_sim_types)
     gym_env = deepdrive_env.start(env_id, should_benchmark=True, should_end_on_lap=should_end_on_lap, cameras=cameras,
-                                  use_sim_start_command=use_sim_start_command)
+                                  use_sim_start_command=use_sim_start_command_first_lap)
     dd_env = gym_env.env
 
     # Perform random actions to reduce sampling error in the recorded dataset
@@ -311,6 +313,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
         while not session_done:
             if episode == 0 or episode_done:
                 obz = gym_env.reset()
+                episode_done = False
             else:
                 obz = None
             while not episode_done:
@@ -326,17 +329,8 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                     session_done = True
             episode += 1
             if should_rotate_camera_setups:
-                cameras = camera_config.rigs[len(camera_config.rigs) % episode]
-                for cam in cameras:
-                    # Add some randomness to the position (less than meter), rotation (less than degree), fov (less than degree),
-                    # capture height (1%), and capture width (1%)
-                    for i in enumerate(cam['relative_rotation']):
-                        cam['relative_rotation'][i] += np.random.random()
-                    for i in enumerate(cam['relative_position']):
-                        cam['relative_position'][i] += np.random.random() * 100.
-                    cam['field_of_view'] = cam['field_of_view'] + np.random.random()
-                    cam['capture_height'] += np.random.random() * 0.01 * cam['capture_height']
-                    cam['capture_width'] += np.random.random() * 0.01 * cam['capture_width']
+                cameras = camera_config.rigs[episode % len(camera_config.rigs)]
+                randomize_cameras(cameras)
                 dd_env.change_viewpoint(cameras,
                                         use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
             if episode >= max_episodes:
@@ -346,6 +340,25 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
         close()
     close()
 
+
+def randomize_cameras(cameras):
+    for cam in cameras:
+        # Add some randomness to the position (less than meter), rotation (less than degree), fov (less than degree),
+        # capture height (1%), and capture width (1%)
+        for i in range(len(cam['relative_rotation'])):
+            cam['relative_rotation'][i] += math.radians(np.random.random())
+        for i in range(len(cam['relative_position'])):
+            if i == 0 or i == 2:
+                # x - forward or z - up
+                cam['relative_position'][i] += (np.random.random() * 100)
+            elif i == 1:
+                # y - right
+                cam['relative_position'][i] += (np.random.random() * 100 - 50)
+
+        cam['field_of_view'] += (np.random.random() - 0.5)
+        cam['capture_height'] += round(np.random.random() * 0.01 * cam['capture_height'])
+        cam['capture_width'] += round(np.random.random() * 0.01 * cam['capture_width'])
+        pass
 
 def random_use_sim_start_command(should_rotate_sim_types):
     use_sim_start_command = should_rotate_sim_types and np.random.random() < 0.5

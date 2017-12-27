@@ -1,6 +1,7 @@
 import random
 import os
 import sys
+import glob
 
 from datetime import datetime
 import numpy as np
@@ -88,9 +89,9 @@ RNG_SEED = 0
 RNG = random.Random(0)
 
 # Sim
-if 'DEEPDRIVE_START_COMMAND' in os.environ:
+if 'DEEPDRIVE_SIM_START_COMMAND' in os.environ:
     # Can do something like `<your-unreal-path>\Engine\Binaries\Win32\UE4Editor.exe <your-deepdrive-sim-path>\DeepDrive.uproject -game ResX=640 ResY=480`
-    SIM_START_COMMAND = os.environ['DEEPDRIVE_START_COMMAND']
+    SIM_START_COMMAND = os.environ['DEEPDRIVE_SIM_START_COMMAND']
 
 REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
 SIM_PATH = os.path.join(DEEPDRIVE_DIR, 'sim')
@@ -103,4 +104,4 @@ elif IS_MAC:
     raise NotImplementedError('Support for OSX not yet implemented, see FAQs')
 elif IS_WINDOWS:
     SIM_BIN_URL = BASE_URL + '/sim/deepdrive-sim-windows-2.0.20171206173312.zip'
-    SIM_BIN_PATH = os.path.join(SIM_PATH, 'WindowsNoEditor', 'DeepDrive.exe')
+    SIM_BIN_PATH = glob.glob(os.path.join(SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') + '/Win*/*.exe')[0]
