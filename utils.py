@@ -1,3 +1,4 @@
+import glob
 import inspect
 import os
 import stat
@@ -205,6 +206,24 @@ def ensure_executable(path):
         st = os.stat(path)
         os.chmod(path, st.st_mode | stat.S_IEXEC)
 
+
+def get_sim_bin_path():
+    path, url = None, None
+    if c.REUSE_OPEN_SIM:
+        return None, None
+    elif c.IS_LINUX:
+        path = c.SIM_PATH + '/DeepDrive/Binaries/Linux/DeepDrive'
+    elif c.IS_MAC:
+        raise NotImplementedError('Support for OSX not yet implemented, see FAQs')
+    elif c.IS_WINDOWS:
+        paths = glob.glob(os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') + '/Win*/*.exe')
+        if not paths:
+            path = None
+        else:
+            path = paths[0]
+    if path and not os.path.exists(path):
+        path = None
+    return path
 
 log = logs.get_log(__name__)
 

@@ -95,13 +95,4 @@ if 'DEEPDRIVE_SIM_START_COMMAND' in os.environ:
 
 REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
 SIM_PATH = os.path.join(DEEPDRIVE_DIR, 'sim')
-if REUSE_OPEN_SIM:
-    SIM_BIN_PATH = None
-elif IS_LINUX:
-    SIM_BIN_URL = BASE_URL + '/sim/deepdrive-sim-linux-2.0.20171127052011.zip'
-    SIM_BIN_PATH = SIM_PATH + '/DeepDrive/Binaries/Linux/DeepDrive'
-elif IS_MAC:
-    raise NotImplementedError('Support for OSX not yet implemented, see FAQs')
-elif IS_WINDOWS:
-    SIM_BIN_URL = BASE_URL + '/sim/deepdrive-sim-windows-2.0.20171206173312.zip'
-    SIM_BIN_PATH = glob.glob(os.path.join(SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') + '/Win*/*.exe')[0]
+

@@ -113,14 +113,14 @@ class DeepDriveEnv(gym.Env):
         self.connection_props = None
 
         if not c.REUSE_OPEN_SIM:
-            if not os.path.exists(c.SIM_BIN_PATH):
+            if utils.get_sim_bin_path() is None:
                 print('\n--------- Simulator not found, downloading ----------')
                 if c.IS_LINUX or c.IS_WINDOWS:
                     url = c.BASE_URL + self.get_latest_sim_file()
                     download(url, c.SIM_PATH, warn_existing=False, overwrite=False)
                 else:
                     raise NotImplementedError('Sim download not yet implemented for this OS')
-            utils.ensure_executable(c.SIM_BIN_PATH)
+            utils.ensure_executable(utils.get_sim_bin_path())
 
         self.client_version = pkg_resources.get_distribution("deepdrive").version
         # TODO: Check with connection version
@@ -183,8 +183,8 @@ class DeepDriveEnv(gym.Env):
 
             pass
         else:
-            log.info('Starting simulator at %s (takes a few seconds the first time).', c.SIM_BIN_PATH)
-            self.sim_process = Popen([c.SIM_BIN_PATH])
+            log.info('Starting simulator at %s (takes a few seconds the first time).', utils.get_sim_bin_path())
+            self.sim_process = Popen([utils.get_sim_bin_path()])
 
     def close_sim(self):
         if self.sim_process is not None:
@@ -214,8 +214,13 @@ class DeepDriveEnv(gym.Env):
         sim_prefix = 'sim/deepdrive-sim-'
         conn = S3Connection()
         bucket = conn.get_bucket('deepdrive')
-        latest_sim_file, version = sorted([(x.name, x.name.split('.')[-2])
-                                           for x in bucket.list(sim_prefix + os_name)], key=lambda y: y[1])[-1]
+        deepdrive_version = pkg_resources.get_distribution('deepdrive').version
+        major_minor = deepdrive_version[:deepdrive_version.rindex('.')]
+        sim_versions = list(bucket.list(sim_prefix + os_name + '-' + major_minor))
+
+        latest_sim_file, path_version = sorted([(x.name, x.name.split('.')[-2])
+                                           for x in sim_versions],
+                                          key=lambda y: y[1])[-1]
         return '/' + latest_sim_file
 
     def init_benchmarking(self):
@@ -812,3 +817,6 @@ def dashboard(dash_queue):
     # TODO: Add blit=True and deal with updating the text if performance becomes unacceptable
     anim = animation.FuncAnimation(fig, animate, init_func=init, frames=200, interval=100)
     plt.show()
+
+if __name__ == '__main__':
+    DeepDriveEnv.get_latest_sim_file()
