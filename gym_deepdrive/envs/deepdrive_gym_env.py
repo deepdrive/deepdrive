@@ -69,9 +69,7 @@ class Camera(object):
         self.connection_id = None
 
 
-default_cam = Camera(name='front_cam', field_of_view=60, capture_width=227, capture_height=227,
-                     relative_position=[150, 1.0, 200],
-                     relative_rotation=[0.0, 0.0, 0.0])
+default_cam = Camera(**c.DEFAULT_CAM)  # TODO: Switch camera dicts to this object
 
 def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
     action = [np.array([steering]),
@@ -137,7 +135,6 @@ class DeepDriveEnv(gym.Env):
         # laps
         self.lap_number = None
         self.prev_lap_score = 0
-        self.should_end_on_lap = None
 
         # benchmarking - carries over across resets
         self.should_benchmark = False
@@ -241,9 +238,6 @@ class DeepDriveEnv(gym.Env):
     def set_tf_session(self, session):
         self.sess = session
 
-    def set_to_end_on_lap(self, should_end_on_lap):
-        self.should_end_on_lap = should_end_on_lap
-
     def _step(self, action):
         self.send_control(Action.from_gym(action))
         obz = self.get_observation()
@@ -274,9 +268,7 @@ class DeepDriveEnv(gym.Env):
                 self.log_benchmark_trial()
                 if len(self.trial_scores) == 1000:
                     self.done_benchmarking = True
-                done = True
-            if self.should_end_on_lap:
-                done = True
+            done = True  # One lap is an episode
             self.log_up_time()
         self.lap_number = lap_number
         return done
@@ -575,8 +567,8 @@ class DeepDriveEnv(gym.Env):
             if cxn_attempts >= max_cxn_attempts:
                 raise RuntimeError('Could not connect to the environment')
 
-            if cameras is None:
-                cameras = [default_cam]
+        if cameras is None:
+            cameras = [c.DEFAULT_CAM]
         self.cameras = cameras
         if self.client_id and self.client_id > 0:
             for cam in self.cameras:

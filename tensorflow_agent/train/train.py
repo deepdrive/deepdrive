@@ -3,6 +3,7 @@ from __future__ import print_function
 import os
 
 import numpy as np
+import scipy
 import tensorflow as tf
 
 import config as c
@@ -46,10 +47,10 @@ def run(resume_dir=None):
     else:
         date_str = c.DATE_STR
     sess_train_dir = '%s/%s_train' % (c.TENSORFLOW_OUT_DIR, date_str)
-    sess_eval_dir = '%s/%s/_eval' % (c.TENSORFLOW_OUT_DIR, date_str)
+    sess_eval_dir = '%s/%s_eval' % (c.TENSORFLOW_OUT_DIR, date_str)
     os.makedirs(sess_train_dir, exist_ok=True)
     os.makedirs(sess_eval_dir, exist_ok=True)
-    batch_size = 64  # Change this to fit in your GPU's memory
+    batch_size = 32  # Change this to fit in your GPU's memory
     x = tf.placeholder(tf.float32, (None,) + c.IMAGE_SHAPE)
     y = tf.placeholder(tf.float32, (None, c.NUM_TARGETS))
     log.info('creating model')
@@ -122,23 +123,43 @@ def run(resume_dir=None):
         train_data_provider = train_dataset.iterate_forever(batch_size)
         log.info('Start tensorboard with \n\ttensorboard --logdir="' + c.TENSORFLOW_OUT_DIR +
                  '" (In Windows tensorboard will be in your python env\'s Scripts folder, '
-                 'i.e. C:\\Users\\<YOU>\\Miniconda3\\envs\\tensorflow\\Scripts)\n'
+                 'i.e. C:\\Users\\<YOU>\\Miniconda3\\envs\\tensorflow\\Scripts) but this should already be in your path \n'
                  'Then navigate to http://localhost:6006 - You may see errors if Tensorboard was already '
                  'started / has tabs open. If so, shut down Tenosrboard first and close all Tensorboard tabs. '
                  'Sometimes you may just need to restart if you get CUDA device errors.')
         while True:
             for i in range(1000):
                 images, targets = next(train_data_provider)
-                feed_dict = {x: images, y: targets}  # , 'phase:0': 1}
-                if i % 10 == 0 and i > 0:
-                    # Summarize: Do this less frequently to speed up training time, more frequently to debug issues
-                    _, summ = sess.run([train_op, summary_op], feed_dict)
-                    sv.summary_computed(sess, summ)
-                    sv.summary_writer.flush()
-                else:
-                    sess.run(train_op, feed_dict)
-                step = model.global_step.eval()
-                log.info('step %d', step)
+                print('num images %r' % len(images))
+                print('num targets %r' % len(targets))
+                valid = True
+                for img_idx, img in enumerate(images):
+                    img = images[img_idx]
+                    if img.shape != c.IMAGE_SHAPE:
+                        log.info('invalid image shape %s - resizing', str(img.shape))
+                        images[img_idx] = scipy.misc.imresize(img, (c.IMAGE_SHAPE[0], c.IMAGE_SHAPE[1]))
+                for tgt in targets:
+                    if len(tgt) != 6:
+                        log.error('invalid target shape %r skipping' % len(tgt))
+                        valid = False
+                if valid:
+                    feed_dict = {x: images, y: targets}  # , 'phase:0': 1}
+                    if i % 10 == 0 and i > 0:
+                        # Summarize: Do this less frequently to speed up training time, more frequently to debug issues
+                        try:
+                            _, summ = sess.run([train_op, summary_op], feed_dict)
+                        except ValueError as e:
+                            print('Error processing batch, skipping - error was %r' % e)
+                        sv.summary_computed(sess, summ)
+                        sv.summary_writer.flush()
+                    else:
+                        # print('evaluating %r' % feed_dict)
+                        try:
+                            sess.run(train_op, feed_dict)
+                        except ValueError as e:
+                            print('Error processing batch, skipping - error was %r' % e)
+                    step = model.global_step.eval()
+                    log.info('step %d', step)
 
             step = model.global_step.eval()
             # Do evaluation

@@ -92,7 +92,13 @@ RNG = random.Random(0)
 if 'DEEPDRIVE_SIM_START_COMMAND' in os.environ:
     # Can do something like `<your-unreal-path>\Engine\Binaries\Win32\UE4Editor.exe <your-deepdrive-sim-path>\DeepDrive.uproject -game ResX=640 ResY=480`
     SIM_START_COMMAND = os.environ['DEEPDRIVE_SIM_START_COMMAND']
+else:
+    SIM_START_COMMAND = None
 
 REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
 SIM_PATH = os.path.join(DEEPDRIVE_DIR, 'sim')
+
+DEFAULT_CAM = dict(name='alexnet_forward_cam_60', field_of_view=60, capture_width=227, capture_height=227,
+         relative_position=[150, 1.0, 200],
+         relative_rotation=[0.0, 0.0, 0.0])
 

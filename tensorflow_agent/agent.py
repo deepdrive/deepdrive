@@ -283,17 +283,16 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
         ),
     )
     sess = tf.Session(config=tf_config)
-    should_end_on_lap = should_record
-    should_rotate_camera_setups = should_record
+    should_rotate_camera_rigs = False
     should_rotate_sim_types = False
-    if should_rotate_camera_setups:
+    if should_rotate_camera_rigs:
         cameras = camera_config.rigs[0]
         randomize_cameras(cameras)
     else:
         cameras = None
 
-    use_sim_start_command_first_lap = False  #  get_use_sim_start_command(should_rotate_sim_types)
-    gym_env = deepdrive_env.start(env_id, should_benchmark=True, should_end_on_lap=should_end_on_lap, cameras=cameras,
+    use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
+    gym_env = deepdrive_env.start(env_id, should_benchmark=True, cameras=cameras,
                                   use_sim_start_command=use_sim_start_command_first_lap)
     dd_env = gym_env.env
 
@@ -328,7 +327,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                 elif should_benchmark and dd_env.done_benchmarking:
                     session_done = True
             episode += 1
-            if should_rotate_camera_setups:
+            if should_rotate_camera_rigs:
                 cameras = camera_config.rigs[episode % len(camera_config.rigs)]
                 randomize_cameras(cameras)
                 dd_env.change_viewpoint(cameras,
