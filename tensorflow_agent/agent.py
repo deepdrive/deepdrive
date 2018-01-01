@@ -101,14 +101,14 @@ class Agent(object):
 
         self.maybe_save()
 
-        action = Action.as_gym(action)
+        action = action.as_gym()
         return action
 
     def get_next_action(self, obz, y):
         log.debug('getting next action')
         if y is None:
             log.debug('net out is None')
-            return self.previous_action  # or Action(has_control=False)
+            return self.previous_action or Action()
 
         desired_spin, desired_direction, desired_speed, desired_speed_change, desired_steering, desired_throttle = y[0]
 
@@ -132,7 +132,7 @@ class Agent(object):
         if actual_speed > desired_speed or actual_speed > 25 * 100:
             # Compensate for bad turning ability at high speed
             log.debug('limiting throttle')
-            desired_throttle = desired_throttle * 0.3 - self.previous_action[1][0] * 0.3
+            desired_throttle = desired_throttle * 0.3 - self.previous_action.throttle * 0.3
             desired_throttle = max(desired_throttle, 0.0)
         elif actual_speed < 0.7 * desired_speed or actual_speed < 25 * 100:
             log.debug('boosting throttle')
