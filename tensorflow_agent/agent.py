@@ -136,11 +136,11 @@ class Agent(object):
             desired_throttle = max(desired_throttle, 0.0)
         elif actual_speed < 0.7 * desired_speed or actual_speed < 25 * 100:
             log.debug('boosting throttle')
-            desired_throttle = desired_throttle * 1.25 + self.previous_action[1][0] * 0.5
+            desired_throttle = desired_throttle * 1.25 + self.previous_action.throttle * 0.5
             desired_throttle = min(desired_throttle, 1.25)
         log.debug('desired_steering %f', desired_steering)
         log.debug('desired_throttle %f', desired_throttle)
-        smoothed_steering = 0.2 * self.previous_action[0][0] + 0.5 * desired_steering
+        smoothed_steering = 0.2 * self.previous_action.steering + 0.5 * desired_steering
         # desired_throttle = desired_throttle * 1.1
         action = Action(smoothed_steering, desired_throttle)
         return action
