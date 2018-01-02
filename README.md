@@ -63,16 +63,18 @@ python main.py --train
 python main.py --train --dataset baseline
 ```
 
-[Frame rate issues?](#framerate-issues-on-linux)
+## Benchmark
 
-#### Frame rate issues on Linux
+The baseline agents 300 lap average score is [2055](https://s3-us-west-1.amazonaws.com/deepdrive/benchmarks/2018-01-01__04-10-23PM.csv).
+
+## Frame rate issues on Linux
 
 If you experience low frame rates on Linux, you may need to install NVIDIA’s display drivers including their OpenGL drivers. We recommend installing these with CUDA which bundles the version you will need to run the baseline agent. Also, make sure to [plugin your laptop](https://help.ubuntu.com/community/PowerManagement/ReducedPower). If CUDA is installed, skip to testing [OpenGL](#opengl).
 
 [CUDA install tips](#cuda-and-nvidia-driver-install)
 [cuDNN install tips](#cudnn-install-tips)
 
-#### NVIDIA install tips
+## NVIDIA install tips
 
 - Install [CUDA 8](https://developer.nvidia.com/cuda-toolkit-archive) and cuDNN 6 as Tensorflow does not yet support  NVIDIA's [current downloads]( https://github.com/tensorflow/tensorflow/issues/12052) - If you want to use CUDA 9 / cuDNN 7, you will need to install Tensorflow from sources.
 - Follow [this guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) carefully
@@ -85,7 +87,7 @@ Make sure to follow the
 thoroughly as you could end up with a broken video driver, login issues, and lots of frustration. We recommend the package manager installation method, i.e. deb[local], for the smoothest install of both CUDA and cuDNN. The runfile method can be fraught with pain, but if you really want to use it, make sure to follow NVIDIA’s instructions on how to disable the Nouveau drivers if you're on Ubuntu. You may want to have another computer handy (or use your mobile if you have to) to search for answers while your machine is unusable. Also, get the older CUDA 8 and cuDNN 6 for a standard tensorflow install later on (read here to see if this changes: https://github.com/tensorflow/tensorflow/issues/12052) - If you want to use CUDA 9 / cuDNN 7, you’ll need to install Tensorflow from source.
 http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html
 
-#### OpenGL
+## OpenGL
 
 `glxinfo | grep OpenGL` should return something like:
 ```
@@ -111,7 +113,7 @@ You may need to disable secure boot in your BIOS in order for NVIDIA’s OpenGL 
 Also `sudo shutdown -r now` is your friend
 
 
-### Development
+## Development
 
 To run tests in PyCharm, go to File | Settings | Tools | Python Integrated Tools and change the default test runner 
 to py.test.
