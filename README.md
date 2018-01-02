@@ -38,27 +38,27 @@ python install.py
 
 ###### Use `pipenv shell` once or `pipenv run` before each to run these in your virtualenv
 
-Run the baseline agent
+Run the **baseline** agent
 ```
-python main.py --baseline --benchmark
-```
-
-Benchmark your own driving
-```
-python main.py --manual --benchmark
+python main.py --baseline
 ```
 
-Record training data for imitation learning / behavioral cloning
+Drive **manually**
+```
+python main.py --manual
+```
+
+**Record** training data for imitation learning / behavioral cloning
 ```
 python main.py --record
 ```
 
-Train on recorded data
+**Train** on recorded data
 ```
 python main.py --train
 ```
 
-Train the same dataset we collected [TODO link with README  (includes play-in-editor and standalone data)]
+**Train** on the same dataset we collected [TODO link with README  (includes play-in-editor and standalone data)]
 ```
 python main.py --train --dataset baseline
 ```
