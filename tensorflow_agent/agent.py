@@ -263,7 +263,7 @@ class Agent(object):
             self.semirandom_sequence_step += 1
 
 
-def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=False,
+def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
@@ -292,7 +292,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
         cameras = None
 
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
-    gym_env = deepdrive_env.start(env_id, should_benchmark=True, cameras=cameras,
+    gym_env = deepdrive_env.start(env_id, should_benchmark=should_benchmark, cameras=cameras,
                                   use_sim_start_command=use_sim_start_command_first_lap)
     dd_env = gym_env.env
 

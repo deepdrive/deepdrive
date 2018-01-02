@@ -266,7 +266,8 @@ class DeepDriveEnv(gym.Env):
             self.prev_lap_score = self.score.total
             if self.should_benchmark:
                 self.log_benchmark_trial()
-                if len(self.trial_scores) == 1000:
+                if 'MAX_BENCHMARK_LAPS' in os.environ and len(self.trial_scores) >= \
+                        int(os.environ['MAX_BENCHMARK_LAPS']):
                     self.done_benchmarking = True
             done = True  # One lap is an episode
             self.log_up_time()
@@ -341,7 +342,7 @@ class DeepDriveEnv(gym.Env):
             dist = obz['distance_along_route'] - self.start_distance_along_route
             progress = dist - self.distance_along_route
             self.distance_along_route = dist
-            DeepDriveRewardCalculator.get_progress_reward(progress, time_passed)
+            progress_reward = DeepDriveRewardCalculator.get_progress_reward(progress, time_passed)
         self.display_stats['progress reward']['value'] = progress_reward
         self.score.progress_reward += progress_reward
         return progress_reward

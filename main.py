@@ -11,8 +11,6 @@ def main():
     parser.add_argument('-e', '--env-id', nargs='?', default='DeepDrive-v0', help='Select the environment to run')
     parser.add_argument('-r', '--record', action='store_true', default=False,
                         help='Records game driving, including recovering from random actions')
-    parser.add_argument('-b', '--benchmark', action='store_true', default=False,
-                        help='Benchmarks driving performance and records the results to CSV')
     parser.add_argument('--baseline', action='store_true', default=False,
                         help='Runs pretrained imitation learning based agent')
     parser.add_argument('--manual', action='store_true', default=False,
@@ -38,14 +36,14 @@ def main():
         from tensorflow_agent import agent
 
         agent.run(should_record=args.record, net_path=args.net_path, env_id=args.env_id,
-                  should_benchmark=args.benchmark, run_baseline_agent=args.baseline)
+                  run_baseline_agent=args.baseline)
     elif args.manual:
         done = False
         render = False
         episode_count = 1
         env = None
         try:
-            env = deepdrive_env.start(args.env_id, should_benchmark=args.benchmark)
+            env = deepdrive_env.start(args.env_id)
             log.info('Manual drive mode')
             for episode in range(episode_count):
                 if episode == 0 or done:
