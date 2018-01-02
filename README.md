@@ -38,12 +38,12 @@ python install.py
 
 ###### Use `pipenv shell` once or `pipenv run` before each to run these in your virtualenv
 
-Run the baseline agent
+Run the **baseline** agent
 ```
 python main.py --baseline --benchmark
 ```
 
-**Manual benchmark**
+Drive **manually** with **benchmarking**
 ```
 python main.py --manual --benchmark
 ```
