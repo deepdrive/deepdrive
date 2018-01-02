@@ -40,12 +40,12 @@ python install.py
 
 Run the **baseline** agent
 ```
-python main.py --baseline --benchmark
+python main.py --baseline
 ```
 
-Drive **manually** with **benchmarking**
+Drive **manually**
 ```
-python main.py --manual --benchmark
+python main.py --manual
 ```
 
 **Record** training data for imitation learning / behavioral cloning
