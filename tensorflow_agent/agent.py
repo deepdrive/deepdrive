@@ -129,15 +129,14 @@ class Agent(object):
         log.debug('actual_speed %f', actual_speed)
         log.debug('desired_speed %f', desired_speed)
 
-        if actual_speed > desired_speed or actual_speed > 25 * 100:
-            # Compensate for bad turning ability at high speed
-            log.debug('limiting throttle')
-            desired_throttle = desired_throttle * 0.3 - self.previous_action.throttle * 0.3
-            desired_throttle = max(desired_throttle, 0.0)
-        elif actual_speed < 0.7 * desired_speed or actual_speed < 25 * 100:
-            log.debug('boosting throttle')
-            desired_throttle = desired_throttle * 1.25 + self.previous_action.throttle * 0.5
-            desired_throttle = min(desired_throttle, 1.25)
+        target_speed = 9 * 100
+        log.debug('actual_speed %r' % actual_speed)
+
+        # Network overfit on speed, plus it's nice to be able to change it,
+        # so we just ignore output speed of net
+        desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
+        desired_throttle = min(max(desired_throttle, 0.), 1.)
+
         log.debug('desired_steering %f', desired_steering)
         log.debug('desired_throttle %f', desired_throttle)
         smoothed_steering = 0.2 * self.previous_action.steering + 0.5 * desired_steering
@@ -326,14 +325,15 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                     session_done = True
                 elif should_benchmark and dd_env.done_benchmarking:
                     session_done = True
-            episode += 1
-            if should_rotate_camera_rigs:
-                cameras = camera_config.rigs[episode % len(camera_config.rigs)]
-                randomize_cameras(cameras)
-                dd_env.change_viewpoint(cameras,
-                                        use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
-            if episode >= max_episodes:
-                session_done = True
+            if not session_done:
+                episode += 1
+                if should_rotate_camera_rigs:
+                    cameras = camera_config.rigs[episode % len(camera_config.rigs)]
+                    randomize_cameras(cameras)
+                    dd_env.change_viewpoint(cameras,
+                                            use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
+                if episode >= max_episodes:
+                    session_done = True
     except KeyboardInterrupt:
         log.info('keyboard interrupt detected, closing')
         close()

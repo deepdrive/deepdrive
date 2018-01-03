@@ -109,6 +109,7 @@ class DeepDriveEnv(gym.Env):
         self.cameras = None
         self.use_sim_start_command = None
         self.connection_props = None
+        self.one_frame_render = False
 
         if not c.REUSE_OPEN_SIM:
             if utils.get_sim_bin_path() is None:
@@ -266,8 +267,7 @@ class DeepDriveEnv(gym.Env):
             self.prev_lap_score = self.score.total
             if self.should_benchmark:
                 self.log_benchmark_trial()
-                if 'MAX_BENCHMARK_LAPS' in os.environ and len(self.trial_scores) >= \
-                        int(os.environ['MAX_BENCHMARK_LAPS']):
+                if len(self.trial_scores) >= 50:
                     self.done_benchmarking = True
             done = True  # One lap is an episode
             self.log_up_time()
@@ -466,7 +466,7 @@ class DeepDriveEnv(gym.Env):
 
     def _render(self, mode='human', close=False):
         # TODO: Implement proper render - this is really only good for one frame - Could use our OpenGLUT viewer (on raw images) for this or PyGame on preprocessed images
-        if self.prev_observation is not None:
+        if self.one_frame_render and self.prev_observation is not None:
             for camera in self.prev_observation['cameras']:
                 utils.show_camera(camera['image'], camera['depth'])
         pass
