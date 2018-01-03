@@ -67,7 +67,7 @@ python main.py --train --dataset baseline
 
 | Score  | Weights |  Deepdrive version |
 | ---:   | :---    |   ---: |
-|[3059](https://d1y4edi1yk5yok.cloudfront.net/deepdrive/benchmarks/2018-01-02__09-49-03PM.csv)|[baseline_agent_weights.zip](https://s3-us-west-1.amazonaws.com/deepdrive/weights/baseline_agent_weights.zip)|2.0.20180101022103|
+|[3059](https://d1y4edi1yk5yok.cloudfront.net/deepdrive/benchmarks/2018-01-02__09-49-03PM.csv)|[baseline_agent_weights.zip](https://d1y4edi1yk5yok.cloudfront.net/deepdrive/weights/baseline_agent_weights.zip)|2.0.20180101022103|
 
 ## Frame rate issues on Linux
 
