@@ -10,7 +10,6 @@ import numpy as np
 import config as c
 import deepdrive_env
 from gym_deepdrive.envs.deepdrive_gym_env import Action
-from tensorflow_agent import camera_config
 from tensorflow_agent.net import Net
 from utils import save_hdf5, download
 import logs
@@ -271,7 +270,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                         'there.\n\n****')
     reward = 0
     episode_done = False
-    render = False
+    render = True
     max_episodes = 1000
     tf_config = tf.ConfigProto(
         gpu_options=tf.GPUOptions(

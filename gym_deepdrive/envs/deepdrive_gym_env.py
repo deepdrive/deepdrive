@@ -16,6 +16,11 @@ import numpy as np
 from boto.s3.connection import S3Connection
 from gym import spaces
 from gym.utils import seeding
+try:
+    import pyglet
+    from pyglet.gl import GLubyte
+except:
+    pyglet = None
 
 import config as c
 import logs
@@ -110,6 +115,10 @@ class DeepDriveEnv(gym.Env):
         self.use_sim_start_command = None
         self.connection_props = None
         self.one_frame_render = False
+        self.pyglet_render = True
+        self.pyglet_image = None
+        self.pyglet_process = None
+        self.pyglet_queue = None
 
         if not c.REUSE_OPEN_SIM:
             if utils.get_sim_bin_path() is None:
@@ -224,6 +233,14 @@ class DeepDriveEnv(gym.Env):
     def init_benchmarking(self):
         self.should_benchmark = True
         os.makedirs(c.BENCHMARK_DIR, exist_ok=True)
+
+
+    def init_pyglet(self, cameras):
+        q = Queue(maxsize=1)
+        p = Process(target=render_cameras, args=(q, cameras))
+        p.start()
+        self.pyglet_process = p
+        self.pyglet_queue = q
 
     def start_dashboard(self):
         if utils.is_debugging():
@@ -465,11 +482,14 @@ class DeepDriveEnv(gym.Env):
         self.close_sim()
 
     def _render(self, mode='human', close=False):
+
         # TODO: Implement proper render - this is really only good for one frame - Could use our OpenGLUT viewer (on raw images) for this or PyGame on preprocessed images
-        if self.one_frame_render and self.prev_observation is not None:
-            for camera in self.prev_observation['cameras']:
-                utils.show_camera(camera['image'], camera['depth'])
-        pass
+        if self.prev_observation is not None:
+            if self.one_frame_render:
+                for camera in self.prev_observation['cameras']:
+                    utils.show_camera(camera['image'], camera['depth'])
+            elif self.pyglet_render and pyglet is not None:
+                self.pyglet_queue.put(self.prev_observation['cameras'])
 
     def _seed(self, seed=None):
         self.np_random = seeding.np_random(seed)
@@ -509,6 +529,9 @@ class DeepDriveEnv(gym.Env):
             log.debug('preprocess took %rms', (end_preprocess - start_preprocess) * 1000.)
             camera_out = obj2dict(camera, exclude=['image', 'depth'])
             camera_out['image'] = image
+            if self.pyglet_render:
+                # Keep copy of image without mean subtraction etc that agent does
+                camera_out['image_raw'] = image
             camera_out['depth'] = depth
             ret.append(camera_out)
         return ret
@@ -535,7 +558,7 @@ class DeepDriveEnv(gym.Env):
         deepdrive_client.set_control_values(self.client_id, steering=action.steering, throttle=action.throttle,
                                             brake=action.brake, handbrake=action.handbrake)
 
-    def connect(self, cameras=None):
+    def connect(self, cameras=None, render=False):
         def _connect():
             self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
             if isinstance(self.connection_props, int):
@@ -584,6 +607,8 @@ class DeepDriveEnv(gym.Env):
             self._init_observation_space()
         else:
             self.raise_connect_fail()
+        if render:
+            self.init_pyglet(cameras)
         self.has_control = False
 
     def reset_capture(self, shared_mem_name, shared_mem_size):
@@ -716,6 +741,60 @@ class DeepDriveRewardCalculator(object):
         progress_reward *= balance_coeff
         progress_reward = DeepDriveRewardCalculator.clip(progress_reward)
         return progress_reward
+
+def render_cameras(render_queue, cameras):
+    if pyglet is None:
+        return
+    widths = []
+    heights = []
+    for camera in cameras:
+        widths += [camera['capture_width']]
+        heights += [camera['capture_height']]
+
+    width = max(widths) * 2  # image and depths
+    height = sum(heights)
+    window = pyglet.window.Window(width, height)
+    fps_display = pyglet.clock.ClockDisplay()
+
+    @window.event
+    def on_draw():
+        window.clear()
+        cams = render_queue.get(block=True)
+        channels = 3
+        bytes_per_channel = 1
+        for cam_idx, cam in enumerate(cams):
+            img_data = np.copy(cam['image_raw'])
+            depth_data = np.ascontiguousarray(utils.depth_heatmap(np.copy(cam['depth'])))
+            img_data.shape = -1
+            depth_data.shape = -1
+            img_texture = (GLubyte * img_data.size)(*img_data.astype('uint8'))
+            depth_texture = (GLubyte * depth_data.size)(*depth_data.astype('uint8'))
+            image = pyglet.image.ImageData(
+                cam['capture_width'],
+                cam['capture_height'],
+                'RGB',
+                img_texture,
+                pitch= -1 * cam['capture_width'] * channels * bytes_per_channel)
+            depth = pyglet.image.ImageData(
+                cam['capture_width'],
+                cam['capture_height'],
+                'RGB',
+                depth_texture,
+                pitch= -1 * cam['capture_width'] * channels * bytes_per_channel)
+            if image is not None:
+                image.blit(0, - cam_idx * cam['capture_height'])
+            if depth is not None:
+                depth.blit(cam['capture_width'], - cam_idx * cam['capture_height'])
+        fps_display.draw()
+
+    while True:
+        pyglet.clock.tick()
+
+        for window in pyglet.app.windows:
+            window.switch_to()
+            window.dispatch_events()
+            window.dispatch_event('on_draw')
+            window.flip()
 
 
 def dashboard(dash_queue):
