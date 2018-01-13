@@ -50,7 +50,7 @@ python main.py --manual
 
 **Record** training data for imitation learning / behavioral cloning
 ```
-python main.py --record
+python main.py --record --toggle-random-actions
 ```
 
 **Train** on recorded data

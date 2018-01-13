@@ -216,7 +216,7 @@ def get_sim_bin_path():
     elif c.IS_MAC:
         raise NotImplementedError('Support for OSX not yet implemented, see FAQs')
     elif c.IS_WINDOWS:
-        paths = glob.glob(os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') + '/Win*/*.exe')
+        paths = glob.glob(os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') + '/Win64/*.exe')
         if not paths:
             path = None
         else:

@@ -1,6 +1,7 @@
 import argparse
 import logging
 
+import camera_config
 import config as c
 import logs
 import deepdrive_env
@@ -17,6 +18,12 @@ def main():
                         help='Allows driving manually within the simulator')
     parser.add_argument('-t', '--train', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
+    parser.add_argument('--render', action='store_true', default=False,
+                        help='Render camera data')
+    parser.add_argument('--toggle-random-actions', action='store_true', default=False,
+                        help='Whether to perform random actions to test recovery')
+    parser.add_argument('--let-game-drive', action='store_true', default=False,
+                        help='Whether to perform random actions to test recovery')
     parser.add_argument('-n', '--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
@@ -25,9 +32,16 @@ def main():
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train')
     parser.add_argument('-v', '--verbose', help='Increase output verbosity',
                         action='store_true')
+    parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
+
     args = parser.parse_args()
     if args.verbose:
         logs.set_level(logging.DEBUG)
+
+    if args.camera_rigs:
+        camera_rigs = camera_config.rigs[args.camera_rigs]
+    else:
+        camera_rigs = camera_config.rigs['baseline_rigs']
 
     if args.train:
         from tensorflow_agent.train import train

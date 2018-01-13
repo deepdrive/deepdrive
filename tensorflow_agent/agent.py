@@ -76,7 +76,8 @@ class Agent(object):
             obz = self.preprocess_obz(obz)
 
         if self.should_toggle_random_actions:
-            action = self.toggle_random_action()
+            action = Action(has_control=False)
+            # action = self.toggle_random_action()
             self.action_count += 1
         elif self.net is not None:
             if obz is None or not obz['cameras']:
@@ -86,7 +87,7 @@ class Agent(object):
                 y = self.get_net_out(image)
             action = self.get_next_action(obz, y)
         else:
-            action = Action()
+            action = Action(has_control=False)
 
         self.previous_action_time = now
         self.previous_action = action
@@ -262,7 +263,7 @@ class Agent(object):
 
 
 def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=True,
-        run_baseline_agent=False):
+        run_baseline_agent=False, camera_rigs=None):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
         if c.REUSE_OPEN_SIM:
@@ -281,17 +282,22 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
         ),
     )
     sess = tf.Session(config=tf_config)
-    should_rotate_camera_rigs = False
-    should_rotate_sim_types = False
-    if should_rotate_camera_rigs:
-        cameras = camera_config.rigs[0]
-        randomize_cameras(cameras)
+    if camera_rigs:
+        cameras = camera_rigs[0]
     else:
         cameras = None
 
+    if camera_rigs is not None and len(camera_rigs) <= 1:
+        should_rotate_camera_rigs = True
+    else:
+        should_rotate_camera_rigs = False
+
+    if should_rotate_camera_rigs:
+        randomize_cameras(cameras)
+
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
     gym_env = deepdrive_env.start(env_id, should_benchmark=should_benchmark, cameras=cameras,
-                                  use_sim_start_command=use_sim_start_command_first_lap)
+                                  use_sim_start_command=use_sim_start_command_first_lap, render=render)
     dd_env = gym_env.env
 
     # Perform random actions to reduce sampling error in the recorded dataset
@@ -327,7 +333,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
             if not session_done:
                 episode += 1
                 if should_rotate_camera_rigs:
-                    cameras = camera_config.rigs[episode % len(camera_config.rigs)]
+                    cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
                     dd_env.change_viewpoint(cameras,
                                             use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))

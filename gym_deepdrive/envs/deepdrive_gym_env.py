@@ -553,8 +553,9 @@ class DeepDriveEnv(gym.Env):
         deepdrive_client.reset_agent(self.client_id)
 
     def send_control(self, action):
-        if self.has_control != action.has_control:
-            self.change_has_control(action.has_control)
+        # if self.has_control != action.has_control:
+        #     self.change_has_control(action.has_control)
+        self.release_agent_control()
         deepdrive_client.set_control_values(self.client_id, steering=action.steering, throttle=action.throttle,
                                             brake=action.brake, handbrake=action.handbrake)
 
