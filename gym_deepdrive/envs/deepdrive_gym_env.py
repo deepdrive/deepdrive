@@ -438,7 +438,7 @@ class DeepDriveEnv(gym.Env):
     def _reset(self):
         self.prev_observation = None
         self.reset_agent()
-        self.send_control(Action(handbrake=True))
+        self.send_control(Action())
         self.step_num = 0
         self.distance_along_route = 0
         self.start_distance_along_route = 0

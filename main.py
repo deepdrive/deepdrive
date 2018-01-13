@@ -46,11 +46,6 @@ def main():
     if args.train:
         from tensorflow_agent.train import train
         train.run(resume_dir=args.resume_train)
-    elif args.net_path or args.baseline or args.record:
-        from tensorflow_agent import agent
-
-        agent.run(should_record=args.record, net_path=args.net_path, env_id=args.env_id,
-                  run_baseline_agent=args.baseline)
     elif args.manual:
         done = False
         render = False
@@ -80,7 +75,11 @@ def main():
             if env:
                 env.close()
         log.info('Last episode complete, closing')
-
+    else:
+        from tensorflow_agent import agent
+        agent.run(should_record=args.record, net_path=args.net_path, env_id=args.env_id,
+                  run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
+                  should_toggle_random_actions=args.toggle_random_actions, let_game_drive=args.let_game_drive)
 
 log = logs.get_log(__name__)
 
