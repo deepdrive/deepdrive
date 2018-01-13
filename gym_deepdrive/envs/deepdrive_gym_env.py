@@ -569,8 +569,7 @@ class DeepDriveEnv(gym.Env):
                 return
             self.client_id = self.connection_props['client_id']
             server_version = self.connection_props['server_protocol_version']
-            # TODO: Restore git commit timestamp version for release - this does hashing for free, once
-            #   Then, for dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
+            # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
             #   connecting, compute same hash and compare. (Need to figure out what to do on dev packaged version as
             #   files may change - maybe ignore as it's uncommon).
             #   Currently, we timestamp the build, and set that as the version in the extension. This is fine unless
