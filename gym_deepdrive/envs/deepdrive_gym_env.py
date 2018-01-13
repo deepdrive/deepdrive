@@ -257,8 +257,11 @@ class DeepDriveEnv(gym.Env):
         self.sess = session
 
     def _step(self, action):
-        self.send_control(Action.from_gym(action))
+        dd_action = Action.from_gym(action)
+        self.send_control(dd_action)
         obz = self.get_observation()
+        if obz and 'is_game_driving' in obz:
+            self.has_control = not obz['is_game_driving']
         now = time.time()
         done = False
         reward = self.get_reward(obz, now)
@@ -376,14 +379,15 @@ class DeepDriveEnv(gym.Env):
             return False
         if obz['speed'] < 100:  # cm/s
             self.steps_crawling += 1
-            if obz['throttle'] > 0:
+            if obz['throttle'] > 0 and obz['brake'] == 0 and obz['handbrake'] == 0:
                 self.steps_crawling_with_throttle_on += 1
-            if time.time() - self.last_forward_progress_time > 1 and \
+            if time.time() - self.last_forward_progress_time > 3 and \
                     (self.steps_crawling_with_throttle_on / float(self.steps_crawling)) > 0.8:
                 self.reset_forward_progress()
                 if self.should_benchmark:
                     self.score.got_stuck = True
                     self.log_benchmark_trial()
+                log.warn('No progress made while throttle on - assuming stuck and ending episode.')
                 return True
         else:
             self.reset_forward_progress()
@@ -433,21 +437,7 @@ class DeepDriveEnv(gym.Env):
 
     def _reset(self):
         self.prev_observation = None
-        # done = False
-        # i = 0
-
         self.reset_agent()
-        # while not done:
-        #
-        #     obz = self.get_observation()
-        #     if obz and obz['distance_along_route'] < 20 * 100:
-        #         self.start_distance_along_route = obz['distance_along_route']
-        #         done = True
-        #     time.sleep(1)
-        #     i += 1
-        #     if i > 5:
-        #         log.error('Unable to reset, try restarting the sim.')
-        #         raise Exception('Unable to reset, try restarting the sim.')
         self.send_control(Action(handbrake=True))
         self.step_num = 0
         self.distance_along_route = 0
@@ -553,9 +543,8 @@ class DeepDriveEnv(gym.Env):
         deepdrive_client.reset_agent(self.client_id)
 
     def send_control(self, action):
-        # if self.has_control != action.has_control:
-        #     self.change_has_control(action.has_control)
-        self.release_agent_control()
+        if self.has_control != action.has_control:
+            self.change_has_control(action.has_control)
         deepdrive_client.set_control_values(self.client_id, steering=action.steering, throttle=action.throttle,
                                             brake=action.brake, handbrake=action.handbrake)
 
