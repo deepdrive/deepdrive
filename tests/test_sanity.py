@@ -7,7 +7,7 @@ import os
 os.environ['DEEPDRIVE_DIR'] = os.path.join(tempfile.gettempdir(), 'testdeepdrive')
 
 import utils
-from gym_deepdrive.envs.deepdrive_env import DeepDriveRewardCalculator
+from gym_deepdrive.envs.deepdrive_gym_env import DeepDriveRewardCalculator
 
 try:
     import tensorflow as tf
