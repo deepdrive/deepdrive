@@ -18,16 +18,11 @@ rigs = {
         dict(name='forward_cam', field_of_view=60, capture_width=512, capture_height=289,
              relative_position=[150, 1.0, 200],
              relative_rotation=[0.0, 0.0, 0.0]),
+        dict(name='left_cam', field_of_view=60, capture_width=512, capture_height=289,
+             relative_position=[150, -150., 200],
+             relative_rotation=[0.0, 0.0, 0.0]),
+        dict(name='right_cam', field_of_view=60, capture_width=512, capture_height=289,
+             relative_position=[150, 150., 200],
+             relative_rotation=[0.0, 0.0, 0.0])
     ]]
-    # 'three_cam_rig': [[
-    #     dict(name='forward_cam', field_of_view=60, capture_width=512, capture_height=289,
-    #          relative_position=[150, 1.0, 200],
-    #          relative_rotation=[0.0, 0.0, 0.0]),
-    #     dict(name='left_cam', field_of_view=60, capture_width=512, capture_height=289,
-    #          relative_position=[150, -150., 200],
-    #          relative_rotation=[0.0, 0.0, 0.0]),
-    #     dict(name='right_cam', field_of_view=60, capture_width=512, capture_height=289,
-    #          relative_position=[150, 150., 200],
-    #          relative_rotation=[0.0, 0.0, 0.0])
-    # ]]
 }

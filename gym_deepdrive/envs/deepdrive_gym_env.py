@@ -499,7 +499,7 @@ class DeepDriveEnv(gym.Env):
 
     def preprocess_cameras(self, cameras):
         ret = []
-        for camera in cameras[:1]:  # Ignore all but the first camera  TODO: Don't hardcode this!
+        for camera in cameras:
             image = camera.image_data.reshape(camera.capture_height, camera.capture_width, 3)
             depth = camera.depth_data.reshape(camera.capture_height, camera.capture_width)
             start_preprocess = time.time()
@@ -771,9 +771,9 @@ def render_cameras(render_queue, cameras):
                 depth_texture,
                 pitch= -1 * cam['capture_width'] * channels * bytes_per_channel)
             if image is not None:
-                image.blit(0, - cam_idx * cam['capture_height'])
+                image.blit(0, cam_idx * cam['capture_height'])
             if depth is not None:
-                depth.blit(cam['capture_width'], - cam_idx * cam['capture_height'])
+                depth.blit(cam['capture_width'], cam_idx * cam['capture_height'])
         fps_display.draw()
 
     while True:

@@ -19,7 +19,7 @@ def main():
     parser.add_argument('-t', '--train', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
     parser.add_argument('--render', action='store_true', default=False,
-                        help='Render camera data')
+                        help='SLOW: render of camera data in Python - Use Unreal for real time camera rendering')
     parser.add_argument('--toggle-random-actions', action='store_true', default=False,
                         help='Whether to perform random actions to test recovery')
     parser.add_argument('--let-game-drive', action='store_true', default=False,
@@ -77,6 +77,8 @@ def main():
         log.info('Last episode complete, closing')
     else:
         from tensorflow_agent import agent
+        if args.record and not args.toggle_random_actions:
+            args.let_game_drive = True
         agent.run(should_record=args.record, net_path=args.net_path, env_id=args.env_id,
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
                   should_toggle_random_actions=args.toggle_random_actions, let_game_drive=args.let_game_drive)
