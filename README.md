@@ -38,7 +38,14 @@ python install.py
 
 ## Usage
 
-> Tip: Use `pipenv shell` once or `pipenv run` before each to run these in your virtualenv
+Activate the [pipenv](https://github.com/pypa/pipenv) virtualenv we've created for this project
+
+```
+cd deepdrive
+pipenv shell
+```
+
+Then run `main.py` to
 
 Run the **baseline** agent
 ```
@@ -64,6 +71,8 @@ python main.py --train
 ```
 python main.py --train --dataset baseline
 ```
+
+or for more options, see [main.py](main.py)
 
 ### Key binds 
 
