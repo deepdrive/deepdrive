@@ -20,7 +20,7 @@ The easiest way to experiment with self-driving AI
 git clone https://github.com/deepdrive/deepdrive
 ```
 
-Optional - Activate the Python / virtualenv where your Tensorflow is installed, then
+> Optional - Activate the Python / virtualenv where your Tensorflow is installed, then
 
 #### Linux
 ```
@@ -30,13 +30,15 @@ python install.py
 #### Windows
 Make sure the Python you want to use is in your **system** path, then
 
+> Tip: We highly recommend using [Conemu](https://conemu.github.io/) for your Windows terminal
+
 ```
 python install.py
 ```
 
 ## Usage
 
-###### Use `pipenv shell` once or `pipenv run` before each to run these in your virtualenv
+> Tip: Use `pipenv shell` once or `pipenv run` before each to run these in your virtualenv
 
 Run the **baseline** agent
 ```
@@ -62,6 +64,27 @@ python main.py --train
 ```
 python main.py --train --dataset baseline
 ```
+
+### Key binds 
+
+* <kbd>Esc</kbd> - Pause
+* <kbd>P</kbd> - useful in Unreal Editor
+* <kbd>J</kbd> - Toggle shared mem stats
+* <kbd>;</kbd> - Toggle FPS
+* <kbd>1</kbd> - Chase cam
+* <kbd>2</kbd> - Orbit (side) cam
+* <kbd>3</kbd> - Hood cam
+* <kbd>4</kbd> - Free cam (use WASD to fly)
+* WASD or Up, Down, Left Right - steer / throttle
+* <kbd>Space</kbd> - Handbrake
+* <kbd>Shift</kbd> - Nitro
+* <kbd>H</kbd> - Horn
+* <kbd>L</kbd> - Light
+* <kbd>R</kbd> - Reset
+* <kbd>E</kbd> - Gear Up
+* <kbd>Q</kbd> - Gear down
+* <kbd>Z</kbd> move mouse outside window and click OR shift+F1 in editor mode OR Alt+Tab - shows mouse cursor
+
 
 ## Benchmark top scores (50 lap average)
 
@@ -113,33 +136,18 @@ to py.test.
 
 ### Random notes (TODO: Cleanup)
 
-Windows
-Controls
-
-TODO:
-Integrate packaged project into setup.py of deepdrive
-
 TIPS:
 If you lose your mouse pointer while in the game, just Alt-Tab!
-deepdrive-agents
-Linux
-`git clone https://github.com/deepdrive/deepdrive-agents`
-Install Tensorflow
-Tips:
+
 Make sure the CUDA_HOME environment variable is set (we used Cuda 8 for the baseline model), specifically /usr/local/cuda
 
 Also make sure LD_LIBRARY_PATH is set - i.e. /home/<YOU>/cuda/lib64:
 
 PATH includes /usr/local/cuda-YOUR_CUDA_VERSION/bin
-Install dependencies with pipenv
-Get pipenv if you don’t have it
-pip install --user pipenv
-pipenv install
-deepdrive/Plugins/DeepDrivePlugin/Source/DeepDrivePython$ python setup.py install
 
 
+To stop the simulation from the Unreal Editor in Linux, hit Esc.
 
-To stop the simulation from the Unreal Editor in Linux, hit Esc. 
 Windows
 Tensorflow install tips
 
@@ -175,7 +183,6 @@ You will need MacOs to download Xcode 8 and build Unreal from sources but we don
 External GPU’s will allow Macs to run demanding GPU loads, but we haven’t tried this setup yet. An alternative way to run eGPUs on Apple hardware would be to use Bootcamp to run Windows which appears to have the best eGPU support as of mid-2017. 
 
 
-Running the baseline agent
 
 All
 
@@ -183,46 +190,6 @@ Install OpenCV
 conda install -c https://conda.anaconda.org/menpo opencv3
 conda install scipy
 conda install pillow
-After opening
-Turn off background nerfing
-Edit->Editor Preferences->Miscellaneous and disabling the Use Less CPU When in Background option.
+
 PyCharm Development of Environment
-If you open an Unreal project in Pycharm, add Binaries, Build, Content, Intermediate, and Saved to your project’s “Excluded” directories in Project Structure or simply by right clicking and choosing “Mark Directory as” => “Excluded”. Keeping these large binary directories in the project will cause PyCharm to freeze while it tries to index them.
-Development in Unreal
-Windows is the best environment for this. We are on Unreal 4.14 due to our use of the substance plugin accessed through unreal’s github (https://www.unrealengine.com/en-US/ue4-on-github)
-
-https://github.com/Allegorithmic/UnrealEngine
-
-In Windows, open the project, generate / refresh Visual Studio files,, then close Unreal and run the project through visual studio. This will allow you to debug in visual studio. When you change code though, compile it in Unreal with the “Compile” button (to the left of Play). It will then say “Compiling C++ code” on the bottom right.
-
-If you change the plugin, recompile through Unreal -> Windows -> Developer -> Modules and fine the DeepDrivePlugin
-
-
-FAQ
-Q: Getting an error in built-in function step. 
-A: Try rebuilding the python module - 
-
-```
-cd DeepDrivePythonpython
-setup.py install
-```
-
-Key binds (Set these in Unreal->Project Settings->Input->Action Mappings or in blueprints->Find (uncheck Find in Current Blueprint Only)
-
-Escape - Pause
-P - Pause (useful in Unreal Editor)
-J - Toggle shared mem stats
-; - Toggle FPS
-1 - Chase cam
-2 - Orbit (side) cam
-3 - Interior cam
-WASD or Up, Down, Left Right - steer / throttle
-Space - Handbrake
-Shift - Nitro
-H - Horn
-L - Light
-R - Reset
-E - Gear Up
-Q - Gear down
-Z, move mouse outside window and click OR shift+F1 in editor mode OR Alt+Tab - shows mouse cursor
-
+If you open an Unreal project in Pycharm, add Binaries, Build, Content, Intermediate, and Saved to your project’s “Excluded” directories in Project Structure or simply by right clicking and choosing “Mark Directory as” => “Excluded”. Keeping these large binary directories in the project will cause PyCharm to index them.
