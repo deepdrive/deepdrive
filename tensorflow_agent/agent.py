@@ -2,6 +2,7 @@ import os
 import time
 from datetime import datetime
 import math
+import glob
 
 import gym
 import tensorflow as tf
@@ -374,9 +375,9 @@ def random_use_sim_start_command(should_rotate_sim_types):
 def ensure_baseline_weights(net_path):
     if net_path is not None:
         raise ValueError('Net path should not be set when running the baseline agent as it has its own weights.')
-    if not os.path.exists(c.BASELINE_WEIGHTS_DIR):
+    net_path = os.path.join(c.BASELINE_WEIGHTS_DIR, c.BASELINE_WEIGHTS_VERSION)
+    if not glob.glob(net_path + '*'):
         print('\n--------- Baseline weights not found, downloading ----------')
         download(c.BASELINE_WEIGHTS_URL, c.WEIGHTS_DIR,
-                 warn_existing=False, overwrite=False)
-    net_path = os.path.join(c.BASELINE_WEIGHTS_DIR, c.BASELINE_WEIGHTS_VERSION)
+                 warn_existing=False, overwrite=True)
     return net_path

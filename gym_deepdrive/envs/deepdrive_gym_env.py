@@ -115,7 +115,7 @@ class DeepDriveEnv(gym.Env):
         self.use_sim_start_command = None
         self.connection_props = None
         self.one_frame_render = False
-        self.pyglet_render = True
+        self.pyglet_render = False
         self.pyglet_image = None
         self.pyglet_process = None
         self.pyglet_queue = None
@@ -145,6 +145,7 @@ class DeepDriveEnv(gym.Env):
         # laps
         self.lap_number = None
         self.prev_lap_score = 0
+        self.total_laps = 0
 
         # benchmarking - carries over across resets
         self.should_benchmark = False
@@ -282,8 +283,9 @@ class DeepDriveEnv(gym.Env):
             return done
         lap_number = obz.get('lap_number')
         if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
+            self.total_laps += 1
             lap_score = self.score.total - self.prev_lap_score
-            log.info('lap %d complete with score of %f, speed reward', lap_number, lap_score)
+            log.info('lap %d complete with score of %f, speed reward', self.total_laps, lap_score)
             self.prev_lap_score = self.score.total
             if self.should_benchmark:
                 self.log_benchmark_trial()
@@ -443,8 +445,6 @@ class DeepDriveEnv(gym.Env):
         self.distance_along_route = 0
         self.start_distance_along_route = 0
         self.prev_step_time = None
-        self.lap_number = None
-        self.prev_lap_score = 0
         self.score = Score()
         self.start_time = time.time()
 
@@ -478,7 +478,7 @@ class DeepDriveEnv(gym.Env):
             if self.one_frame_render:
                 for camera in self.prev_observation['cameras']:
                     utils.show_camera(camera['image'], camera['depth'])
-            elif self.pyglet_render and pyglet is not None:
+            elif self.pyglet_render and pyglet is not None and self.pygle_queue is not None:
                 self.pyglet_queue.put(self.prev_observation['cameras'])
 
     def _seed(self, seed=None):

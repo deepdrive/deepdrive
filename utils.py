@@ -212,7 +212,7 @@ def get_sim_bin_path():
     if c.REUSE_OPEN_SIM:
         return None, None
     elif c.IS_LINUX:
-        path = c.SIM_PATH + '/DeepDrive/Binaries/Linux/DeepDrive'
+        path = c.SIM_PATH + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive-Linux-Shipping'
     elif c.IS_MAC:
         raise NotImplementedError('Support for OSX not yet implemented, see FAQs')
     elif c.IS_WINDOWS:
