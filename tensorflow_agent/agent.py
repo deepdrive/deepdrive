@@ -20,9 +20,9 @@ log = logs.get_log(__name__)
 
 
 class Agent(object):
-    def __init__(self, action_space, tf_session, env, fps=8, should_toggle_random_actions=True, should_record=False,
-                 net_path=None, use_frozen_net=False, random_action_count=0, non_random_action_count=5,
-                 let_game_drive=False):
+    def __init__(self, action_space, tf_session, env, fps=8, should_record_recovery_from_random_actions=True,
+                 should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
+                 non_random_action_count=5, let_game_drive=False):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space
         self.previous_action_time = None
@@ -33,7 +33,7 @@ class Agent(object):
         self.env = env
 
         # State for toggling random actions
-        self.should_toggle_random_actions = should_toggle_random_actions
+        self.should_record_recovery_from_random_actions = should_record_recovery_from_random_actions
         self.random_action_count = random_action_count
         self.non_random_action_count = non_random_action_count
         self.semirandom_sequence_step = 0
@@ -47,7 +47,7 @@ class Agent(object):
         self.sess_dir = os.path.join(c.RECORDINGS_DIR, datetime.now().strftime(c.DIR_DATE_FORMAT))
         self.obz_recording = []
 
-        if should_toggle_random_actions:
+        if should_record_recovery_from_random_actions:
             log.info('Mixing in random actions to increase data diversity (these are not recorded).')
         if should_record:
             log.info('Recording driving data to %s', self.sess_dir)
@@ -78,7 +78,7 @@ class Agent(object):
             log.debug('throttle %r', obz['throttle'])
             obz = self.preprocess_obz(obz)
 
-        if self.should_toggle_random_actions:
+        if self.should_record_recovery_from_random_actions:
             action = self.toggle_random_action()
             self.action_count += 1
         elif self.net is not None:
@@ -265,8 +265,8 @@ class Agent(object):
 
 
 def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=True,
-        run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False, should_toggle_random_actions=False,
-        render=False, let_game_drive=False):
+        run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
+        should_record_recovery_from_random_actions=False, render=False, let_game_drive=False):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
         if c.REUSE_OPEN_SIM:
@@ -304,8 +304,9 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
 
     # Perform random actions to reduce sampling error in the recorded dataset
     agent = Agent(gym_env.action_space, sess, env=gym_env.env,
-                  should_toggle_random_actions=should_toggle_random_actions, should_record=should_record,
-                  net_path=net_path, random_action_count=4, non_random_action_count=5, let_game_drive=let_game_drive)
+                  should_record_recovery_from_random_actions=should_record_recovery_from_random_actions,
+                  should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,
+                  let_game_drive=let_game_drive)
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
 
@@ -327,7 +328,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                 obz, reward, episode_done, _ = gym_env.step(action)
                 if render:
                     gym_env.render()
-                if should_toggle_random_actions:
+                if should_record_recovery_from_random_actions:
                     agent.set_random_action_repeat_count()
                 if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:
                     session_done = True

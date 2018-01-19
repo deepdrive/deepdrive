@@ -59,7 +59,7 @@ python main.py --manual
 
 **Record** training data for imitation learning / behavioral cloning
 ```
-python main.py --record --toggle-random-actions
+python main.py --record --record-recovery-from-random-actions
 ```
 
 **Train** on recorded data
@@ -67,7 +67,7 @@ python main.py --record --toggle-random-actions
 python main.py --train
 ```
 
-**Train** on the same dataset we collected [TODO link with README  (includes play-in-editor and standalone data)]
+**Train** on the same dataset we collected [TODO link with README  (includes windows play-in-editor and standalone data + linux standalone)]
 ```
 python main.py --train --dataset baseline
 ```
