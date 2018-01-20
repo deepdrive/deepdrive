@@ -58,7 +58,7 @@ class BackgroundGenerator(threading.Thread):
 
 
 def get_file_names(hdf5_path, train=True):
-    files = glob.glob(hdf5_path + '/*/*.hdf5')
+    files = glob.glob(hdf5_path + '/**/*.hdf5', recursive=True)
     if train:
         files = files[1:]
     else:
@@ -69,17 +69,18 @@ def get_file_names(hdf5_path, train=True):
 
 
 def load_file(h5_filename):
-    try:
-        frames = read_hdf5(h5_filename)
-    except Exception as e:
-        log.error('Could not load %s - skipping', h5_filename)
-        frames = []
-    RNG.shuffle(frames)
+    frames = []
     out_images = []
     out_targets = []
-    for frame in frames:
-        out_images.append(frame['cameras'][0]['image'])  # Just use one camera for now
-        out_targets.append([*normalize_frame(frame)])
+    try:
+        frames = read_hdf5(h5_filename)
+        RNG.shuffle(frames)
+        for frame in frames:
+            out_images.append(frame['cameras'][0]['image'])  # Just use one camera for now
+            out_targets.append([*normalize_frame(frame)])
+    except Exception as e:
+        log.error('Could not load %s - skipping', h5_filename)
+
     return out_images, out_targets
 
 

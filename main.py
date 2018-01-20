@@ -18,6 +18,8 @@ def main():
                         help='Allows driving manually within the simulator')
     parser.add_argument('-t', '--train', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
+    parser.add_argument('--recording-dir', nargs='?', default=c.RECORDING_DIR, help='Where to store and read recorded '
+                                                                                    'environment data from')
     parser.add_argument('--render', action='store_true', default=False,
                         help='SLOW: render of camera data in Python - Use Unreal for real time camera rendering')
     parser.add_argument('--record-recovery-from-random-actions', action='store_true', default=False,
@@ -27,7 +29,7 @@ def main():
     parser.add_argument('-n', '--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
-    parser.add_argument('-c', '--resume-train', nargs='?', default=None,
+    parser.add_argument('--resume-train', nargs='?', default=None,
                         help='Path to the tensorflow training session you want to resume, '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train')
     parser.add_argument('-v', '--verbose', help='Increase output verbosity',
@@ -45,7 +47,7 @@ def main():
 
     if args.train:
         from tensorflow_agent.train import train
-        train.run(resume_dir=args.resume_train)
+        train.run(resume_dir=args.resume_train, recording_dir=args.recording_dir)
     elif args.manual:
         done = False
         render = False
@@ -83,6 +85,7 @@ def main():
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
                   should_record_recovery_from_random_actions=args.record_recovery_from_random_actions,
                   let_game_drive=args.let_game_drive)
+
 
 log = logs.get_log(__name__)
 

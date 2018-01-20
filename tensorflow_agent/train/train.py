@@ -40,10 +40,10 @@ def visualize_gradients(grads_and_vars):
     tf.summary.scalar("model/var_global_norm", tf.global_norm(var_list))
 
 
-def run(resume_dir=None):
+def run(resume_dir=None, recording_dir=c.RECORDING_DIR):
     os.makedirs(c.TENSORFLOW_OUT_DIR, exist_ok=True)
     if resume_dir is not None:
-        date_str = resume_dir[:resume_dir.rindex('_')]
+        date_str = resume_dir[resume_dir.rindex('/') + 1:resume_dir.rindex('_')]
     else:
         date_str = c.DATE_STR
     sess_train_dir = '%s/%s_train' % (c.TENSORFLOW_OUT_DIR, date_str)
@@ -51,7 +51,7 @@ def run(resume_dir=None):
     os.makedirs(sess_train_dir, exist_ok=True)
     os.makedirs(sess_eval_dir, exist_ok=True)
     batch_size = 32  # Change this to fit in your GPU's memory
-    x = tf.placeholder(tf.float32, (None,) + c.IMAGE_SHAPE)
+    x = tf.placeholder(tf.float32, (None,) + c.BASELINE_IMAGE_SHAPE)
     y = tf.placeholder(tf.float32, (None, c.NUM_TARGETS))
     log.info('creating model')
     with tf.variable_scope("model") as vs:
@@ -116,8 +116,8 @@ def run(resume_dir=None):
 
     eval_sw = tf.summary.FileWriter(sess_eval_dir)
 
-    train_dataset = get_dataset(c.RECORDINGS_DIR, log)
-    eval_dataset = get_dataset(c.RECORDINGS_DIR, log, train=False)
+    train_dataset = get_dataset(recording_dir, log)
+    eval_dataset = get_dataset(recording_dir, log, train=False)
     config = tf.ConfigProto(allow_soft_placement=True)
     with sv.managed_session(config=config) as sess, sess.as_default():
         train_data_provider = train_dataset.iterate_forever(batch_size)
@@ -135,9 +135,10 @@ def run(resume_dir=None):
                 valid = True
                 for img_idx, img in enumerate(images):
                     img = images[img_idx]
-                    if img.shape != c.IMAGE_SHAPE:
+                    if img.shape != c.BASELINE_IMAGE_SHAPE:
                         log.info('invalid image shape %s - resizing', str(img.shape))
-                        images[img_idx] = scipy.misc.imresize(img, (c.IMAGE_SHAPE[0], c.IMAGE_SHAPE[1]))
+                        images[img_idx] = scipy.misc.imresize(img, (c.BASELINE_IMAGE_SHAPE[0],
+                                                                    c.BASELINE_IMAGE_SHAPE[1]))
                 for tgt in targets:
                     if len(tgt) != 6:
                         log.error('invalid target shape %r skipping' % len(tgt))

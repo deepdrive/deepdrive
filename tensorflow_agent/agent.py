@@ -22,7 +22,7 @@ log = logs.get_log(__name__)
 class Agent(object):
     def __init__(self, action_space, tf_session, env, fps=8, should_record_recovery_from_random_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
-                 non_random_action_count=5, let_game_drive=False):
+                 non_random_action_count=5, let_game_drive=False, recording_dir=c.RECORDING_DIR):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space
         self.previous_action_time = None
@@ -41,10 +41,11 @@ class Agent(object):
         self.recorded_obz_count = 0
         self.performing_random_actions = False
         self.let_game_drive = let_game_drive
+        self.recording_dir = recording_dir
 
         # Recording state
         self.should_record = should_record
-        self.sess_dir = os.path.join(c.RECORDINGS_DIR, datetime.now().strftime(c.DIR_DATE_FORMAT))
+        self.sess_dir = os.path.join(recording_dir, datetime.now().strftime(c.DIR_DATE_FORMAT))
         self.obz_recording = []
 
         if should_record_recovery_from_random_actions:
@@ -100,6 +101,8 @@ class Agent(object):
             # utils.save_camera(obz['cameras'][0]['image'], obz['cameras'][0]['depth'],
             #                   os.path.join(self.sess_dir, str(self.total_obz).zfill(10)))
             self.recorded_obz_count += 1
+        else:
+            log.debug('Not recording frame')
 
         self.maybe_save()
 
@@ -188,7 +191,7 @@ class Agent(object):
         
         where model/add_2 is the auto-generated name for self.net.p 
         '''
-        self.net_input_placeholder = tf.placeholder(tf.float32, (None,) + c.IMAGE_SHAPE)
+        self.net_input_placeholder = tf.placeholder(tf.float32, (None,) + c.BASELINE_IMAGE_SHAPE)
         if is_frozen:
             # TODO: Get frozen nets working
 

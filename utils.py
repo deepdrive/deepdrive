@@ -134,10 +134,10 @@ def show_camera(image, depth):
     input('Enter any key to continue')
 
 
-def read_hdf5_manual():
-    save_png_dir = os.path.join(c.RECORDINGS_DIR, 'test_view')
+def read_hdf5_manual(recording_dir):
+    save_png_dir = os.path.join(recording_dir, 'test_view')
     os.makedirs(save_png_dir)
-    read_hdf5(os.path.join(c.RECORDINGS_DIR, '2017-11-22_0105_26AM', '0000000001.hdf5'), save_png_dir=save_png_dir)
+    read_hdf5(os.path.join(recording_dir, '2017-11-22_0105_26AM', '0000000001.hdf5'), save_png_dir=save_png_dir)
 
 
 def is_debugging():
@@ -159,6 +159,8 @@ def download(url, directory, warn_existing=True, overwrite=False):
     request = requests.get(url, stream=True)
     location = os.path.join(tempfile.gettempdir(), url.split('/')[-1])
     with open(location, 'wb') as f:
+        if request.status_code == 404:
+            raise RuntimeError('Download URL not accessible %s' % url)
         total_length = int(request.headers.get('content-length'))
         for chunk in progress.bar(request.iter_content(chunk_size=1024), expected_size=(total_length / 1024) + 1):
             if chunk:

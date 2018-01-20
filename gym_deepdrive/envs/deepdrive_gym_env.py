@@ -618,6 +618,7 @@ class DeepDriveEnv(gym.Env):
 
     @staticmethod
     def raise_connect_fail():
+        log.error('Environment connection failed')
         if c.SIM_START_COMMAND:
             raise Exception('Could not connect to environment. You may need to close the Unreal Editor and/or turn off '
                             'saving CPU in background in the Editor preferences (search for CPU).')

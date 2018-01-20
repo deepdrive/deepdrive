@@ -8,7 +8,7 @@ import numpy as np
 
 # Net
 NUM_TARGETS = 6
-IMAGE_SHAPE = (227, 227, 3)
+BASELINE_IMAGE_SHAPE = (227, 227, 3)
 
 # Normalization
 SPIN_THRESHOLD = 1.0
@@ -65,7 +65,7 @@ os.makedirs(DEEPDRIVE_DIR, exist_ok=True)
 # Data directories
 DIR_DATE_FORMAT = '%Y-%m-%d__%I-%M-%S%p'
 DATE_STR = datetime.now().strftime(DIR_DATE_FORMAT)
-RECORDINGS_DIR = os.path.join(DEEPDRIVE_DIR, 'recordings')
+RECORDING_DIR = os.path.join(DEEPDRIVE_DIR, 'recordings')
 GYM_DIR = os.path.join(DEEPDRIVE_DIR, 'gym')
 LOG_DIR = os.path.join(DEEPDRIVE_DIR, 'log')
 BENCHMARK_DIR = os.path.join(DEEPDRIVE_DIR, 'benchmark')
