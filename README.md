@@ -143,6 +143,10 @@ To run tests in PyCharm, go to File | Settings | Tools | Python Integrated Tools
 to py.test.
 
 
+## Thanks
+
+Special thanks to [Rafał Józefowicz](https://scholar.google.com/citations?user=C7zfAI4AAAAJ) for contributing the original [training](#tensorflow_agent/train) code on which ours is based 
+
 ### Random notes (TODO: Cleanup)
 
 TIPS:
