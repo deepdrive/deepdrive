@@ -404,7 +404,7 @@ class DeepDriveEnv(gym.Env):
         high = max(totals)
         low = min(totals)
         std = np.std(totals)
-        log.info('benchmark lap #%d score: %f - high score: %f', len(self.trial_scores), self.score.total, median)
+        log.info('benchmark lap #%d score: %f - average: %f', len(self.trial_scores), self.score.total, average)
         filename = os.path.join(c.BENCHMARK_DIR, c.DATE_STR + '.csv')
         with open(filename, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
