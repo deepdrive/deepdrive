@@ -1,5 +1,8 @@
 import argparse
+import glob
 import logging
+
+import os
 
 import camera_config
 import config as c
@@ -18,6 +21,8 @@ def main():
                         help='Allows driving manually within the simulator')
     parser.add_argument('-t', '--train', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
+    parser.add_argument('--use-last-model', action='store_true', default=False,
+                        help='Run the most recently trained model')
     parser.add_argument('--recording-dir', nargs='?', default=c.RECORDING_DIR, help='Where to store and read recorded '
                                                                                     'environment data from')
     parser.add_argument('--render', action='store_true', default=False,
@@ -44,6 +49,12 @@ def main():
         camera_rigs = camera_config.rigs[args.camera_rigs]
     else:
         camera_rigs = camera_config.rigs['baseline_rigs']
+
+    if args.use_last_model:
+        if args.train:
+            args.resume_train = get_latest_model()
+        else:
+            args.net_path = get_latest_model()
 
     if args.train:
         from tensorflow_agent.train import train
@@ -85,6 +96,18 @@ def main():
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
                   should_record_recovery_from_random_actions=args.record_recovery_from_random_actions,
                   let_game_drive=args.let_game_drive)
+
+
+def get_latest_model():
+    train_dirs = glob.glob('%s/*_train' % c.TENSORFLOW_OUT_DIR)
+    latest_subdir = max(train_dirs, key=os.path.getmtime)
+    if not latest_subdir:
+        raise RuntimeError('Can not get latest model, no models found in % s' % c.TENSORFLOW_OUT_DIR)
+    latest_model = max(glob.glob('%s/model.ckpt-*.meta' % latest_subdir), key=os.path.getmtime)
+    if not latest_model:
+        raise RuntimeError('Can not get latest model, no models found in %s' % latest_subdir)
+    latest_prefix = latest_model[:-len('.meta')]
+    return latest_prefix
 
 
 log = logs.get_log(__name__)
