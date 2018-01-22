@@ -18,6 +18,7 @@ The easiest way to experiment with self-driving AI
 
 ```
 git clone https://github.com/deepdrive/deepdrive
+cd deepdrive
 ```
 
 > Optional - Activate the Python / virtualenv where your Tensorflow is installed, then
@@ -35,6 +36,8 @@ Make sure the Python you want to use is in your **system** path, then
 ```
 python install.py
 ```
+
+> If you run into issues, you can rerun install.py as it's idempotent
 
 ## Usage
 
