@@ -9,6 +9,8 @@ from collections import deque, OrderedDict
 from multiprocessing import Process, Queue
 from subprocess import Popen
 import pkg_resources
+from distutils.version import LooseVersion as semvar
+
 
 import arrow
 import gym
@@ -557,15 +559,16 @@ class DeepDriveEnv(gym.Env):
                 # Try again
                 return
             self.client_id = self.connection_props['client_id']
-            server_version = self.connection_props['server_protocol_version']
+            server_version = semvar(self.connection_props['server_protocol_version']).version
             # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
             #   connecting, compute same hash and compare. (Need to figure out what to do on dev packaged version as
             #   files may change - maybe ignore as it's uncommon).
             #   Currently, we timestamp the build, and set that as the version in the extension. This is fine unless
             #   you change shared code and build the extension only, then the versions won't change, and you could
             #   see incompatibilities.
-            if self.client_version != self.connection_props['server_protocol_version']:
-                raise RuntimeError('Server and client version do not match - server is %s and client is %s' %
+
+            if semvar(self.client_version).version[:2] != server_version[:2]:
+                raise RuntimeError('Server and client major/minor version do not match - server is %s and client is %s' %
                                    (server_version, self.client_version))
         _connect()
         cxn_attempts = 0
