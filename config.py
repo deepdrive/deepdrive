@@ -74,7 +74,7 @@ WEIGHTS_DIR = os.path.join(DEEPDRIVE_DIR, 'weights')
 
 # Weights
 BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'baseline_agent_weights')
-BASELINE_WEIGHTS_VERSION = 'model.ckpt-118113'
+BASELINE_WEIGHTS_VERSION = 'model.ckpt-143361'
 BVLC_CKPT_NAME = 'bvlc_alexnet.ckpt'
 BVLC_CKPT_PATH = os.path.join(WEIGHTS_DIR, BVLC_CKPT_NAME)
 

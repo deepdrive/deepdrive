@@ -222,7 +222,7 @@ class DeepDriveEnv(gym.Env):
         else:
             raise RuntimeError('Unexpected OS')
         sim_prefix = 'sim/deepdrive-sim-'
-        conn = S3Connection()
+        conn = S3Connection(anon=True)
         bucket = conn.get_bucket('deepdrive')
         deepdrive_version = pkg_resources.get_distribution('deepdrive').version
         major_minor = deepdrive_version[:deepdrive_version.rindex('.')]
