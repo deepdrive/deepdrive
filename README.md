@@ -44,7 +44,6 @@ python install.py
 Activate the [pipenv](https://github.com/pypa/pipenv) virtualenv we've created for this project
 
 ```
-cd deepdrive
 pipenv shell
 ```
 
