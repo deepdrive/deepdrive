@@ -382,6 +382,6 @@ def ensure_baseline_weights(net_path):
     net_path = os.path.join(c.BASELINE_WEIGHTS_DIR, c.BASELINE_WEIGHTS_VERSION)
     if not glob.glob(net_path + '*'):
         print('\n--------- Baseline weights not found, downloading ----------')
-        download(c.BASELINE_WEIGHTS_URL, c.WEIGHTS_DIR,
+        download(c.BASELINE_WEIGHTS_URL + '?cache_bust=' + c.BASELINE_WEIGHTS_VERSION, c.WEIGHTS_DIR,
                  warn_existing=False, overwrite=True)
     return net_path
