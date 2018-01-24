@@ -157,7 +157,9 @@ def download(url, directory, warn_existing=True, overwrite=False):
     log.info('Downloading %s to %s...', url, directory)
 
     request = requests.get(url, stream=True)
-    location = os.path.join(tempfile.gettempdir(), url.split('/')[-1])
+    filename = url.split('/')[-1]
+    filename = filename[:filename.index('?')]
+    location = os.path.join(tempfile.gettempdir(), filename)
     with open(location, 'wb') as f:
         if request.status_code == 404:
             raise RuntimeError('Download URL not accessible %s' % url)
