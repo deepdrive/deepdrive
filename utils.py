@@ -158,7 +158,8 @@ def download(url, directory, warn_existing=True, overwrite=False):
 
     request = requests.get(url, stream=True)
     filename = url.split('/')[-1]
-    filename = filename[:filename.index('?')]
+    if '?' in filename:
+        filename = filename[:filename.index('?')]
     location = os.path.join(tempfile.gettempdir(), filename)
     with open(location, 'wb') as f:
         if request.status_code == 404:
