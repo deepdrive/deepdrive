@@ -5,7 +5,7 @@ The easiest way to experiment with self-driving AI
 ## Simulator requirements
 
 - Linux or Windows
-- Python 3.5+
+- Python 3.5+ - We recommend Miniconda for Windows
 - 3GB disk space
 - 8GB RAM
 
@@ -29,7 +29,7 @@ python install.py
 ```
 
 #### Windows
-Make sure the Python you want to use is in your **system** path, then
+Make sure the Python you want to use is in your **system** path (for Tensorflow), then
 
 > Tip: We highly recommend using [Conemu](https://conemu.github.io/) for your Windows terminal
 
