@@ -37,7 +37,7 @@ Make sure the Python you want to use is in your **system** path, then
 python install.py
 ```
 
-If you run into issues starting the sim - try starting it directly. The default location is in your user directory in <kbd>DeepDrive/sim</kbd>
+If you run into issues, try starting the sim directly as Unreal may need to install some prerequisetes. The default location is in your user directory under <kbd>DeepDrive/sim</kbd>
 
 ## Usage
 
