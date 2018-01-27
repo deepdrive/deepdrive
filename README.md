@@ -1,4 +1,4 @@
-# DeepDrive [![Build Status](https://travis-ci.com/crizCraig/deepdrive-agents-beta.svg?token=hcA6yn9X8yYZspyyCMpp&branch=master)](https://travis-ci.com/crizCraig/deepdrive-agents-beta)
+# Deepdrive [![Build Status](https://travis-ci.com/crizCraig/deepdrive-agents-beta.svg?token=hcA6yn9X8yYZspyyCMpp&branch=master)](https://travis-ci.com/crizCraig/deepdrive-agents-beta)
 
 The easiest way to experiment with self-driving AI
 
@@ -9,7 +9,7 @@ The easiest way to experiment with self-driving AI
 - 3GB disk space
 - 8GB RAM
 
-## Optional baseline agent requirements
+## Optional - baseline agent requirements
 
 - CUDA capable GPU (tested and developed on 970, 1070, and 1060's)
 - Tensorflow 1.1+ [See NVIDIA install tips](#nvidia-install-tips)
@@ -37,7 +37,7 @@ Make sure the Python you want to use is in your **system** path, then
 python install.py
 ```
 
-> If you run into issues, you can rerun install.py as it's idempotent
+If you run into issues starting the sim - try starting it directly. The default location is in your user directory in <kbd>DeepDrive/sim</kbd>
 
 ## Usage
 
