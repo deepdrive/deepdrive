@@ -29,7 +29,7 @@ python install.py
 ```
 
 #### Windows
-Make sure the Python you want to use is in your **system** path (for Tensorflow), then
+Make sure the Python you want to use is in your PATH, then
 
 > Tip: We highly recommend using [Conemu](https://conemu.github.io/) for your Windows terminal
 
