@@ -1,5 +1,3 @@
-print('Importing installation modules...')
-
 import argparse
 import os
 import tempfile
@@ -42,15 +40,18 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
 
 
 def main():
+    print('Checking python version')
     py, _ = run_command('python -u bin/install/check_py_version.py')
+    print('Checking if Tensorflow is already installed')
     tf_valid_outside = get_tf_valid(py, verbose=False)  # Could still be in existing pipenv...
+    print('Installing pipenv')
     if 'ubuntu' in platform.platform().lower():
         # Install tk for dashboard
-        run_command('sudo apt-get install -y python3-tk', throw=False)
+        run_command('sudo apt-get install -y python3-tk', throw=False, verbose=True)
     if not find_executable('pipenv'):
         install_pipenv = '%s -m pip install pipenv' % py
         if IS_LINUX:
-            run_command('sudo ' + install_pipenv)
+            run_command('sudo ' + install_pipenv, verbose=True)
         else:
             run_command(install_pipenv)
     os.system('pipenv install')
@@ -63,8 +64,8 @@ def main():
         print('Starting baseline agent')
         os.system('pipenv run python main.py --baseline')
     else:
-        print('Starting sim in manual mode')
-        os.system('pipenv run python main.py --manual')
+        print('Starting sim in path follower mode')
+        os.system('pipenv run python main.py --let-game-drive')
 
 
 def get_tf_valid(py, verbose=False, print_errors=False):

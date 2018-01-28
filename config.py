@@ -40,14 +40,14 @@ if DEEPDRIVE_DIR is None:
         with open(deepdrive_dir_config) as f:
             DEEPDRIVE_DIR = f.read()
     else:
-        default_dir = os.path.join(os.path.expanduser('~'), 'DeepDrive')
+        default_dir = os.path.join(os.path.expanduser('~'), 'Deepdrive')
         DEEPDRIVE_DIR = input('Where would you like to store DeepDrive files '
                               '(i.e. sim binaries (1GB), checkpoints (200MB), recordings, and logs)? [Default - %s] ' % default_dir)
         deepdrive_dir_set = False
         while not deepdrive_dir_set:
             DEEPDRIVE_DIR = DEEPDRIVE_DIR or default_dir
             if 'deepdrive' not in DEEPDRIVE_DIR.lower():
-                DEEPDRIVE_DIR = os.path.join(DEEPDRIVE_DIR, 'DeepDrive')
+                DEEPDRIVE_DIR = os.path.join(DEEPDRIVE_DIR, 'Deepdrive')
             if not os.path.isabs(DEEPDRIVE_DIR):
                 DEEPDRIVE_DIR = input('Path: %s is not absolute, please specify a different path [Default - %s] ' %
                                       (DEEPDRIVE_DIR, default_dir))

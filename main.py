@@ -17,8 +17,6 @@ def main():
                         help='Records game driving, including recovering from random actions')
     parser.add_argument('--baseline', action='store_true', default=False,
                         help='Runs pretrained imitation learning based agent')
-    parser.add_argument('--manual', action='store_true', default=False,
-                        help='Allows driving manually within the simulator')
     parser.add_argument('-t', '--train', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
     parser.add_argument('--use-last-model', action='store_true', default=False,
@@ -59,34 +57,36 @@ def main():
     if args.train:
         from tensorflow_agent.train import train
         train.run(resume_dir=args.resume_train, recording_dir=args.recording_dir)
-    elif args.manual:
+    elif args.let_game_drive:
         done = False
         render = False
         episode_count = 1
-        env = None
+        gym_env = None
         try:
-            env = deepdrive_env.start(args.env_id)
-            log.info('Manual drive mode')
+            gym_env = deepdrive_env.start(args.env_id)
+            log.info('Path follower drive mode')
             for episode in range(episode_count):
                 if episode == 0 or done:
-                    obz = env.reset()
+                    obz = gym_env.reset()
                 else:
                     obz = None
 
                 while True:
-                    action = deepdrive_env.action()
-                    obz, reward, done, _ = env.step(action)
+                    action = deepdrive_env.action(has_control=False)
+                    obz, reward, done, _ = gym_env.step(action)
                     if render:
-                        env.render()
+                        gym_env.render()
                     if done:
-                        env.reset()
+                        gym_env.reset()
+                    pass
         except KeyboardInterrupt:
             log.info('keyboard interrupt detected, closing')
         except Exception as e:
-            raise e
+            # raise e
+            log.error('Error running agent. %s', e)
         finally:
-            if env:
-                env.close()
+            if gym_env:
+                gym_env.close()
         log.info('Last episode complete, closing')
     else:
         from tensorflow_agent import agent

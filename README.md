@@ -37,7 +37,7 @@ Make sure the Python you want to use is in your **system** path (for Tensorflow)
 python install.py
 ```
 
-If you run into issues, try starting the sim directly as Unreal may need to install some prerequisetes. The default location is in your user directory under <kbd>DeepDrive/sim</kbd>
+If you run into issues, try starting the sim directly as Unreal may need to install some prerequisetes. The default location is in your user directory under <kbd>Deepdrive/sim</kbd>
 
 ## Usage
 
@@ -54,9 +54,9 @@ Run the **baseline** agent
 python main.py --baseline
 ```
 
-Drive **manually**
+Run in-game path follower
 ```
-python main.py --manual
+python main.py --let-game-drive
 ```
 
 **Record** training data for imitation learning / behavioral cloning
