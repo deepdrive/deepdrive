@@ -136,7 +136,7 @@ class DeepDriveEnv(gym.Env):
         # TODO: Check with connection version
 
         # collision detection  # TODO: Remove in favor of in-game detection
-        self.reset_forward_progress()
+        self.set_forward_progress()
 
         self.distance_along_route = 0
         self.start_distance_along_route = 0
@@ -373,29 +373,29 @@ class DeepDriveEnv(gym.Env):
 
     def is_stuck(self, obz):
         # TODO: Get this from the game instead
-
+        ret = False
         if 'TEST_BENCHMARK_WRITE' in os.environ:
             self.score.got_stuck = True
             self.log_benchmark_trial()
-            return True
-
-        if obz is None:
-            return False
-        if obz['speed'] < 100:  # cm/s
+            ret = True
+        elif obz is None:
+            ret = False
+        elif obz['speed'] < 100:  # cm/s
             self.steps_crawling += 1
             if obz['throttle'] > 0 and obz['brake'] == 0 and obz['handbrake'] == 0:
                 self.steps_crawling_with_throttle_on += 1
-            if time.time() - self.last_forward_progress_time > 3 and \
-                    (self.steps_crawling_with_throttle_on / float(self.steps_crawling)) > 0.8:
-                self.reset_forward_progress()
+            time_crawling = time.time() - self.last_forward_progress_time
+            portion_crawling = self.steps_crawling_with_throttle_on / max(1, self.steps_crawling)
+            if self.steps_crawling_with_throttle_on > 0 and time_crawling > 3 and portion_crawling > 0.8:
+                self.set_forward_progress()
                 if self.should_benchmark:
                     self.score.got_stuck = True
                     self.log_benchmark_trial()
                 log.warn('No progress made while throttle on - assuming stuck and ending episode.')
-                return True
+                ret = True
         else:
-            self.reset_forward_progress()
-        return False
+            self.set_forward_progress()
+        return ret
 
     def log_benchmark_trial(self):
         self.score.end_time = time.time()
@@ -434,7 +434,7 @@ class DeepDriveEnv(gym.Env):
         self.has_control = deepdrive_client.request_agent_control(self.client_id) == 1
 
     # noinspection PyAttributeOutsideInit
-    def reset_forward_progress(self):
+    def set_forward_progress(self):
         self.last_forward_progress_time = time.time()
         self.steps_crawling_with_throttle_on = 0
         self.steps_crawling = 0
