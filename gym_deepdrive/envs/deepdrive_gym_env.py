@@ -582,7 +582,10 @@ class DeepDriveEnv(gym.Env):
                 raise RuntimeError('Could not connect to the environment')
 
         if cameras is None:
-            cameras = [c.DEFAULT_CAM]
+            faq_cam = dict(name='faq_cam', field_of_view=60, capture_width=512, capture_height=512,
+                           relative_position=[150, 1., 200],
+                           relative_rotation=[0.0, 0.0, 0.0])
+            cameras = [faq_cam] * 1
         self.cameras = cameras
         if self.client_id and self.client_id > 0:
             for cam in self.cameras:
