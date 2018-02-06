@@ -197,22 +197,6 @@ Restart programs to get new path
 
 Download https://www.dropbox.com/s/x153v1d001fqu91/bvlc_alexnet.ckpt?dl=1
 
-
-Freeglut viewer (optional)
-OpenGL / Freeglut
-conda install pyopengl
-http://www.transmissionzero.co.uk/software/freeglut-devel/
-Make sure to get the architecture (x64) that corresponds with the Python version
-
-Mac
-Mac will be unsupported at first due to poor GPU support.
-
-You will need MacOs to download Xcode 8 and build Unreal from sources but we don’t need that for substance.
-
-External GPU’s will allow Macs to run demanding GPU loads, but we haven’t tried this setup yet. An alternative way to run eGPUs on Apple hardware would be to use Bootcamp to run Windows which appears to have the best eGPU support as of mid-2017. 
-
-
-
 All
 
 Install OpenCV
@@ -220,5 +204,3 @@ conda install -c https://conda.anaconda.org/menpo opencv3
 conda install scipy
 conda install pillow
 
-PyCharm Development of Environment
-If you open an Unreal project in Pycharm, add Binaries, Build, Content, Intermediate, and Saved to your project’s “Excluded” directories in Project Structure or simply by right clicking and choosing “Mark Directory as” => “Excluded”. Keeping these large binary directories in the project will cause PyCharm to index them.

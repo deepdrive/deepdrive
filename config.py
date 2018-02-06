@@ -41,7 +41,7 @@ if DEEPDRIVE_DIR is None:
             DEEPDRIVE_DIR = f.read()
     else:
         default_dir = os.path.join(os.path.expanduser('~'), 'Deepdrive')
-        DEEPDRIVE_DIR = input('Where would you like to store DeepDrive files '
+        DEEPDRIVE_DIR = input('Where would you like to store Deepdrive files '
                               '(i.e. sim binaries (1GB), checkpoints (200MB), recordings, and logs)? [Default - %s] ' % default_dir)
         deepdrive_dir_set = False
         while not deepdrive_dir_set:
