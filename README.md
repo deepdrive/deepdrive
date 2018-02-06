@@ -82,7 +82,7 @@ cd -
 python main.py --train --recording-dir <the-directory-you-want>
 ```
 
-If you'd like to see our Tensorboard training session, you can download the 13GB
+If you'd like to check out our Tensorboard training session, you can download the 13GB
 [tfevents files here](https://d1y4edi1yk5yok.cloudfront.net/tensorflow/baseline_tensorflow_train_and_eval.zip),
 unzip, and run
 
