@@ -92,8 +92,9 @@ tensorboard --logdir <your-unzipped-baseline_tensorflow_train_and_eval>
 
 ### Key binds 
 
-* <kbd>Esc</kbd> - Pause
-* <kbd>P</kbd> - useful in Unreal Editor
+* <kbd>Esc</kbd> - Pause (Quit in Unreal Editor)
+* <kbd>Alt+Tab</kbd> - Control other windows
+* <kbd>P</kbd> - Pause in Unreal Editor
 * <kbd>J</kbd> - Toggle shared mem stats
 * <kbd>;</kbd> - Toggle FPS
 * <kbd>1</kbd> - Chase cam
@@ -108,7 +109,7 @@ tensorboard --logdir <your-unzipped-baseline_tensorflow_train_and_eval>
 * <kbd>R</kbd> - Reset
 * <kbd>E</kbd> - Gear Up
 * <kbd>Q</kbd> - Gear down
-* <kbd>Z</kbd> move mouse outside window and click OR shift+F1 in editor mode OR Alt+Tab - shows mouse cursor
+* <kbd>Z</kbd> - Show mouse
 
 
 ## Benchmark top scores (50 lap average)
@@ -126,9 +127,8 @@ If you experience low frame rates on Linux, you may need to install NVIDIA’s d
 
 ## NVIDIA install tips
 
-- Get the older [CUDA 8 and cuDNN 6](https://developer.nvidia.com/cuda-toolkit-archive) for a standard tensorflow install later on (read here to see if this changes: https://github.com/tensorflow/tensorflow/issues/12052) - If you want to use CUDA 9 / cuDNN 7, you’ll need to install Tensorflow from source.
 - Use the packaged install, i.e. deb[local] on Ubuntu, referred to in [this guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
-- If you are feeling frisky and use the runfile method, be sure to follow [NVIDIA’s instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) on how to disable the Nouveau drivers if you're on Ubuntu.
+- If you are feeling dangerous and use the runfile method, be sure to follow [NVIDIA’s instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) on how to disable the Nouveau drivers if you're on Ubuntu.
 
 ## OpenGL
 
@@ -162,45 +162,4 @@ to py.test.
 ## Thanks
 
 Special thanks to [Rafał Józefowicz](https://scholar.google.com/citations?user=C7zfAI4AAAAJ) for contributing the original [training](#tensorflow_agent/train) code on which ours is based 
-
-### Random notes (TODO: Cleanup)
-
-TIPS:
-If you lose your mouse pointer while in the game, just Alt-Tab!
-
-Make sure the CUDA_HOME environment variable is set (we used Cuda 8 for the baseline model), specifically /usr/local/cuda
-
-Also make sure LD_LIBRARY_PATH is set - i.e. /home/<YOU>/cuda/lib64:
-
-PATH includes /usr/local/cuda-YOUR_CUDA_VERSION/bin
-
-
-To stop the simulation from the Unreal Editor in Linux, hit Esc.
-
-Windows
-Tensorflow install tips
-
-Add /Users/a/Miniconda3/Scripts and /Users/a/Miniconda3 to your user environment variable path
-
-To run Tensorboard, navigate to your C:\Users\<YOU>\Miniconda3\envs\tensorflow\Scripts and run tensorboard --logdir=/tmp/gtanet
-
-Merge your cuDNN bin, lib, and include into your CUDA install bin, lib, and include directories, i.e.
-- bin files to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin
-- lib files to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\lib\x64
-- headers to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\include
-
-Add cupti64_80.dll to user PATH environment variable, i.e.
-cupti64_80.dll
-in
-C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\extras\CUPTI\libx64
-Restart programs to get new path
-
-Download https://www.dropbox.com/s/x153v1d001fqu91/bvlc_alexnet.ckpt?dl=1
-
-All
-
-Install OpenCV
-conda install -c https://conda.anaconda.org/menpo opencv3
-conda install scipy
-conda install pillow
 
