@@ -69,12 +69,26 @@ python main.py --record --record-recovery-from-random-actions
 python main.py --train
 ```
 
-**Train** on the same dataset we collected [TODO link with README  (includes windows play-in-editor and standalone data + linux standalone)]
+**Train** on the same dataset we used 
+
+1. Get the [AWS CLI](https://github.com/aws/aws-cli)
+2. Ensure you have 104GB of free space
+3. Download our dataset of Windows (Unreal PIE + Unreal packaged)/ Linux mixed camera, corrective action recordings 
+(generated with `--record`)
 ```
-python main.py --train --dataset baseline
+cd <the-directory-you-want>
+aws s3 sync s3://deepdrive/data/baseline .
+cd -
+python main.py --train --recording-dir <the-directory-you-want>
 ```
 
-or for more options, see [main.py](main.py)
+If you'd like to see our Tensorboard training session, you can download the 13GB
+[tfevents files here](https://d1y4edi1yk5yok.cloudfront.net/tensorflow/baseline_tensorflow_train_and_eval.zip),
+unzip, and run
+
+```
+tensorboard --logdir <your-unzipped-baseline_tensorflow_train_and_eval>
+```
 
 ### Key binds 
 
