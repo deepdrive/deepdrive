@@ -43,7 +43,7 @@ def main():
     print('Checking python version')
     py, _ = run_command('python -u bin/install/check_py_version.py')
     print('Checking if Tensorflow is already installed')
-    tf_valid_outside = get_tf_valid(py, verbose=False)  # Could still be in existing pipenv...
+    tf_version_outside, tf_valid_outside = get_tf_valid(py, verbose=False)  # Could still be in existing pipenv...
     print('Installing pipenv')
     if 'ubuntu' in platform.platform().lower():
         # Install tk for dashboard
@@ -55,10 +55,10 @@ def main():
         else:
             run_command(install_pipenv)
     os.system('pipenv install')
-    tf_valid_inside = get_tf_valid(py='pipenv run python')
+    tf_version_inside, tf_valid_inside = get_tf_valid(py='pipenv run python')
     if tf_valid_outside and not tf_valid_inside:
         print('Installing Tensorflow to your virtualenv')
-        os.system('pipenv run pip install tensorflow-gpu')
+        os.system('pipenv run pip install tensorflow-gpu==%s' % tf_version_outside)
     tf_valid = get_tf_valid(py='pipenv run python', verbose=True, print_errors=True)  # Confirm
     if tf_valid:
         print('Starting baseline agent')
@@ -69,10 +69,17 @@ def main():
 
 
 def get_tf_valid(py, verbose=False, print_errors=False):
-    _, exit_code = run_command('%s -u bin/install/check_tf_version.py' % py, throw=False, verbose=verbose,
-                               print_errors=print_errors)
+    flags = ''
+    if not verbose:
+        flags += ' --version-only'
+    cmd_out, exit_code = run_command('%s -u bin/install/check_tf_version.py%s' % (py, flags),
+                                        throw=False, verbose=verbose, print_errors=print_errors)
+    if exit_code == 0 and not verbose:
+        tf_version = cmd_out.splitlines()[-1]
+    else:
+        tf_version = None
     tf_valid = exit_code == 0
-    return tf_valid
+    return tf_version, tf_valid
 
 
 if __name__ == '__main__':
