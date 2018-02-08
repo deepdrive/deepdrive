@@ -15,7 +15,6 @@ from tensorflow_agent.net import Net
 from utils import save_hdf5, download
 import logs
 
-gym.undo_logger_setup()
 log = logs.get_log(__name__)
 
 

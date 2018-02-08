@@ -82,11 +82,12 @@ def main():
         except KeyboardInterrupt:
             log.info('keyboard interrupt detected, closing')
         except Exception as e:
-            # raise e
             log.error('Error running agent. %s', e)
-        finally:
             if gym_env:
                 gym_env.close()
+            raise e
+        if gym_env:
+            gym_env.close()
         log.info('Last episode complete, closing')
     else:
         from tensorflow_agent import agent

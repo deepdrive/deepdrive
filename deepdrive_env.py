@@ -6,7 +6,6 @@ import logs
 
 import config as c
 from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action
-gym.undo_logger_setup()
 log = logs.get_log(__name__)
 
 
