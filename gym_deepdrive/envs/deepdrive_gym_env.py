@@ -634,10 +634,10 @@ class DeepDriveEnv(gym.Env):
                         '**********************************************************************\n\n')
 
     def _init_action_space(self):
-        steering_space = spaces.Box(low=-1, high=1, shape=1)
-        throttle_space = spaces.Box(low=-1, high=1, shape=1)
-        brake_space = spaces.Box(low=0, high=1, shape=1)
-        handbrake_space = spaces.Box(low=0, high=1, shape=1)
+        steering_space = spaces.Box(low=-1, high=1, shape=(1,))
+        throttle_space = spaces.Box(low=-1, high=1, shape=(1,))
+        brake_space = spaces.Box(low=0, high=1, shape=(1,))
+        handbrake_space = spaces.Box(low=0, high=1, shape=(1,))
         is_game_driving_space = spaces.Discrete(2)
         action_space = spaces.Tuple(
             (steering_space, throttle_space, brake_space, handbrake_space, is_game_driving_space))
