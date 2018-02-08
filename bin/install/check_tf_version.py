@@ -5,8 +5,7 @@ from distutils.version import LooseVersion as semvar
 
 def main():
     error_msg = '\n\n*** Warning: %s, baseline imitation learning agent will not be available. ' \
-                'HINT: Check out our CUDA / cuDNN install tips on the readme ' \
-                'https://github.com/deepdrive/deepdrive-agents if you install Tensorflow. ' \
+                'HINT: Check out our CUDA / cuDNN install tips on the README ' \
                 '\n\n'
 
     print('Checking for valid Tensorflow installation')

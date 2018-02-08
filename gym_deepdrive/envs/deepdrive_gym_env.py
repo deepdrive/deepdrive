@@ -259,7 +259,7 @@ class DeepDriveEnv(gym.Env):
     def set_tf_session(self, session):
         self.sess = session
 
-    def _step(self, action):
+    def step(self, action):
         dd_action = Action.from_gym(action)
         self.send_control(dd_action)
         obz = self.get_observation()
@@ -439,7 +439,7 @@ class DeepDriveEnv(gym.Env):
         self.steps_crawling_with_throttle_on = 0
         self.steps_crawling = 0
 
-    def _reset(self):
+    def reset(self):
         self.prev_observation = None
         self.reset_agent()
         self.step_num = 0
@@ -458,7 +458,7 @@ class DeepDriveEnv(gym.Env):
         self.open_sim()
         self.connect(cameras)
 
-    def _close(self):
+    def close(self):
         if self.dashboard_queue is not None:
             self.dashboard_queue.put({'should_stop': True})
             self.dashboard_queue.close()
@@ -472,7 +472,7 @@ class DeepDriveEnv(gym.Env):
             self.sess.close()
         self.close_sim()
 
-    def _render(self, mode='human', close=False):
+    def render(self, mode='human', close=False):
 
         # TODO: Implement proper render - this is really only good for one frame - Could use our OpenGLUT viewer (on raw images) for this or PyGame on preprocessed images
         if self.prev_observation is not None:
@@ -482,7 +482,7 @@ class DeepDriveEnv(gym.Env):
             elif self.pyglet_render and pyglet is not None and self.pygle_queue is not None:
                 self.pyglet_queue.put(self.prev_observation['cameras'])
 
-    def _seed(self, seed=None):
+    def seed(self, seed=None):
         self.np_random = seeding.np_random(seed)
         # TODO: Generate random actions with this seed
 
@@ -634,10 +634,10 @@ class DeepDriveEnv(gym.Env):
                         '**********************************************************************\n\n')
 
     def _init_action_space(self):
-        steering_space = spaces.Box(low=-1, high=1, shape=(1,))
-        throttle_space = spaces.Box(low=-1, high=1, shape=(1,))
-        brake_space = spaces.Box(low=0, high=1, shape=(1,))
-        handbrake_space = spaces.Box(low=0, high=1, shape=(1,))
+        steering_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
+        throttle_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
+        brake_space = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
+        handbrake_space = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
         is_game_driving_space = spaces.Discrete(2)
         action_space = spaces.Tuple(
             (steering_space, throttle_space, brake_space, handbrake_space, is_game_driving_space))
