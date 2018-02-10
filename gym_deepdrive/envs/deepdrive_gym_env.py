@@ -1,4 +1,5 @@
 import csv
+import subprocess
 import deepdrive_client
 import deepdrive_capture
 import os
@@ -28,6 +29,7 @@ import config as c
 import logs
 import utils
 from utils import obj2dict, download
+from dashboard import dashboard_fn
 
 log = logs.get_log(__name__)
 SPEED_LIMIT_KPH = 64.
@@ -155,6 +157,7 @@ class DeepDriveEnv(gym.Env):
         self.trial_scores = []
 
     def open_sim(self):
+        self._kill_competing_procs()
         if c.REUSE_OPEN_SIM:
             return
         if self.use_sim_start_command:
@@ -197,16 +200,24 @@ class DeepDriveEnv(gym.Env):
             self.sim_process = Popen([utils.get_sim_bin_path()])
 
     def close_sim(self):
+        log.info('Closing sim')
         if self.sim_process is not None:
             self.sim_process.kill()
-            i = 0
-            max_tries = 5
-            while self.sim_process.poll() is None and i < max_tries:
-                log.info('Waiting for sim to close')
-                time.sleep(0.5)
-                i += 1
-            if i == max_tries:
-                self.sim_process.terminate()
+
+
+
+
+    def _kill_competing_procs(self):
+        # TODO: Allow for many environments on the same machine by using registry DB for this and sharedmem
+        process_name = os.path.basename(utils.get_sim_bin_path())
+        if c.IS_WINDOWS:
+            cmd = 'taskkill /IM %s /F' % process_name
+        elif c.IS_LINUX or c.IS_MAC:
+            cmd = 'pkill %s' % process_name
+        else:
+            raise NotImplementedError('OS not supported')
+        utils.run_command(cmd, verbose=False, throw=False, print_errors=False)
+        time.sleep(1)  # TODO: Don't rely on time for shared mem to go away, we should have a unique name on startup.
 
 
 
@@ -237,7 +248,6 @@ class DeepDriveEnv(gym.Env):
         self.should_benchmark = True
         os.makedirs(c.BENCHMARK_DIR, exist_ok=True)
 
-
     def init_pyglet(self, cameras):
         q = Queue(maxsize=1)
         p = Process(target=render_cameras, args=(q, cameras))
@@ -251,7 +261,8 @@ class DeepDriveEnv(gym.Env):
             log.warning('Dashboard not supported in debug mode')
             return
         q = Queue()
-        p = Process(target=dashboard, args=(q,))
+        p = Process(target=dashboard_fn, args=(q,))
+        print('DEBUG - after starting dashboard')
         p.start()
         self.dashboard_process = p
         self.dashboard_queue = q
@@ -386,12 +397,12 @@ class DeepDriveEnv(gym.Env):
                 self.steps_crawling_with_throttle_on += 1
             time_crawling = time.time() - self.last_forward_progress_time
             portion_crawling = self.steps_crawling_with_throttle_on / max(1, self.steps_crawling)
-            if self.steps_crawling_with_throttle_on > 0 and time_crawling > 3 and portion_crawling > 0.8:
+            if self.steps_crawling_with_throttle_on > 10 and time_crawling > 5 and portion_crawling > 0.8:
                 self.set_forward_progress()
+                log.warn('No progress made while throttle on - assuming stuck and ending episode.')
                 if self.should_benchmark:
                     self.score.got_stuck = True
                     self.log_benchmark_trial()
-                log.warn('No progress made while throttle on - assuming stuck and ending episode.')
                 ret = True
         else:
             self.set_forward_progress()
@@ -457,6 +468,9 @@ class DeepDriveEnv(gym.Env):
         self.close_sim()  # Need to restart process now to change cameras
         self.open_sim()
         self.connect(cameras)
+
+    def __del__(self):
+        self.close()
 
     def close(self):
         if self.dashboard_queue is not None:
@@ -599,7 +613,24 @@ class DeepDriveEnv(gym.Env):
             self.raise_connect_fail()
         if render:
             self.init_pyglet(cameras)
+
+        self._perform_first_step()
         self.has_control = False
+
+    def _perform_first_step(self):
+        obz = None
+        read_obz_count = 0
+        while obz is None:
+            if read_obz_count > 10:
+                error_msg = 'Failed first step of environment'
+                log.error(error_msg)
+                raise RuntimeError(error_msg)
+            try:
+                obz = deepdrive_capture.step()
+            except SystemError as e:
+                log.error('caught error during step' + str(e))
+            time.sleep(0.25)
+            read_obz_count += 1
 
     def reset_capture(self, shared_mem_name, shared_mem_size):
         n = 10
@@ -646,7 +677,8 @@ class DeepDriveEnv(gym.Env):
     def _init_observation_space(self):
         obz_spaces = []
         for camera in self.cameras:
-            obz_spaces.append(spaces.Box(low=0, high=255, shape=(camera['capture_width'], camera['capture_height'])))
+            obz_spaces.append(spaces.Box(low=0, high=255, shape=(camera['capture_width'], camera['capture_height']),
+                                         dtype=np.uint8))
         observation_space = spaces.Tuple(tuple(obz_spaces))
         self.observation_space = observation_space
         return observation_space
@@ -787,99 +819,6 @@ def render_cameras(render_queue, cameras):
             window.dispatch_event('on_draw')
             window.flip()
 
-
-def dashboard(dash_queue):
-    import matplotlib.animation as animation
-    import matplotlib
-    try:
-        # noinspection PyUnresolvedReferences
-        import matplotlib.pyplot as plt
-    except ImportError as e:
-        log.error('\n\n\n***** Error: Could not start dashboard: %s\n\n', e)
-        return
-    plt.figure(0)
-
-    class Disp(object):
-        stats = {}
-        txt_values = {}
-        lines = {}
-        x_lists = {}
-        y_lists = {}
-
-    def get_next(block=False):
-        try:
-            q_next = dash_queue.get(block=block)
-            if q_next['should_stop']:
-                print('Stopping dashboard')
-                try:
-                    anim._fig.canvas._tkcanvas.master.quit()  # Hack to avoid "Exiting Abnormally"
-                finally:
-                    exit()
-            else:
-                Disp.stats = q_next['display_stats']
-        except queue.Empty:
-            # Reuuse old stats
-            pass
-
-    get_next(block=True)
-
-    font = {'size': 8}
-
-    matplotlib.rc('font', **font)
-
-    for i, (stat_name, stat) in enumerate(Disp.stats.items()):
-        stat = Disp.stats[stat_name]
-        stat_label_subplot = plt.subplot2grid((len(Disp.stats), 3), (i, 0))
-        stat_value_subplot = plt.subplot2grid((len(Disp.stats), 3), (i, 1))
-        stat_graph_subplot = plt.subplot2grid((len(Disp.stats), 3), (i, 2))
-        stat_label_subplot.text(0.5, 0.5, stat_name, fontsize=12, va="center", ha="center")
-        txt_value = stat_value_subplot.text(0.5, 0.5, '', fontsize=12, va="center", ha="center")
-        Disp.txt_values[stat_name] = txt_value
-        stat_graph_subplot.set_xlim([0, 200])
-        stat_graph_subplot.set_ylim([stat['ymin'], stat['ymax']])
-        Disp.lines[stat_name], = stat_graph_subplot.plot([], [])
-        stat_label_subplot.axis('off')
-        stat_value_subplot.axis('off')
-        Disp.x_lists[stat_name] = deque(np.linspace(200, 0, num=400))
-        Disp.y_lists[stat_name] = deque([-1] * 400)
-        frame1 = plt.gca()
-        frame1.axes.get_xaxis().set_visible(False)
-
-    plt.subplots_adjust(hspace=0.88)
-    fig = plt.gcf()
-    fig.set_size_inches(5.5, len(Disp.stats) * 0.5)
-    fig.canvas.set_window_title('Dashboard')
-    anim = None
-
-    def init():
-        lines = []
-        for s_name in Disp.stats:
-            line = Disp.lines[s_name]
-            line.set_data([], [])
-            lines.append(line)
-        return lines
-
-    def animate(_i):
-        lines = []
-        get_next()
-        for s_name in Disp.stats:
-            s = Disp.stats[s_name]
-            xs = Disp.x_lists[s_name]
-            ys = Disp.y_lists[s_name]
-            tv = Disp.txt_values[s_name]
-            line = Disp.lines[s_name]
-            val = s['value']
-            tv.set_text(str(round(val, 2)) + s['units'])
-            ys.pop()
-            ys.appendleft(val)
-            line.set_data(xs, ys)
-            lines.append(line)
-        plt.draw()
-        return lines
-
-    # TODO: Add blit=True and deal with updating the text if performance becomes unacceptable
-    anim = animation.FuncAnimation(fig, animate, init_func=init, frames=200, interval=100)
-    plt.show()
 
 if __name__ == '__main__':
     DeepDriveEnv.get_latest_sim_file()

@@ -320,7 +320,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
     episode = 0
     try:
         while not session_done:
-            if episode == 0 or episode_done:
+            if episode_done:
                 obz = gym_env.reset()
                 episode_done = False
             else:

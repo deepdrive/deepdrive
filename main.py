@@ -66,7 +66,7 @@ def main():
             gym_env = deepdrive_env.start(args.env_id)
             log.info('Path follower drive mode')
             for episode in range(episode_count):
-                if episode == 0 or done:
+                if done:
                     obz = gym_env.reset()
                 else:
                     obz = None
