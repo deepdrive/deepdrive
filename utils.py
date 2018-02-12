@@ -214,9 +214,9 @@ def ensure_executable(path):
 
 
 def get_sim_bin_path():
-    path, url = None, None
+    path = None
     if c.REUSE_OPEN_SIM:
-        return None, None
+        return None
     elif c.IS_LINUX:
         path = c.SIM_PATH + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive-Linux-Shipping'
     elif c.IS_MAC:

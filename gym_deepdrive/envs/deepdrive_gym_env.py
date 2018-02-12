@@ -209,6 +209,9 @@ class DeepDriveEnv(gym.Env):
 
     def _kill_competing_procs(self):
         # TODO: Allow for many environments on the same machine by using registry DB for this and sharedmem
+        path = utils.get_sim_bin_path()
+        if path is None:
+            return
         process_name = os.path.basename(utils.get_sim_bin_path())
         if c.IS_WINDOWS:
             cmd = 'taskkill /IM %s /F' % process_name
