@@ -1,3 +1,4 @@
+from __future__ import print_function
 import argparse
 import os
 import tempfile
@@ -39,33 +40,32 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
     return result, process.returncode
 
 
+def check_py_version():
+    version = sys.version_info[:]
+
+    if version[0] == 3 and version[1] >= 5:
+        return find_executable('python')
+    else:
+        raise RuntimeError('Error: Python 3.5+ is required to run deepdrive-agents')
+
 def main():
     print('Checking python version')
-    py, _ = run_command('python -u bin/install/check_py_version.py')
+    py = check_py_version()
     print('Checking if Tensorflow is already installed')
-    tf_version_outside, tf_valid_outside = get_tf_valid(py, verbose=False)  # Could still be in existing pipenv...
-    print('Installing pipenv')
+    _, tf_valid = get_tf_valid(py, verbose=True)
+
     if 'ubuntu' in platform.platform().lower():
         # Install tk for dashboard
         run_command('sudo apt-get install -y python3-tk', throw=False, verbose=True)
-    if not find_executable('pipenv'):
-        install_pipenv = '%s -m pip install pipenv' % py
-        if IS_LINUX:
-            run_command('sudo ' + install_pipenv, verbose=True)
-        else:
-            run_command(install_pipenv)
-    os.system('pipenv install')
-    tf_version_inside, tf_valid_inside = get_tf_valid(py='pipenv run python')
-    if tf_valid_outside and not tf_valid_inside:
-        print('Installing Tensorflow to your virtualenv')
-        os.system('pipenv run pip install tensorflow-gpu==%s' % tf_version_outside)
-    tf_valid = get_tf_valid(py='pipenv run python', verbose=True, print_errors=True)  # Confirm
+
+    run_command(py + ' -m pip install -r requirements.txt', verbose=True)
+
     if tf_valid:
         print('Starting baseline agent')
-        os.system('pipenv run python main.py --baseline')
+        os.system('python main.py --baseline')
     else:
         print('Starting sim in path follower mode')
-        os.system('pipenv run python main.py --let-game-drive')
+        os.system('python main.py --let-game-drive')
 
 
 def get_tf_valid(py, verbose=False, print_errors=False):
@@ -73,7 +73,7 @@ def get_tf_valid(py, verbose=False, print_errors=False):
     if not verbose:
         flags += ' --version-only'
     cmd_out, exit_code = run_command('%s -u bin/install/check_tf_version.py%s' % (py, flags),
-                                        throw=False, verbose=verbose, print_errors=print_errors)
+                                     throw=False, verbose=verbose, print_errors=print_errors)
     if exit_code == 0 and not verbose:
         tf_version = cmd_out.splitlines()[-1]
     else:

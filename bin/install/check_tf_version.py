@@ -5,6 +5,7 @@ from distutils.version import LooseVersion as semvar
 
 version_only = False
 
+
 def say(*args, **kwargs):
     if not version_only:
         print(*args, **kwargs)

@@ -1,0 +1,12 @@
+deepdrive
+scipy
+numpy
+h5py
+gym==0.9.6
+arrow
+matplotlib
+pytest-xdist
+requests
+clint
+pillow
+boto
