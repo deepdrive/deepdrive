@@ -20,7 +20,7 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
     def say(*args):
         if verbose:
             print(*args)
-    say(cmd)
+    say('running command: ' + cmd)
     if not isinstance(cmd, list):
         cmd = cmd.split()
     process = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd, env=env)
@@ -48,11 +48,11 @@ def check_py_version():
     else:
         raise RuntimeError('Error: Python 3.5+ is required to run deepdrive-agents')
 
+
 def main():
     print('Checking python version')
     py = check_py_version()
-    print('Checking if Tensorflow is already installed')
-    _, tf_valid = get_tf_valid(py, verbose=True)
+    _, tf_valid = get_tf_valid(py)
 
     if 'ubuntu' in platform.platform().lower():
         # Install tk for dashboard
@@ -68,12 +68,12 @@ def main():
         os.system('python main.py --let-game-drive')
 
 
-def get_tf_valid(py, verbose=False, print_errors=False):
+def get_tf_valid(py):
     flags = ''
     if not verbose:
         flags += ' --version-only'
     cmd_out, exit_code = run_command('%s -u bin/install/check_tf_version.py%s' % (py, flags),
-                                     throw=False, verbose=verbose, print_errors=print_errors)
+                                     throw=False, verbose=True, print_errors=True)
     if exit_code == 0 and not verbose:
         tf_version = cmd_out.splitlines()[-1]
     else:
