@@ -608,7 +608,8 @@ class DeepDriveEnv(gym.Env):
                                                               cam['capture_width'],
                                                               cam['capture_height'],
                                                               cam['relative_position'],
-                                                              cam['relative_rotation'])
+                                                              cam['relative_rotation'],
+                                                              cam['name'])
 
             shared_mem = deepdrive_client.get_shared_memory(self.client_id)
             self.reset_capture(shared_mem[0], shared_mem[1])
