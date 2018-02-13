@@ -68,12 +68,12 @@ def main():
         os.system('python main.py --let-game-drive')
 
 
-def get_tf_valid(py):
+def get_tf_valid(py, verbose=True):
     flags = ''
     if not verbose:
         flags += ' --version-only'
     cmd_out, exit_code = run_command('%s -u bin/install/check_tf_version.py%s' % (py, flags),
-                                     throw=False, verbose=True, print_errors=True)
+                                     throw=False, verbose=verbose, print_errors=True)
     if exit_code == 0 and not verbose:
         tf_version = cmd_out.splitlines()[-1]
     else:
