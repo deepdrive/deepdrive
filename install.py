@@ -43,7 +43,6 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
 
 def check_py_version():
     version = sys.version_info[:]
-
     if version[0] == 3 and version[1] >= 5:
         return find_executable('python')
     else:
@@ -71,7 +70,7 @@ def main():
 
 def get_tf_valid():
     error_msg = '\n\n*** Warning: %s, baseline imitation learning agent will not be available. ' \
-                'HINT: Check out our CUDA / cuDNN install tips on the README ' \
+                'HINT: Install Tensorflow or use the python / virtualenv you have it already installed to. If you install, check out our CUDA / cuDNN install tips on the README ' \
                 '\n\n'
 
     print('Checking for valid Tensorflow installation')
