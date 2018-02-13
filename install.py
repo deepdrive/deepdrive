@@ -6,7 +6,7 @@ from subprocess import Popen, PIPE
 import sys
 import platform
 from distutils.spawn import find_executable
-
+from distutils.version import LooseVersion as semvar
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -20,6 +20,7 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
     def say(*args):
         if verbose:
             print(*args)
+
     say('running command: ' + cmd)
     if not isinstance(cmd, list):
         cmd = cmd.split()
@@ -36,7 +37,7 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
         if throw:
             raise RuntimeError(err_msg)
         elif print_errors:
-            print(err_msg)
+            say(err_msg)
     return result, process.returncode
 
 
@@ -52,7 +53,7 @@ def check_py_version():
 def main():
     print('Checking python version')
     py = check_py_version()
-    _, tf_valid = get_tf_valid(py)
+    tf_valid = get_tf_valid()
 
     if 'ubuntu' in platform.platform().lower():
         # Install tk for dashboard
@@ -68,33 +69,49 @@ def main():
         os.system('python main.py --let-game-drive')
 
 
-def get_tf_valid(py, verbose=True):
-    flags = ''
-    if not verbose:
-        flags += ' --version-only'
-    cmd_out, exit_code = run_command('%s -u bin/install/check_tf_version.py%s' % (py, flags),
-                                     throw=False, verbose=verbose, print_errors=True)
-    if exit_code == 0 and not verbose:
-        tf_version = cmd_out.splitlines()[-1]
+def get_tf_valid():
+    error_msg = '\n\n*** Warning: %s, baseline imitation learning agent will not be available. ' \
+                'HINT: Check out our CUDA / cuDNN install tips on the README ' \
+                '\n\n'
+
+    print('Checking for valid Tensorflow installation')
+    try:
+        # noinspection PyUnresolvedReferences
+        import tensorflow as tf
+        check = tf.constant('string tensors are not tensors but are called tensors in tensorflow')
+        with tf.Session(config=tf.ConfigProto(log_device_placement=False,
+                                              gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.01,
+                                                                        allow_growth=True))) as sess:
+            if not get_available_gpus():
+                print('\n\n*** Warning: %s \n\n' %
+                      'Tensorflow could not find a GPU, performance will be severely degraded on CPU. '
+                      'HINT: Try "pipenv install tensorflow-gpu"')
+                return False
+            sess.run(check)
+            print('Tensorflow is working on the GPU.')
+
+    except ImportError:
+        print(error_msg % 'Tensorflow not installed', file=sys.stderr)
+        return False
+    except Exception:
+        print(error_msg % 'Tensorflow not working', file=sys.stderr)
+        return False
+
+    min_version = '1.1'
+    if semvar(tf.__version__) < semvar(min_version):
+        warn_msg = 'Tensorflow %s is less than the minimum required version (%s)' % (tf.__version__, min_version)
+        print(error_msg % warn_msg, file=sys.stderr)
+        return False
     else:
-        tf_version = None
-    tf_valid = exit_code == 0
-    return tf_version, tf_valid
+        print('Tensorflow %s detected - meets min version (%s)' % (tf.__version__, min_version))
+        return True
+
+
+def get_available_gpus():
+    from tensorflow.python.client import device_lib
+    local_device_protos = device_lib.list_local_devices()
+    return [x.name for x in local_device_protos if x.device_type == 'GPU']
 
 
 if __name__ == '__main__':
     main()
-
-
-# Run the tutorial.sh
-# Mute with u
-# Escape to see menu / controls
-# Change cam with 1, 2, 3
-# Alt-tab to get back to agent.py
-# Change the throttle out in agent.py
-
-# Pause the game, ask them to press j
-# Pause the game, ask them to change the camera position
-# Pause the game, ask them to change the steering coeff
-
-# To rerun this tutorial, run tutorial.sh
