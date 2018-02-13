@@ -34,6 +34,7 @@ from dashboard import dashboard_fn
 log = logs.get_log(__name__)
 SPEED_LIMIT_KPH = 64.
 
+
 class Score(object):
     total = 0
     gforce_penalty = 0
@@ -496,7 +497,7 @@ class DeepDriveEnv(gym.Env):
             if self.one_frame_render:
                 for camera in self.prev_observation['cameras']:
                     utils.show_camera(camera['image'], camera['depth'])
-            elif self.pyglet_render and pyglet is not None and self.pygle_queue is not None:
+            elif self.pyglet_render and pyglet is not None and self.pyglet_queue is not None:
                 self.pyglet_queue.put(self.prev_observation['cameras'])
 
     def seed(self, seed=None):

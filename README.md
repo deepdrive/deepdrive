@@ -41,14 +41,6 @@ If you run into issues, try starting the sim directly as Unreal may need to inst
 
 ## Usage
 
-Activate the [pipenv](https://github.com/pypa/pipenv) virtualenv we've created for this project
-
-```
-pipenv shell
-```
-
-Then run `main.py` to
-
 Run the **baseline** agent
 ```
 python main.py --baseline

@@ -3,8 +3,6 @@ python:
   - "3.5"
   - "3.6"
 install:
-  - pip install --verbose pipenv
-  - pipenv install -d --system
-  - pipenv graph
+  - pip install --verbose -r requirements.txt
 script:
-  - DEEPDRIVE_DIR=/tmp/testdeepdrive pipenv run pytest tests/test_sanity.py
+  - DEEPDRIVE_DIR=/tmp/testdeepdrive pytest tests/test_sanity.py
