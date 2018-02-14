@@ -63,23 +63,9 @@ python main.py --train
 
 **Train** on the same dataset we used 
 
-1. Get the [AWS CLI](https://github.com/aws/aws-cli)
-2. Ensure you have 104GB of free space
-3. Download our dataset of Windows (Unreal PIE + Unreal packaged)/ Linux mixed camera, corrective action recordings 
-(generated with `--record`)
+Grab the [dataset](#Dataset)
 ```
-cd <the-directory-you-want>
-aws s3 sync s3://deepdrive/data/baseline .
-cd -
-python main.py --train --recording-dir <the-directory-you-want>
-```
-
-If you'd like to check out our Tensorboard training session, you can download the 13GB
-[tfevents files here](https://d1y4edi1yk5yok.cloudfront.net/tensorflow/baseline_tensorflow_train_and_eval.zip),
-unzip, and run
-
-```
-tensorboard --logdir <your-unzipped-baseline_tensorflow_train_and_eval>
+python main.py --train --recording-dir <the-directory-with-the-dataset>
 ```
 
 ### Key binds 
@@ -109,6 +95,25 @@ tensorboard --logdir <your-unzipped-baseline_tensorflow_train_and_eval>
 | Score  | Weights |  Deepdrive version |
 | ---:   | :---    |   ---: |
 |[3059](https://d1y4edi1yk5yok.cloudfront.net/benchmarks/2018-01-02__09-49-03PM.csv)|[baseline_agent_weights.zip](https://d1y4edi1yk5yok.cloudfront.net/weights/baseline_agent_weights.zip)|2.0.20180101022103|
+
+## Dataset
+
+1. Get the [AWS CLI](https://github.com/aws/aws-cli)
+2. Ensure you have 104GB of free space
+3. Download our dataset of mixed Windows (Unreal PIE + Unreal packaged) and Linux + variable camera and corrective action recordings 
+(generated with `--record`)
+```
+cd <the-directory-you-want>
+aws s3 sync s3://deepdrive/data/baseline .
+```
+
+If you'd like to check out our Tensorboard training session, you can download the 13GB
+[tfevents files here](https://d1y4edi1yk5yok.cloudfront.net/tensorflow/baseline_tensorflow_train_and_eval.zip),
+unzip, and run
+
+```
+tensorboard --logdir <your-unzipped-baseline_tensorflow_train_and_eval>
+```
 
 ## Frame rate issues on Linux
 
