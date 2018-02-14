@@ -63,7 +63,7 @@ python main.py --train
 
 **Train** on the same dataset we used 
 
-Grab the [dataset](#Dataset)
+Grab the [dataset](#dataset)
 ```
 python main.py --train --recording-dir <the-directory-with-the-dataset>
 ```
