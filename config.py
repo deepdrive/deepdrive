@@ -27,40 +27,48 @@ IS_MAC = sys.platform == 'darwin'
 IS_UNIX = IS_LINUX or IS_MAC or 'bsd' in sys.platform.lower()
 IS_WINDOWS = sys.platform == 'win32'
 
-# Set DEEPDRIVE_DIR
-DEEPDRIVE_DIR = os.environ.get('DEEPDRIVE_DIR')
-if DEEPDRIVE_DIR is None:
-    config_dir = os.path.expanduser('~') + '/.deepdrive'
-    os.makedirs(config_dir, exist_ok=True)
-    deepdrive_python_bin = os.path.join(config_dir, 'python_bin')
-    with open(deepdrive_python_bin, 'w') as f:
-        f.write(sys.executable)
-    deepdrive_dir_config = os.path.join(config_dir, 'deepdrive_dir')
-    if os.path.exists(deepdrive_dir_config):
-        with open(deepdrive_dir_config) as f:
-            DEEPDRIVE_DIR = f.read()
+# DEEPDRIVE_DIR
+def _get_deepdrive_dir():
+    dir_config_file = os.path.join(DEEPDRIVE_CONFIG_DIR, 'deepdrive_dir')
+    if os.path.exists(dir_config_file):
+        with open(dir_config_file) as dcf:
+            ret = dcf.read()
     else:
         default_dir = os.path.join(os.path.expanduser('~'), 'Deepdrive')
-        DEEPDRIVE_DIR = input('Where would you like to store Deepdrive files '
+        ret = input('Where would you like to store Deepdrive files '
                               '(i.e. sim binaries (1GB), checkpoints (200MB), recordings, and logs)? [Default - %s] ' % default_dir)
         deepdrive_dir_set = False
         while not deepdrive_dir_set:
-            DEEPDRIVE_DIR = DEEPDRIVE_DIR or default_dir
-            if 'deepdrive' not in DEEPDRIVE_DIR.lower():
-                DEEPDRIVE_DIR = os.path.join(DEEPDRIVE_DIR, 'Deepdrive')
-            if not os.path.isabs(DEEPDRIVE_DIR):
-                DEEPDRIVE_DIR = input('Path: %s is not absolute, please specify a different path [Default - %s] ' %
-                                      (DEEPDRIVE_DIR, default_dir))
-            if os.path.isfile(DEEPDRIVE_DIR):
-                DEEPDRIVE_DIR = input('Path: %s is already a file, please specify a different path [Default - %s] ' %
-                                      (DEEPDRIVE_DIR, default_dir))
+            ret = ret or default_dir
+            if 'deepdrive' not in ret.lower():
+                ret = os.path.join(ret, 'Deepdrive')
+            if not os.path.isabs(ret):
+                ret = input('Path: %s is not absolute, please specify a different path [Default - %s] ' %
+                                      (ret, default_dir))
+            if os.path.isfile(ret):
+                ret = input('Path: %s is already a file, please specify a different path [Default - %s] ' %
+                                      (ret, default_dir))
             else:
                 deepdrive_dir_set = True
-        with open(deepdrive_dir_config, 'w') as f:
-            f.write(DEEPDRIVE_DIR)
-            print('%s written to %s' % (DEEPDRIVE_DIR, deepdrive_dir_config))
-DEEPDRIVE_DIR = DEEPDRIVE_DIR.replace('\r', '').replace('\n', '')
-os.makedirs(DEEPDRIVE_DIR, exist_ok=True)
+        with open(dir_config_file, 'w') as dcf:
+            dcf.write(ret)
+            print('%s written to %s' % (ret, dir_config_file))
+    ret = ret.replace('\r', '').replace('\n', '')
+    os.makedirs(ret, exist_ok=True)
+    return ret
+
+def _ensure_python_bin_config():
+    py_bin = os.path.join(DEEPDRIVE_CONFIG_DIR, 'python_bin')
+    with open(py_bin, 'w') as _dpbf:
+        _dpbf.write(sys.executable)
+
+DEEPDRIVE_DIR = os.environ.get('DEEPDRIVE_DIR')
+DEEPDRIVE_CONFIG_DIR = os.path.expanduser('~') + '/.deepdrive'
+os.makedirs(DEEPDRIVE_CONFIG_DIR, exist_ok=True)
+if DEEPDRIVE_DIR is None:
+    DEEPDRIVE_DIR = _get_deepdrive_dir()
+_ensure_python_bin_config()
+
 
 # Data directories
 DIR_DATE_FORMAT = '%Y-%m-%d__%I-%M-%S%p'
