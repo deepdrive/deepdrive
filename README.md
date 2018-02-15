@@ -90,9 +90,11 @@ python main.py --train --recording-dir <the-directory-with-the-dataset>
 * <kbd>Z</kbd> - Show mouse
 
 
-## Benchmark top scores (50 lap average)
+## Benchmark
 
-| Score  | Weights |  Deepdrive version |
+
+
+| Score (50 lap average)  | Weights |  Deepdrive version |
 | ---:   | :---    |   ---: |
 |[3059](https://d1y4edi1yk5yok.cloudfront.net/benchmarks/2018-01-02__09-49-03PM.csv)|[baseline_agent_weights.zip](https://d1y4edi1yk5yok.cloudfront.net/weights/baseline_agent_weights.zip)|2.0.20180101022103|
 
