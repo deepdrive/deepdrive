@@ -106,7 +106,7 @@ else:
 REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
 SIM_PATH = os.path.join(DEEPDRIVE_DIR, 'sim')
 
-DEFAULT_CAM = dict(name='alexnet_forward_cam_60', field_of_view=60, capture_width=227, capture_height=227,
+DEFAULT_CAM = dict(name='forward cam 227x227 60 FOV', field_of_view=60, capture_width=227, capture_height=227,
          relative_position=[150, 1.0, 200],
          relative_rotation=[0.0, 0.0, 0.0])
 
