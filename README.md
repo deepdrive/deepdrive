@@ -124,7 +124,7 @@ If you experience low frame rates on Linux, you may need to install NVIDIA’s d
 ## Tensorflow install tips
 
 - Use the Tensorflow instructions on GitHub for the release you wish to install, i.e. here's the [latest](https://github.com/tensorflow/tensorflow/releases/latest) - which at the time of this writing is v1.5 which stores the docs [here](https://github.com/tensorflow/tensorflow/blob/v1.5.0/tensorflow/docs_src/install/install_windows.md).
-- Make sure to install the CUDA / cuDNN major and minor version the Tensorflow instructions specify.  i.e. CUDA 9.0 / cuDNN 7.0 on Windows. These will likely be older than the latest version NVIDIA offers. See all [CUDA](https://developer.nvidia.com/cuda-toolkit-archive) releases here.
+- Make sure to install the CUDA / cuDNN major and minor version the Tensorflow instructions specify.  i.e. CUDA 9.0 / cuDNN 7.0 on Windows. These will likely be older than the latest version NVIDIA offers. You can see all [CUDA  releases here](https://developer.nvidia.com/cuda-toolkit-archive).
 - Use the packaged install, i.e. deb[local] on Ubuntu, referred to in [this guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
 - If you are feeling dangerous and use the runfile method, be sure to follow [NVIDIA’s instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) on how to disable the Nouveau drivers if you're on Ubuntu.
 
