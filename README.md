@@ -121,11 +121,9 @@ tensorboard --logdir <your-unzipped-baseline_tensorflow_train_and_eval>
 
 If you experience low frame rates on Linux, you may need to install NVIDIA’s display drivers including their OpenGL drivers. We recommend installing these with CUDA which bundles the version you will need to run the baseline agent. Also, make sure to [plugin your laptop](https://help.ubuntu.com/community/PowerManagement/ReducedPower). If CUDA is installed, skip to testing [OpenGL](#opengl).
 
-[CUDA install tips](#cuda-and-nvidia-driver-install)
-[cuDNN install tips](#cudnn-install-tips)
-
 ## NVIDIA install tips
 
+- Make sure to install the CUDA / cuDNN major and minor version the Tensorflow instructions specify.  i.e. CUDA 9.0 / cuDNN 6.0 on Windows. These will likely be older than the latest version NVIDIA offers.
 - Use the packaged install, i.e. deb[local] on Ubuntu, referred to in [this guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
 - If you are feeling dangerous and use the runfile method, be sure to follow [NVIDIA’s instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) on how to disable the Nouveau drivers if you're on Ubuntu.
 
