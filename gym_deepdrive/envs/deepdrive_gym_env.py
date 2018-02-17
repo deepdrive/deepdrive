@@ -568,24 +568,29 @@ class DeepDriveEnv(gym.Env):
 
     def connect(self, cameras=None, render=False):
         def _connect():
-            self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
-            if isinstance(self.connection_props, int):
-                raise Exception('You have an old version of the deepdrive client - try uninstalling and reinstalling with pip')
-            if not self.connection_props or not self.connection_props['max_capture_resolution']:
-                # Try again
-                return
-            self.client_id = self.connection_props['client_id']
-            server_version = semvar(self.connection_props['server_protocol_version']).version
-            # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
-            #   connecting, compute same hash and compare. (Need to figure out what to do on dev packaged version as
-            #   files may change - maybe ignore as it's uncommon).
-            #   Currently, we timestamp the build, and set that as the version in the extension. This is fine unless
-            #   you change shared code and build the extension only, then the versions won't change, and you could
-            #   see incompatibilities.
+            try:
+                self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
+                if isinstance(self.connection_props, int):
+                    raise Exception('You have an old version of the deepdrive client - try uninstalling and reinstalling with pip')
+                if not self.connection_props or not self.connection_props['max_capture_resolution']:
+                    # Try again
+                    return
+                self.client_id = self.connection_props['client_id']
+                server_version = semvar(self.connection_props['server_protocol_version']).version
+                # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
+                #   connecting, compute same hash and compare. (Need to figure out what to do on dev packaged version as
+                #   files may change - maybe ignore as it's uncommon).
+                #   Currently, we timestamp the build, and set that as the version in the extension. This is fine unless
+                #   you change shared code and build the extension only, then the versions won't change, and you could
+                #   see incompatibilities.
 
-            if semvar(self.client_version).version[:2] != server_version[:2]:
-                raise RuntimeError('Server and client major/minor version do not match - server is %s and client is %s' %
-                                   (server_version, self.client_version))
+                if semvar(self.client_version).version[:2] != server_version[:2]:
+                    raise RuntimeError('Server and client major/minor version do not match - server is %s and client is %s' %
+                                       (server_version, self.client_version))
+
+            except deepdrive_client.time_out:
+                _connect()
+
         _connect()
         cxn_attempts = 0
         max_cxn_attempts = 10
