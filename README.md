@@ -100,6 +100,8 @@ python main.py --train --recording-dir <the-directory-with-the-dataset>
 
 ## Dataset
 
+100GB (8.2 hours of driving) of camera, depth, steering, throttle, and brake of an 'oracle' path following agent. We rotate between three different cameras: normal, wide, and semi-truck - with random camera intrisic/extrinsic perturbations at the beginning of each episode (lap). This boosted performance on the benchmark by 3x. We also use DAgger to collect course correction data as in previous versions of Deepdrive.
+
 1. Get the [AWS CLI](https://github.com/aws/aws-cli)
 2. Ensure you have 104GB of free space
 3. Download our dataset of mixed Windows (Unreal PIE + Unreal packaged) and Linux + variable camera and corrective action recordings 
