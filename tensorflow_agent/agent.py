@@ -21,7 +21,7 @@ log = logs.get_log(__name__)
 class Agent(object):
     def __init__(self, action_space, tf_session, env, fps=8, should_record_recovery_from_random_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
-                 non_random_action_count=5, let_game_drive=False, recording_dir=c.RECORDING_DIR):
+                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space
         self.previous_action_time = None
@@ -39,7 +39,7 @@ class Agent(object):
         self.action_count = 0
         self.recorded_obz_count = 0
         self.performing_random_actions = False
-        self.let_game_drive = let_game_drive
+        self.path_follower_mode = path_follower
         self.recording_dir = recording_dir
 
         # Recording state
@@ -89,7 +89,7 @@ class Agent(object):
                 y = self.get_net_out(image)
             action = self.get_next_action(obz, y)
         else:
-            action = Action(has_control=(not self.let_game_drive))
+            action = Action(has_control=(not self.path_follower_mode))
 
         self.previous_action_time = now
         self.previous_action = action
@@ -268,12 +268,9 @@ class Agent(object):
 
 def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
-        should_record_recovery_from_random_actions=False, render=False, let_game_drive=False):
+        should_record_recovery_from_random_actions=False, render=False, path_follower=False):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
-        if c.REUSE_OPEN_SIM:
-            log.warning('****\n Baseline agent performs poorly in the Unreal editor as it was not trained '
-                        'there.\n\n****')
     reward = 0
     episode_done = False
     max_episodes = 1000
@@ -291,7 +288,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
     else:
         cameras = None
 
-    if camera_rigs is not None and len(camera_rigs) <= 1:
+    if should_record and camera_rigs is not None and len(camera_rigs) >= 1:
         should_rotate_camera_rigs = True
     else:
         should_rotate_camera_rigs = False
@@ -308,7 +305,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
     agent = Agent(gym_env.action_space, sess, env=gym_env.env,
                   should_record_recovery_from_random_actions=should_record_recovery_from_random_actions,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,
-                  let_game_drive=let_game_drive)
+                  path_follower=path_follower)
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
 
@@ -336,13 +333,16 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                     session_done = True
                 elif should_benchmark and dd_env.done_benchmarking:
                     session_done = True
-            if not session_done:
+            if session_done:
+                log.info('Session done')
+            else:
+                log.info('Episode done, rotating camera')
                 episode += 1
                 if should_rotate_camera_rigs:
                     cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
-                    dd_env.change_viewpoint(cameras,
-                                            use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
+                dd_env.change_viewpoint(cameras,
+                                        use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
                 if episode >= max_episodes:
                     session_done = True
     except KeyboardInterrupt:

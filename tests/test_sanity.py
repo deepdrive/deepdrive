@@ -27,23 +27,6 @@ def tf_sess():
         yield None
 
 
-def test_speed_reward():
-    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=833, time_passed=0.1)
-    assert reward == pytest.approx(0.59976)
-    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=833, time_passed=1e8)
-    assert reward == pytest.approx(100)
-    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=0, time_passed=0.1)
-    assert reward == pytest.approx(0)
-    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=-42, time_passed=0.1)
-    assert reward == pytest.approx(-0.03024)
-    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=-42, time_passed=1e8)
-    assert reward == pytest.approx(-100)
-    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=1e8, time_passed=0.1)
-    assert reward == pytest.approx(-1e2)
-    reward = DeepDriveRewardCalculator.get_speed_reward(cmps=-1e8, time_passed=0.1)
-    assert reward == pytest.approx(-1e2)
-
-
 def test_lane_deviation_penalty():
     penalty = DeepDriveRewardCalculator.get_lane_deviation_penalty(lane_deviation=100, time_passed=0.1)
     assert penalty == pytest.approx(0)

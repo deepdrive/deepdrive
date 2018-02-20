@@ -27,7 +27,7 @@ def main():
                         help='SLOW: render of camera data in Python - Use Unreal for real time camera rendering')
     parser.add_argument('--record-recovery-from-random-actions', action='store_true', default=False,
                         help='Whether to occasionally perform random actions and record recovery from them')
-    parser.add_argument('--let-game-drive', action='store_true', default=False,
+    parser.add_argument('--path-follower', action='store_true', default=False,
                         help='Whether to let the in-game path follower drive')
     parser.add_argument('-n', '--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
@@ -57,16 +57,18 @@ def main():
     if args.train:
         from tensorflow_agent.train import train
         train.run(resume_dir=args.resume_train, recording_dir=args.recording_dir)
-    elif args.let_game_drive:
+    elif args.path_follower:
         done = False
         render = False
         episode_count = 1
         gym_env = None
         try:
             gym_env = deepdrive_env.start(args.env_id)
+            dd_env = gym_env.env
             log.info('Path follower drive mode')
             for episode in range(episode_count):
                 if done:
+                    # dd_env.change_viewpoint([c.DEFAULT_CAM])
                     obz = gym_env.reset()
                 else:
                     obz = None
@@ -92,11 +94,11 @@ def main():
     else:
         from tensorflow_agent import agent
         if args.record and not args.record_recovery_from_random_actions:
-            args.let_game_drive = True
+            args.path_follower = True
         agent.run(should_record=args.record, net_path=args.net_path, env_id=args.env_id,
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
                   should_record_recovery_from_random_actions=args.record_recovery_from_random_actions,
-                  let_game_drive=args.let_game_drive)
+                  path_follower=args.path_follower)
 
 
 def get_latest_model():

@@ -90,7 +90,8 @@ def dashboard_fn(dash_queue):
             tv = Disp.txt_values[s_name]
             line = Disp.lines[s_name]
             val = s['value']
-            tv.set_text(str(round(val, 2)) + s['units'])
+            total = s['total']
+            tv.set_text(str(round(total, 2)) + s['units'])
             ys.pop()
             ys.appendleft(val)
             line.set_data(xs, ys)

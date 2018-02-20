@@ -23,8 +23,6 @@ def start(env='DeepDrive-v0', sess=None, start_dashboard=True, should_benchmark=
     if sess:
         dd_env.set_tf_session(sess)
     if start_dashboard:
-        print('DEBUG - before starting dashboard')
-
         dd_env.start_dashboard()
     if should_benchmark:
         log.info('Benchmarking enabled - will save results to %s', c.BENCHMARK_DIR)

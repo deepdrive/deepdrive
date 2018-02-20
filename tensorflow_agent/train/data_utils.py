@@ -1,11 +1,14 @@
-import logging as log
-
 import glob
 import threading
 from collections import deque
 
+import numpy as np
+
 from utils import read_hdf5
-from config import *
+import config as c
+import logs
+
+log = logs.get_log(__name__)
 
 
 class BackgroundGenerator(threading.Thread):
@@ -22,11 +25,11 @@ class BackgroundGenerator(threading.Thread):
         for item in self.generator:
             with self.cv:
                 print('queue length', len(self.queue))
-                while len(self.queue) > NUM_TRAIN_FILES_TO_QUEUE:
+                while len(self.queue) > c.NUM_TRAIN_FILES_TO_QUEUE:
                     print('waiting for queue size to decrease')
                     self.cv.wait()
                 if self.should_shuffle:
-                    queue_index = RNG.randint(0, len(self.queue))
+                    queue_index = c.RNG.randint(0, len(self.queue))
                     print('inserting randomly at', queue_index)
                     self.queue.insert(queue_index, item)
                 else:
@@ -74,7 +77,7 @@ def load_file(h5_filename):
     out_targets = []
     try:
         frames = read_hdf5(h5_filename)
-        RNG.shuffle(frames)
+        c.RNG.shuffle(frames)
         for frame in frames:
             out_images.append(frame['cameras'][0]['image'])  # Just use one camera for now
             out_targets.append([*normalize_frame(frame)])
@@ -86,15 +89,15 @@ def load_file(h5_filename):
 
 def normalize_frame(frame):
     spin = frame['angular_velocity'][2]
-    if spin <= -SPIN_THRESHOLD:
+    if spin <= -c.SPIN_THRESHOLD:
         direction = -1.0
-    elif spin >= SPIN_THRESHOLD:
+    elif spin >= c.SPIN_THRESHOLD:
         direction = 1.0
     else:
         direction = 0.0
-    spin = spin / SPIN_NORMALIZATION_FACTOR
-    speed = frame['speed'] / SPEED_NORMALIZATION_FACTOR
-    speed_change = np.dot(frame['acceleration'], frame['forward_vector']) / SPEED_NORMALIZATION_FACTOR
+    spin = spin / c.SPIN_NORMALIZATION_FACTOR
+    speed = frame['speed'] / c.SPEED_NORMALIZATION_FACTOR
+    speed_change = np.dot(frame['acceleration'], frame['forward_vector']) / c.SPEED_NORMALIZATION_FACTOR
     steering = frame['steering']
     throttle = frame['throttle']
     return spin, direction, speed, speed_change, steering, throttle
@@ -134,7 +137,7 @@ class Dataset(object):
     def iterate_forever(self, batch_size):
         def file_stream():
             while True:
-                RNG.shuffle(self._files)  # File order will be the same every epoch
+                c.RNG.shuffle(self._files)  # File order will be the same every epoch
                 for file_name in self._files:
                     self.log.info('queueing data from %s for iterate forever', file_name)
                     yield file_name
@@ -151,10 +154,15 @@ def get_dataset(hdf5_path, log, train=True):
 
 
 def run():
-    hdf5_path = os.environ['DEEPDRIVE_HDF5_PATH']
-    log.info(get_file_names(hdf5_path))
-    dataset = get_dataset(hdf5_path, log)
+    hdf5_path = c.RECORDING_DIR
+    log.info(get_file_names(hdf5_path, train=True))
+    dataset = get_dataset(hdf5_path, log, train=True)
     log.info(dataset)
+    log.info('Iterating through recordings')
+    for images, targets in dataset.iterate_once(64):
+        for image in images:
+            if image.shape != (227,227,3):
+                log.info('FOUND %r', image.shape)
 
 if __name__ == "__main__":
     run()
