@@ -124,6 +124,10 @@ class DeepDriveEnv(gym.Env):
         self.pyglet_process = None
         self.pyglet_queue = None
         self.ep_time_balance_coeff = 10
+        self.previous_action_time = None
+        self.fps = None
+        self.period = None
+        self.experiment = None
 
         if not c.REUSE_OPEN_SIM:
             if utils.get_sim_bin_path() is None:
@@ -293,7 +297,23 @@ class DeepDriveEnv(gym.Env):
             reward -= -10000  # reward is in scale of meters
         info = {}
         self.step_num += 1
+
+        self.regulate_fps()
+
+
         return obz, reward, done, info
+
+    def regulate_fps(self):
+        now = time.time()
+        if self.previous_action_time:
+            delta = now - self.previous_action_time
+            if delta < self.period:
+                time.sleep(delta)
+            else:
+                fps = 1. / delta
+                if self.step_num > 5 and fps < self.fps / 2:
+                    log.warning('Low FPS of %r, target is %r, step %r', fps, self.fps, self.step)
+        self.previous_action_time = now
 
     def compute_lap_statistics(self, done, obz):
         if not obz:
@@ -423,13 +443,17 @@ class DeepDriveEnv(gym.Env):
         low = min(totals)
         std = np.std(totals)
         log.info('benchmark lap #%d score: %f - average: %f', len(self.trial_scores), self.score.total, average)
-        filename = os.path.join(c.BENCHMARK_DIR, c.DATE_STR + '.csv')
-        with open(filename, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
+        filename = os.path.join(c.BENCHMARK_DIR, '%s_%s.csv' % (self.experiment, c.DATE_STR))
+        with open(filename, 'w', newline='') as csv_file:
+            writer = csv.writer(csv_file)
             for i, score in enumerate(self.trial_scores):
                 if i == 0:
                     writer.writerow(['episode #', 'score', 'progress reward', 'lane deviation penalty',
                                      'gforce penalty', 'got stuck', 'start', 'end', 'lap time'])
+                log.info('progress_reward %r', score.progress_reward)
+                log.info('lane_deviation_penalty %r', score.lane_deviation_penalty)
+                log.info('gforce_penalty %r', score.gforce_penalty)
+                log.info('episode_time %r', score.episode_time)
                 writer.writerow([i + 1, score.total,
                                  score.progress_reward, score.lane_deviation_penalty,
                                  score.gforce_penalty, score.got_stuck, str(arrow.get(score.start_time).to('local')),
@@ -441,6 +465,7 @@ class DeepDriveEnv(gym.Env):
             writer.writerow(['std', std])
             writer.writerow(['high score', high])
             writer.writerow(['low score', low])
+
         log.info('median score %r', median)
         log.info('avg score %r', average)
         log.info('std %r', std)

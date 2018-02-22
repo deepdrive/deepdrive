@@ -110,3 +110,4 @@ DEFAULT_CAM = dict(name='forward cam 227x227 60 FOV', field_of_view=60, capture_
          relative_position=[150, 1.0, 200],
          relative_rotation=[0.0, 0.0, 0.0])
 
+DEFAULT_FPS = 8

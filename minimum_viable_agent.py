@@ -1,7 +1,7 @@
 import deepdrive_env
 
 def main():
-    env = deepdrive_env.start()
+    env = deepdrive_env.start(experiment_name='hello world')
     forward = deepdrive_env.action(throttle=1, steering=0, brake=0)
     done = False
     while not done:

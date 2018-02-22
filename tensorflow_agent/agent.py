@@ -19,14 +19,11 @@ log = logs.get_log(__name__)
 
 
 class Agent(object):
-    def __init__(self, action_space, tf_session, env, fps=8, should_record_recovery_from_random_actions=True,
+    def __init__(self, action_space, tf_session, env, should_record_recovery_from_random_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
                  non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space
-        self.previous_action_time = None
-        self.fps = fps
-        self.period = 1. / fps
         self.previous_action = None
         self.step = 0
         self.env = env
@@ -63,16 +60,6 @@ class Agent(object):
             self.sess = None
 
     def act(self, obz, reward, done):
-        now = time.time()
-        if self.previous_action_time:
-            delta = now - self.previous_action_time
-            if delta < self.period:
-                time.sleep(delta)
-            else:
-                fps = 1. / delta
-                if self.step > 5 and fps < self.fps / 2:
-                    log.warning('Low FPS of %r, target is %r, step %r', fps, self.fps, self.step)
-
         if obz is not None:
             log.debug('steering %r', obz['steering'])
             log.debug('throttle %r', obz['throttle'])
@@ -91,7 +78,6 @@ class Agent(object):
         else:
             action = Action(has_control=(not self.path_follower_mode))
 
-        self.previous_action_time = now
         self.previous_action = action
         self.step += 1
 
@@ -266,9 +252,9 @@ class Agent(object):
             self.semirandom_sequence_step += 1
 
 
-def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=True,
+def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
-        should_record_recovery_from_random_actions=False, render=False, path_follower=False):
+        should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
     reward = 0
@@ -297,8 +283,9 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
         randomize_cameras(cameras)
 
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
-    gym_env = deepdrive_env.start(env_id, should_benchmark=should_benchmark, cameras=cameras,
-                                  use_sim_start_command=use_sim_start_command_first_lap, render=render)
+    gym_env = deepdrive_env.start(experiment, env_id, should_benchmark=should_benchmark, cameras=cameras,
+                                  use_sim_start_command=use_sim_start_command_first_lap, render=render,
+                                  fps=fps)
     dd_env = gym_env.env
 
     # Perform random actions to reduce sampling error in the recorded dataset
@@ -341,7 +328,7 @@ def run(env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=Non
                 if should_rotate_camera_rigs:
                     cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
-                dd_env.change_viewpoint(cameras,
+                    dd_env.change_viewpoint(cameras,
                                         use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
                 if episode >= max_episodes:
                     session_done = True

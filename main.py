@@ -4,6 +4,8 @@ import logging
 
 import os
 
+import time
+
 import camera_config
 import config as c
 import logs
@@ -29,7 +31,7 @@ def main():
                         help='Whether to occasionally perform random actions and record recovery from them')
     parser.add_argument('--path-follower', action='store_true', default=False,
                         help='Whether to let the in-game path follower drive')
-    parser.add_argument('-n', '--net-path', nargs='?', default=None,
+    parser.add_argument('--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
     parser.add_argument('--resume-train', nargs='?', default=None,
@@ -38,6 +40,9 @@ def main():
     parser.add_argument('-v', '--verbose', help='Increase output verbosity',
                         action='store_true')
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
+    parser.add_argument('-n', '--experiment-name', nargs='?', default=None, help='Name of your experiment')
+    parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
+
 
     args = parser.parse_args()
     if args.verbose:
@@ -47,6 +52,12 @@ def main():
         camera_rigs = camera_config.rigs[args.camera_rigs]
     else:
         camera_rigs = camera_config.rigs['baseline_rigs']
+
+    if args.experiment_name is None:
+        if args.baseline:
+            args.experiment_name = 'baseline'
+        elif args.path_follower:
+            args.experiment_name = 'path_follower'
 
     if args.use_last_model:
         if args.train:
@@ -63,16 +74,11 @@ def main():
         episode_count = 1
         gym_env = None
         try:
-            gym_env = deepdrive_env.start(args.env_id)
-            dd_env = gym_env.env
+            gym_env = deepdrive_env.start(args.experiment_name, args.env_id, fps=args.fps)
             log.info('Path follower drive mode')
             for episode in range(episode_count):
                 if done:
-                    # dd_env.change_viewpoint([c.DEFAULT_CAM])
-                    obz = gym_env.reset()
-                else:
-                    obz = None
-
+                    gym_env.reset()
                 while True:
                     action = deepdrive_env.action(has_control=False)
                     obz, reward, done, _ = gym_env.step(action)
@@ -80,7 +86,6 @@ def main():
                         gym_env.render()
                     if done:
                         gym_env.reset()
-                    pass
         except KeyboardInterrupt:
             log.info('keyboard interrupt detected, closing')
         except Exception as e:
@@ -95,10 +100,11 @@ def main():
         from tensorflow_agent import agent
         if args.record and not args.record_recovery_from_random_actions:
             args.path_follower = True
-        agent.run(should_record=args.record, net_path=args.net_path, env_id=args.env_id,
+        agent.run(args.experiment_name,
+                  should_record=args.record, net_path=args.net_path, env_id=args.env_id,
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
                   should_record_recovery_from_random_actions=args.record_recovery_from_random_actions,
-                  path_follower=args.path_follower)
+                  path_follower=args.path_follower, fps=args.fps)
 
 
 def get_latest_model():
