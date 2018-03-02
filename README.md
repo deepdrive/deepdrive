@@ -95,6 +95,7 @@ python main.py --train --recording-dir <the-directory-with-the-dataset>
 * <kbd>E</kbd> - Gear Up
 * <kbd>Q</kbd> - Gear down
 * <kbd>Z</kbd> - Show mouse
+* <kbd>`</kbd><kbd>`</kbd> - Unreal console (first press releases game input capture)
 
 
 ## Benchmark
