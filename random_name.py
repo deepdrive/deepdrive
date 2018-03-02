@@ -54,7 +54,6 @@ ADJECTIVES = [
     'nonparametric',
     'latent',
     'post-bayesian',
-    'added logging',
     'Kolmogorov',
     'Solomonoff',
     'WIP',
