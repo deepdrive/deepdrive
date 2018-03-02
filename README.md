@@ -39,7 +39,7 @@ python install.py
 
 #### Cloud
 
-We highly recommend Paperspace's ML-in-a-Box machine which already has Tensorflow installed and just requires
+We highly recommend Paperspace's ML-in-a-Box public template which already has Tensorflow installed and just requires
 
 ```
 python install.py
