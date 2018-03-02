@@ -121,22 +121,24 @@ def run(resume_dir=None, recording_dir=c.RECORDING_DIR):
     config = tf.ConfigProto(allow_soft_placement=True)
     with sv.managed_session(config=config) as sess, sess.as_default():
         train_data_provider = train_dataset.iterate_forever(batch_size)
-        log.info('Start tensorboard with \n\ttensorboard --logdir="' + c.TENSORFLOW_OUT_DIR +
-                 '" (In Windows tensorboard will be in your python env\'s Scripts folder, '
+        log.info('\n\n*********************************************************************\n'
+                 'Start tensorboard with \n\n\ttensorboard --logdir="' + c.TENSORFLOW_OUT_DIR +
+                 '"\n\n(In Windows tensorboard will be in your python env\'s Scripts folder, '
                  'i.e. C:\\Users\\<YOU>\\Miniconda3\\envs\\tensorflow\\Scripts) but this should already be in your path \n'
                  'Then navigate to http://localhost:6006 - You may see errors if Tensorboard was already '
                  'started / has tabs open. If so, shut down Tenosrboard first and close all Tensorboard tabs. '
-                 'Sometimes you may just need to restart if you get CUDA device errors.')
+                 'Sometimes you may just need to restart if you get CUDA device errors.'
+                 '\n*********************************************************************\n\n')
         while True:
             for i in range(1000):
                 images, targets = next(train_data_provider)
-                print('num images %r' % len(images))
-                print('num targets %r' % len(targets))
+                log.debug('num images %r', len(images))
+                log.debug('num targets %r', len(targets))
                 valid = True
                 for img_idx, img in enumerate(images):
                     img = images[img_idx]
                     if img.shape != c.BASELINE_IMAGE_SHAPE:
-                        log.info('invalid image shape %s - resizing', str(img.shape))
+                        log.debug('invalid image shape %s - resizing', str(img.shape))
                         images[img_idx] = scipy.misc.imresize(img, (c.BASELINE_IMAGE_SHAPE[0],
                                                                     c.BASELINE_IMAGE_SHAPE[1]))
                 for tgt in targets:

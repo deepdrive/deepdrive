@@ -56,7 +56,7 @@ python main.py --baseline
 
 Run in-game path follower
 ```
-python main.py --let-game-drive
+python main.py --path-follower
 ```
 
 **Record** training data for imitation learning / behavioral cloning

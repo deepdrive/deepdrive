@@ -24,36 +24,36 @@ class BackgroundGenerator(threading.Thread):
     def run(self):
         for item in self.generator:
             with self.cv:
-                print('queue length', len(self.queue))
+                log.debug('queue length %r', len(self.queue))
                 while len(self.queue) > c.NUM_TRAIN_FILES_TO_QUEUE:
-                    print('waiting for queue size to decrease')
+                    log.debug('waiting for queue size to decrease')
                     self.cv.wait()
                 if self.should_shuffle:
                     queue_index = c.RNG.randint(0, len(self.queue))
-                    print('inserting randomly at', queue_index)
+                    log.debug('inserting randomly at', queue_index)
                     self.queue.insert(queue_index, item)
                 else:
                     self.queue.append(item)
-                print('inserted, queue length is', len(self.queue), 'item was None', item is None)
+                log.debug('inserted, queue length is %r item was None %r', len(self.queue), item is None)
                 self.cv.notify()  # Tell consumer we have more
-        print('inserting none')
+        log.debug('inserting none')
         self.queue.append(None)
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        print('getting item')
+        log.debug('getting item')
         with self.cv:
-            print('in cv getting item')
+            log.debug('in cv getting item')
             while len(self.queue) == 0:
-                print('waiting for item')
+                log.debug('waiting for item')
                 self.cv.wait()
-            print('out of cv getting item')
+                log.debug('out of cv getting item')
             next_item = self.queue.popleft()
             self.cv.notify()   # Tell producer we want more
         if next_item is None:
-            print('next item is None, ending!!!!')
+            log.debug('next item is None, ending!!!!')
             raise StopIteration
         # print('returning item!', next_item)
 
