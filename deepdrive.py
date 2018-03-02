@@ -4,6 +4,8 @@ import gym
 import logs
 
 import config as c
+import random_name
+
 # noinspection PyUnresolvedReferences
 from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action
 log = logs.get_log(__name__)
@@ -16,7 +18,8 @@ def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=T
     env.seed(0)
 
     if experiment_name is None:
-        experiment_name = input('Experiment name? ')
+        default_ex_name = random_name.generate()
+        experiment_name = input('Experiment name? (or press enter for random default "%s"): ' % default_ex_name) or default_ex_name
 
     dd_env = env.env
     dd_env.fps = fps

@@ -312,7 +312,7 @@ class DeepDriveEnv(gym.Env):
             else:
                 fps = 1. / delta
                 if self.step_num > 5 and fps < self.fps / 2:
-                    log.warning('Low FPS of %r, target is %r, step %r', fps, self.fps, self.step)
+                    log.warning('Step %r took %rs - target is %rs', self.step_num, delta, 1 / self.fps)
         self.previous_action_time = now
 
     def compute_lap_statistics(self, done, obz):
