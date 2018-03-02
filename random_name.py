@@ -54,7 +54,7 @@ ADJECTIVES = [
     'nonparametric',
     'latent',
     'post-bayesian',
-    'added logging to',
+    'added logging',
     'Kolmogorov',
     'Solomonoff',
     'WIP',
@@ -109,7 +109,8 @@ def _get_adjectives():
     else:
         num_adjectives = 4
     adjectives = [choice(ADJECTIVES) for _ in range(num_adjectives)]
-    adjectives[0] = adjectives[0].capitalize()
+    if not adjectives[0][0].isupper():
+        adjectives[0] = adjectives[0].capitalize()
     return ' '.join(adjectives)
 
 
