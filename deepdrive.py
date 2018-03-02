@@ -9,11 +9,15 @@ from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action
 log = logs.get_log(__name__)
 
 
-def start(experiment_name, env='DeepDrive-v0', sess=None, start_dashboard=True, should_benchmark=True,
+def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=True, should_benchmark=True,
           cameras=None, use_sim_start_command=False, render=False, fps=c.DEFAULT_FPS):
     env = gym.make(env)
     env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
     env.seed(0)
+
+    if experiment_name is None:
+        experiment_name = input('Experiment name? ')
+
     dd_env = env.env
     dd_env.fps = fps
     dd_env.experiment = experiment_name.replace(' ', '_')

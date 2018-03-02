@@ -268,7 +268,7 @@ class DeepDriveEnv(gym.Env):
             # TODO: Deal with plot UI not being in the main thread somehow - (move to browser?)
             log.warning('Dashboard not supported in debug mode')
             return
-        q = Queue()
+        q = Queue(maxsize=10)
         p = Process(target=dashboard_fn, args=(q,))
         print('DEBUG - after starting dashboard')
         p.start()
@@ -450,10 +450,6 @@ class DeepDriveEnv(gym.Env):
                 if i == 0:
                     writer.writerow(['episode #', 'score', 'progress reward', 'lane deviation penalty',
                                      'gforce penalty', 'got stuck', 'start', 'end', 'lap time'])
-                log.info('progress_reward %r', score.progress_reward)
-                log.info('lane_deviation_penalty %r', score.lane_deviation_penalty)
-                log.info('gforce_penalty %r', score.gforce_penalty)
-                log.info('episode_time %r', score.episode_time)
                 writer.writerow([i + 1, score.total,
                                  score.progress_reward, score.lane_deviation_penalty,
                                  score.gforce_penalty, score.got_stuck, str(arrow.get(score.start_time).to('local')),
@@ -471,6 +467,10 @@ class DeepDriveEnv(gym.Env):
         log.info('std %r', std)
         log.info('high score %r', high)
         log.info('low score %r', low)
+        log.info('progress_reward %r', self.score.progress_reward)
+        log.info('lane_deviation_penalty %r', self.score.lane_deviation_penalty)
+        log.info('gforce_penalty %r', self.score.gforce_penalty)
+        log.info('episode_time %r', self.score.episode_time)
         log.info('wrote results to %s', os.path.normpath(filename))
 
     def release_agent_control(self):

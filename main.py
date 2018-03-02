@@ -9,7 +9,7 @@ import time
 import camera_config
 import config as c
 import logs
-import deepdrive_env
+import deepdrive
 
 
 def main():
@@ -53,12 +53,6 @@ def main():
     else:
         camera_rigs = camera_config.rigs['baseline_rigs']
 
-    if args.experiment_name is None:
-        if args.baseline:
-            args.experiment_name = 'baseline'
-        elif args.path_follower:
-            args.experiment_name = 'path_follower'
-
     if args.use_last_model:
         if args.train:
             args.resume_train = get_latest_model()
@@ -74,13 +68,13 @@ def main():
         episode_count = 1
         gym_env = None
         try:
-            gym_env = deepdrive_env.start(args.experiment_name, args.env_id, fps=args.fps)
+            gym_env = deepdrive.start(args.experiment_name, args.env_id, fps=args.fps)
             log.info('Path follower drive mode')
             for episode in range(episode_count):
                 if done:
                     gym_env.reset()
                 while True:
-                    action = deepdrive_env.action(has_control=False)
+                    action = deepdrive.action(has_control=False)
                     obz, reward, done, _ = gym_env.step(action)
                     if render:
                         gym_env.render()

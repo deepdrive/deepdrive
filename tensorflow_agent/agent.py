@@ -9,7 +9,7 @@ import tensorflow as tf
 import numpy as np
 
 import config as c
-import deepdrive_env
+import deepdrive
 from gym_deepdrive.envs.deepdrive_gym_env import Action
 from tensorflow_agent.net import Net
 from utils import save_hdf5, download
@@ -283,7 +283,7 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
         randomize_cameras(cameras)
 
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
-    gym_env = deepdrive_env.start(experiment, env_id, should_benchmark=should_benchmark, cameras=cameras,
+    gym_env = deepdrive.start(experiment, env_id, should_benchmark=should_benchmark, cameras=cameras,
                                   use_sim_start_command=use_sim_start_command_first_lap, render=render,
                                   fps=fps)
     dd_env = gym_env.env

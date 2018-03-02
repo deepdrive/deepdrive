@@ -37,6 +37,14 @@ Make sure the Python you want to use is in your PATH, then
 python install.py
 ```
 
+#### Cloud
+
+We highly recommend Paperspace's ML-in-a-Box machine which already has Tensorflow installed and just requires
+
+```
+python install.py
+```
+
 If you run into issues, try starting the sim directly as Unreal may need to install some prerequisetes. The default location is in your user directory under <kbd>Deepdrive/sim</kbd>
 
 ## Usage
@@ -73,7 +81,6 @@ python main.py --train --recording-dir <the-directory-with-the-dataset>
 * <kbd>Esc</kbd> - Pause (Quit in Unreal Editor)
 * <kbd>Alt+Tab</kbd> - Control other windows
 * <kbd>P</kbd> - Pause in Unreal Editor
-* <kbd>J</kbd> - Toggle shared mem stats
 * <kbd>;</kbd> - Toggle FPS
 * <kbd>1</kbd> - Chase cam
 * <kbd>2</kbd> - Orbit (side) cam
@@ -91,8 +98,6 @@ python main.py --train --recording-dir <the-directory-with-the-dataset>
 
 
 ## Benchmark
-
-
 
 | 50 lap avg score  | Weights |  Deepdrive version |
 | ---:   | :---    |   ---: |
