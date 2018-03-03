@@ -105,7 +105,7 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['g-forces']                      = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 3,    'units': 'g'}
         self.display_stats['gforce penalty']                = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 0,    'units': ''}
         self.display_stats['lane deviation penalty']        = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 0,    'units': ''}
-        self.display_stats['episode progress']              = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 100,  'units': '%'}
+        self.display_stats['lap progress']              = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 100,  'units': '%'}
         self.display_stats['episode #']                     = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 5,    'units': ''}
         self.display_stats['time']                          = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 250,  'units': 's'}
         self.display_stats['episode score']                 = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 2000, 'units': ''}
@@ -396,8 +396,8 @@ class DeepDriveEnv(gym.Env):
             progress = dist - self.distance_along_route
             self.distance_along_route = dist
             progress_reward = DeepDriveRewardCalculator.get_progress_reward(progress, time_passed)
-        self.display_stats['episode progress']['total'] = self.distance_along_route / 2736.7
-        self.display_stats['episode progress']['value'] = self.display_stats['episode progress']['total']
+        self.display_stats['lap progress']['total'] = self.distance_along_route / 2736.7
+        self.display_stats['lap progress']['value'] = self.display_stats['lap progress']['total']
         self.display_stats['episode #']['total'] = self.total_laps
         self.display_stats['episode #']['value'] = self.total_laps
         self.score.progress_reward += progress_reward
