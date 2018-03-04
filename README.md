@@ -51,12 +51,12 @@ If you run into issues, try starting the sim directly as Unreal may need to inst
 
 Run the **baseline** agent
 ```
-python main.py --baseline
+python main.py --baseline --experiment-name my-baseline-test
 ```
 
 Run in-game path follower
 ```
-python main.py --path-follower
+python main.py --path-follower --experiment-name my-path-follower-test
 ```
 
 **Record** training data for imitation learning / behavioral cloning
@@ -103,6 +103,12 @@ python main.py --train --recording-dir <the-directory-with-the-dataset>
 | 50 lap avg score  | Weights |  Deepdrive version |
 | ---:   | :---    |   ---: |
 |[3059](https://d1y4edi1yk5yok.cloudfront.net/benchmarks/2018-01-02__09-49-03PM.csv)|[baseline_agent_weights.zip](https://d1y4edi1yk5yok.cloudfront.net/weights/baseline_agent_weights.zip)|2.0.20180101022103|
+
+The baseline agent currently outperforms the path follower it was trained on, most likely due to the slower
+speed the at which the baseline agent drives and the resulting lower lane deviation and g-force penalties. 
+Interestingly, reducing the path follower speed causes it to crash at points where it otherwise drifts, 
+so the baseline agent has learned a more robust turning function than the original hardcoded path follower it
+was trained on.
 
 ## Dataset
 

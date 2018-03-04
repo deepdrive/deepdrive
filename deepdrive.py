@@ -18,8 +18,7 @@ def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=T
     env.seed(0)
 
     if experiment_name is None:
-        default_ex_name = random_name.generate()
-        experiment_name = input('Experiment name [random-default: %s]? ' % default_ex_name) or default_ex_name
+        experiment_name = ''
 
     dd_env = env.env
     dd_env.fps = fps

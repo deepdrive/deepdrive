@@ -321,12 +321,14 @@ class DeepDriveEnv(gym.Env):
         lap_number = obz.get('lap_number')
         if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
             self.total_laps += 1
-            log.info('lap %d complete with score of %f', self.total_laps, self.score.total)
             self.prev_lap_score = self.score.total
             if self.should_benchmark:
                 self.log_benchmark_trial()
                 if len(self.trial_scores) >= 50:
                     self.done_benchmarking = True
+            else:
+                log.info('lap %d complete with score of %f', self.total_laps, self.score.total)
+
             done = True  # One lap per episode
             self.log_up_time()
         self.lap_number = lap_number
@@ -443,7 +445,8 @@ class DeepDriveEnv(gym.Env):
         low = min(totals)
         std = np.std(totals)
         log.info('benchmark lap #%d score: %f - average: %f', len(self.trial_scores), self.score.total, average)
-        filename = os.path.join(c.BENCHMARK_DIR, '%s_%s.csv' % (self.experiment, c.DATE_STR))
+        file_prefix = self.experiment + '_' if self.experiment else ''
+        filename = os.path.join(c.BENCHMARK_DIR, '%s%s.csv' % (file_prefix, c.DATE_STR))
         with open(filename, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
             for i, score in enumerate(self.trial_scores):
