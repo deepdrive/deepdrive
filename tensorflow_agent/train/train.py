@@ -3,7 +3,7 @@ from __future__ import print_function
 import os
 
 import numpy as np
-import scipy
+import scipy.misc
 import tensorflow as tf
 
 import config as c
