@@ -127,7 +127,7 @@ def run(resume_dir=None, recording_dir=c.RECORDING_DIR):
                  'i.e. C:\\Users\\<YOU>\\Miniconda3\\envs\\tensorflow\\Scripts) but this should already be in your path \n'
                  'Then navigate to http://localhost:6006 - You may see errors if Tensorboard was already '
                  'started / has tabs open. If so, shut down Tenosrboard first and close all Tensorboard tabs. '
-                 'Sometimes you may just need to restart if you get CUDA device errors.'
+                 'Sometimes you may just need to restart training if you get CUDA device errors.'
                  '\n*********************************************************************\n\n')
         while True:
             for i in range(1000):
