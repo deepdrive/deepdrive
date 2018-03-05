@@ -100,15 +100,16 @@ python main.py --train --recording-dir <the-directory-with-the-dataset>
 
 ## Benchmark
 
-| 50 lap avg score  | Weights |  Deepdrive version |
-| ---:   | :---    |   ---: |
-|[3059](https://d1y4edi1yk5yok.cloudfront.net/benchmarks/2018-01-02__09-49-03PM.csv)|[baseline_agent_weights.zip](https://d1y4edi1yk5yok.cloudfront.net/weights/baseline_agent_weights.zip)|2.0.20180101022103|
+| Agent  |  10 lap avg score  | Weights |  Deepdrive version |
+| :---    | ---:   | :---    |   ---: |
+|Baseline agent (imitation learning)|[1691](https://docs.google.com/spreadsheets/d/1ryFaMFJhcTMBuhXZv0eMFHO35NMcXE2_MFLYqeUosfM/edit#gid=0)|[baseline_agent_weights.zip](https://d1y4edi1yk5yok.cloudfront.net/weights/baseline_agent_weights.zip)|2.0|
+|Path follower |[1069*](https://docs.google.com/spreadsheets/d/1T5EuEobdVFn5ewdYTO20i9CqcZ-jIEsAihlV5lpvLQQ/edit#gid=0)| n/a [3D spline follower](https://github.com/crizCraig/deepdrive-beta/blob/bde6b8c48314c34a96ce0942fc398fae840720ee/Source/DeepDrive/Private/Car.cpp#L409)|2.0|
 
-The baseline agent currently outperforms the path follower it was trained on, most likely due to the slower
-speed the at which the baseline agent drives and the resulting lower lane deviation and g-force penalties. 
-Interestingly, reducing the path follower speed causes it to crash at points where it otherwise drifts, 
-so the baseline agent has learned a more robust turning function than the original hardcoded path follower it
-was trained on.
+*The baseline agent currently outperforms the path follower it was trained on, likely due to the slower
+speed the at which the baseline agent drives, resulting in lower lane deviation and g-force penalties. 
+Interestingly, reducing the path follower speed causes it to crash at points where it otherwise loses traction and drifts, 
+so the baseline agent has actually learned a more robust turning function than the original hardcoded path follower
+it was trained on.
 
 ## Dataset
 
