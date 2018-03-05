@@ -61,6 +61,7 @@ def main():
 
     if args.train:
         from tensorflow_agent.train import train
+        # TODO: Add experiment name here as well, and integrate it into Tensorflow runs, recording names, model checkpoints, etc...
         train.run(resume_dir=args.resume_train, recording_dir=args.recording_dir)
     elif args.path_follower:
         done = False
