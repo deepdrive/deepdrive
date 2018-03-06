@@ -39,13 +39,13 @@ python install.py
 
 #### Cloud
 
-We highly recommend Paperspace's ML-in-a-Box public template which already has Tensorflow installed and just requires
+We've tested on Paperspace's ML-in-a-Box Linux public template which already has Tensorflow installed and just requires
 
 ```
 python install.py
 ```
 
-If you run into issues, try starting the sim directly as Unreal may need to install some prerequisetes. The default location is in your user directory under <kbd>Deepdrive/sim</kbd>
+If you run into issues, try starting the sim directly as Unreal may need to install some prerequisetes (i.e. DirectX needs to be installed on the Paperspace Parsec Windows box). The default location of the Unreal sim binary is in your user directory under <kbd>Deepdrive/sim</kbd>.
 
 ## Usage
 
