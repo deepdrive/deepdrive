@@ -102,8 +102,8 @@ python main.py --train --recording-dir <the-directory-with-the-dataset>
 
 | Agent  |  10 lap avg score  | Weights |  Deepdrive version |
 | :---    | ---:   | :---    |   ---: |
-|Baseline agent (imitation learning)|[1691](https://docs.google.com/spreadsheets/d/1ryFaMFJhcTMBuhXZv0eMFHO35NMcXE2_MFLYqeUosfM/edit#gid=0)|[baseline_agent_weights.zip](https://d1y4edi1yk5yok.cloudfront.net/weights/baseline_agent_weights.zip)|2.0|
-|Path follower |[1069*](https://docs.google.com/spreadsheets/d/1T5EuEobdVFn5ewdYTO20i9CqcZ-jIEsAihlV5lpvLQQ/edit#gid=0)| n/a [3D spline follower](https://github.com/crizCraig/deepdrive-beta/blob/bde6b8c48314c34a96ce0942fc398fae840720ee/Source/DeepDrive/Private/Car.cpp#L409)|2.0|
+|Baseline agent (trained with imitation learning)|[1691](https://docs.google.com/spreadsheets/d/1ryFaMFJhcTMBuhXZv0eMFHO35NMcXE2_MFLYqeUosfM/edit#gid=0)|[baseline_agent_weights.zip](https://d1y4edi1yk5yok.cloudfront.net/weights/baseline_agent_weights.zip)|2.0|
+|Path follower |[1069 *](https://docs.google.com/spreadsheets/d/1T5EuEobdVFn5ewdYTO20i9CqcZ-jIEsAihlV5lpvLQQ/edit#gid=0)| N/A (see [3D spline follower](https://github.com/crizCraig/deepdrive-beta/blob/bde6b8c48314c34a96ce0942fc398fae840720ee/Source/DeepDrive/Private/Car.cpp#L409))|2.0|
 
 *The baseline agent currently outperforms the path follower it was trained on, likely due to the slower
 speed the at which the baseline agent drives, resulting in lower lane deviation and g-force penalties. 
