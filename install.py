@@ -84,7 +84,7 @@ def get_tf_valid():
             if not get_available_gpus():
                 print('\n\n*** Warning: %s \n\n' %
                       'Tensorflow could not find a GPU, performance will be severely degraded on CPU. '
-                      'HINT: Try "pipenv install tensorflow-gpu"')
+                      'HINT: Try "pip install tensorflow-gpu"')
                 return False
             sess.run(check)
             print('Tensorflow is working on the GPU.')
