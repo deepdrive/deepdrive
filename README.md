@@ -1,6 +1,6 @@
 # Deepdrive [![Build Status](https://travis-ci.com/crizCraig/deepdrive-agents-beta.svg?token=hcA6yn9X8yYZspyyCMpp&branch=master)](https://travis-ci.com/crizCraig/deepdrive-agents-beta)
 
-The easiest way to test self-driving AI
+The easiest way to experiment with self-driving AI
 
 ## Simulator requirements
 
