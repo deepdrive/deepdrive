@@ -1,4 +1,4 @@
-# Deepdrive [![Build Status](https://travis-ci.com/crizCraig/deepdrive-agents-beta.svg?token=hcA6yn9X8yYZspyyCMpp&branch=master)](https://travis-ci.com/crizCraig/deepdrive-agents-beta)
+# Deepdrive [![Build Status](https://travis-ci.com/deepdrive/deepdrive.svg?token=hcA6yn9X8yYZspyyCMpp&branch=master)](https://travis-ci.com/deepdrive/deepdrive)
 
 The easiest way to experiment with self-driving AI
 
