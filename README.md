@@ -1,4 +1,4 @@
-# Deepdrive [![Build Status](https://travis-ci.com/deepdrive/deepdrive.svg?token=hcA6yn9X8yYZspyyCMpp&branch=master)](https://travis-ci.com/deepdrive/deepdrive)
+# Deepdrive [![Build Status](https://travis-ci.org/deepdrive/deepdrive.svg?branch=master)](https://travis-ci.org/deepdrive/deepdrive)
 
 The easiest way to experiment with self-driving AI
 
