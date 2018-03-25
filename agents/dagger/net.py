@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from tensorflow_agent.layers import conv2d, max_pool_2x2, linear, lrn
+from agents.dagger.layers import conv2d, max_pool_2x2, linear, lrn
 
 
 class Net(object):
@@ -43,6 +43,7 @@ class Net(object):
             fc7 = tf.nn.dropout(fc7, 1.0)
 
         fc8 = linear(fc7, "fc8", num_targets)
+        self.fc7 = fc7
         self.p = fc8
         self.global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.zeros_initializer,
                                            trainable=False)

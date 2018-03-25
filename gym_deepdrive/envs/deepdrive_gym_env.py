@@ -11,7 +11,7 @@ from multiprocessing import Process, Queue
 from subprocess import Popen
 import pkg_resources
 from distutils.version import LooseVersion as semvar
-
+from itertools import product
 
 import arrow
 import gym
@@ -79,7 +79,17 @@ class Camera(object):
         self.connection_id = None
 
 
+class DiscreteActions(object):
+    def __init__(self, steer, throttle, brake):
+        self.steer = steer
+        self.throttle = throttle
+        self.brake = brake
+
+        self.product = list(product(steer, throttle, brake))
+
+
 default_cam = Camera(**c.DEFAULT_CAM)  # TODO: Switch camera dicts to this object
+
 
 def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
     action = [np.array([steering]),
@@ -89,12 +99,13 @@ def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
               has_control]
     return action
 
+
 # noinspection PyMethodMayBeStatic
 class DeepDriveEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, preprocess_with_tensorflow=False):
-        self.action_space = self._init_action_space()
+    def __init__(self, preprocess_with_tensorflow=False, discrete=False):
+        self.action_space = self._init_action_space(discrete)
         self.preprocess_with_tensorflow = preprocess_with_tensorflow
         self.sess = None
         self.prev_observation = None
@@ -105,7 +116,7 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['g-forces']                      = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 3,    'units': 'g'}
         self.display_stats['gforce penalty']                = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 0,    'units': ''}
         self.display_stats['lane deviation penalty']        = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 0,    'units': ''}
-        self.display_stats['lap progress']              = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 100,  'units': '%'}
+        self.display_stats['lap progress']                  = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 100,  'units': '%'}
         self.display_stats['episode #']                     = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 5,    'units': ''}
         self.display_stats['time']                          = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 250,  'units': 's'}
         self.display_stats['episode score']                 = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 2000, 'units': ''}
@@ -128,6 +139,7 @@ class DeepDriveEnv(gym.Env):
         self.fps = None
         self.period = None
         self.experiment = None
+        self.discrete = None
 
         if not c.REUSE_OPEN_SIM:
             if utils.get_sim_bin_path() is None:
@@ -209,9 +221,6 @@ class DeepDriveEnv(gym.Env):
         if self.sim_process is not None:
             self.sim_process.kill()
 
-
-
-
     def _kill_competing_procs(self):
         # TODO: Allow for many environments on the same machine by using registry DB for this and sharedmem
         path = utils.get_sim_bin_path()
@@ -226,8 +235,6 @@ class DeepDriveEnv(gym.Env):
             raise NotImplementedError('OS not supported')
         utils.run_command(cmd, verbose=False, throw=False, print_errors=False)
         time.sleep(1)  # TODO: Don't rely on time for shared mem to go away, we should have a unique name on startup.
-
-
 
     def set_use_sim_start_command(self, use_sim_start_command):
         self.use_sim_start_command = use_sim_start_command
@@ -299,7 +306,6 @@ class DeepDriveEnv(gym.Env):
         self.step_num += 1
 
         self.regulate_fps()
-
 
         return obz, reward, done, info
 
@@ -709,14 +715,32 @@ class DeepDriveEnv(gym.Env):
                         '**********************************************************************\n'
                         '**********************************************************************\n\n')
 
-    def _init_action_space(self):
-        steering_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
-        throttle_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
-        brake_space = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
-        handbrake_space = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
-        is_game_driving_space = spaces.Discrete(2)
-        action_space = spaces.Tuple(
-            (steering_space, throttle_space, brake_space, handbrake_space, is_game_driving_space))
+    def _init_action_space(self, discrete):
+        if discrete:
+            num_steer_steps = 30
+            steer_step = 1 / ((num_steer_steps - 1) / 2)
+
+            # Fermi estimate of a good discretization
+            steer = list(np.arange(-1, 1 + steer_step, steer_step))
+            throttle = [0, 0.01, 0.02, 0.04, 0.08, 0.16, 0.32, 0.64, 0.8, 1]
+            brake = [0, 0.1, 0.3, 0.7, 1]
+
+            self.discrete = DiscreteActions(steer, throttle, brake)
+
+            learned_space = spaces.Discrete(len(self.discrete.product))
+            is_game_driving_space = spaces.Discrete(2)
+
+            action_space = spaces.Tuple(
+                (learned_space, is_game_driving_space))
+
+        else:
+            steering_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
+            throttle_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
+            brake_space = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
+            handbrake_space = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
+            is_game_driving_space = spaces.Discrete(2)
+            action_space = spaces.Tuple(
+                (steering_space, throttle_space, brake_space, handbrake_space, is_game_driving_space))
         return action_space
 
     def _init_observation_space(self):
@@ -785,6 +809,7 @@ class DeepDriveRewardCalculator(object):
         progress_reward *= balance_coeff
         progress_reward = DeepDriveRewardCalculator.clip(progress_reward)
         return progress_reward
+
 
 def render_cameras(render_queue, cameras):
     if pyglet is None:

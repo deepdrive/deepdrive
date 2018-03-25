@@ -11,7 +11,7 @@ import numpy as np
 import config as c
 import deepdrive
 from gym_deepdrive.envs.deepdrive_gym_env import Action
-from tensorflow_agent.net import Net
+from agents.dagger.net import Net
 from utils import save_hdf5, download
 import logs
 
@@ -60,6 +60,7 @@ class Agent(object):
             self.sess = None
 
     def act(self, obz, reward, done):
+        net_out = None
         if obz is not None:
             log.debug('steering %r', obz['steering'])
             log.debug('throttle %r', obz['throttle'])
@@ -70,11 +71,11 @@ class Agent(object):
             self.action_count += 1
         elif self.net is not None:
             if obz is None or not obz['cameras']:
-                y = None
+                net_out = None
             else:
                 image = obz['cameras'][0]['image']
-                y = self.get_net_out(image)
-            action = self.get_next_action(obz, y)
+                net_out = self.get_net_out(image)
+            action = self.get_next_action(obz, net_out)
         else:
             action = Action(has_control=(not self.path_follower_mode))
 
@@ -92,7 +93,7 @@ class Agent(object):
         self.maybe_save()
 
         action = action.as_gym()
-        return action
+        return action, net_out
 
     def get_next_action(self, obz, y):
         log.debug('getting next action')
@@ -209,12 +210,14 @@ class Agent(object):
         if self.sess is not None:
             self.sess.close()
 
-    def get_net_out(self, image):
+    def get_net_out(self, image, get_fc7=False):
         begin = time.time()
         if self.use_frozen_net:
             out_var = 'prefix/model/add_2'
         else:
             out_var = self.net.p
+        if get_fc7:
+            out_var = [out_var, self.net.fc7]
         net_out = self.sess.run(out_var, feed_dict={
             self.net_input_placeholder: image.reshape(1, *image.shape),})
         # print(net_out)
@@ -252,23 +255,30 @@ class Agent(object):
             self.semirandom_sequence_step += 1
 
 
+class State(object):
+    obz = None
+    reward = None
+    done = None
+    info = None
+
+
 def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
-        should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS):
+        should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS,
+        bootstrap=False, sess=None):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
-    reward = 0
-    episode_done = False
     max_episodes = 1000
-    tf_config = tf.ConfigProto(
-        gpu_options=tf.GPUOptions(
-            per_process_gpu_memory_fraction=0.8,
-            # leave room for the game,
-            # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
-            allow_growth=True
-        ),
-    )
-    sess = tf.Session(config=tf_config)
+    if sess is not None:
+        tf_config = tf.ConfigProto(
+            gpu_options=tf.GPUOptions(
+                per_process_gpu_memory_fraction=0.8,
+                # leave room for the game,
+                # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
+                allow_growth=True
+            ),
+        )
+        sess = tf.Session(config=tf_config)
     if camera_rigs:
         cameras = camera_rigs[0]
     else:
@@ -302,16 +312,26 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
 
     session_done = False
     episode = 0
+    s = State()
+    s.reward = 0
+    s.done = False
     try:
         while not session_done:
-            if episode_done:
-                obz = gym_env.reset()
-                episode_done = False
+            if s.done:
+                s.obz = gym_env.reset()
+                s.done = False
             else:
-                obz = None
-            while not episode_done:
-                action = agent.act(obz, reward, episode_done)
-                obz, reward, episode_done, _ = gym_env.step(action)
+                s.obz = None
+            while not s.done:
+                action, net_out = agent.act(s.obz, s.reward, s.done)
+                if bootstrap:
+                    def gen_codes(override_action):
+                        s.obz, s.reward, s.done, s.info = gym_env.step(override_action)
+                        return net_out
+                    yield gen_codes
+                else:
+                    s.obz, s.reward, s.done, s.info = gym_env.step(action)
+
                 if render:
                     gym_env.render()
                 if should_record_recovery_from_random_actions:
@@ -320,6 +340,7 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
                     session_done = True
                 elif should_benchmark and dd_env.done_benchmarking:
                     session_done = True
+
             if session_done:
                 log.info('Session done')
             else:

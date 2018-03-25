@@ -7,8 +7,8 @@ import scipy.misc
 import tensorflow as tf
 
 import config as c
-from tensorflow_agent.net import Net
-from tensorflow_agent.train.data_utils import get_dataset
+from agents.dagger.net import Net
+from agents.dagger.data_utils import get_dataset
 from utils import download, has_stuff
 import logs
 

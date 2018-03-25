@@ -4,7 +4,7 @@ import logging
 
 import os
 
-import time
+import tensorflow as tf
 
 import camera_config
 import config as c
@@ -42,6 +42,8 @@ def main():
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
     parser.add_argument('-n', '--experiment-name', nargs='?', default=None, help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
+    parser.add_argument('--agent', nargs='?', default='dagger', help='Agent type (dagger, bootstrap)')
+
 
 
     args = parser.parse_args()
@@ -60,9 +62,47 @@ def main():
             args.net_path = get_latest_model()
 
     if args.train:
-        from tensorflow_agent.train import train
         # TODO: Add experiment name here as well, and integrate it into Tensorflow runs, recording names, model checkpoints, etc...
-        train.run(resume_dir=args.resume_train, recording_dir=args.recording_dir)
+        if args.agent == 'dagger':
+            '''
+            Really it's just the first iteration of DAgger where our policy is random.
+            This seems to be sufficient for exploring the types of mistakes our AI makes and labeling
+            the corrections to those mistakes and does a better job at handling edge cases that
+            the agent would not encounter acting under its own policy during training.
+            In this way, we come a little closer to reinforcement learning, as we explore randomly covering
+            a larger number of possibilities.
+            '''
+            from agents.dagger.train import train
+            train.run(resume_dir=args.resume_train, recording_dir=args.recording_dir)
+        elif args.agent == 'bootstrapped_ppo2':
+            from agents.rl.ppo2.run_deepdrive import train
+            tf_config = tf.ConfigProto(
+                allow_soft_placement=True,
+                intra_op_parallelism_threads=1,
+                inter_op_parallelism_threads=1,
+                gpu_options=tf.GPUOptions(
+                    per_process_gpu_memory_fraction=0.8,
+                    # leave room for the game,
+                    # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
+                    allow_growth=True
+                ),
+            )
+            sess = tf.Session(config=tf_config)
+            sess.as_default()
+            from agents import dagger
+
+            # TODO: Make the dagger agent an environment wrapper, where you can call step, reset, etc...
+            # Then when you call step, you get the codes back and resets will work as expected from the ppo2 code
+            #
+
+            dagger_code_gen = dagger.agent.run(args.experiment_name,
+                                               net_path=args.net_path, env_id=args.env_id,
+                                               run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
+                                               fps=args.fps, bootstrap=True, sess=sess)
+            train(args.env_id, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess, obz_gen=dagger_code_gen)
+
+        else:
+            raise Exception('Agent type not recognized')
     elif args.path_follower:
         done = False
         render = False
@@ -92,7 +132,7 @@ def main():
             gym_env.close()
         log.info('Last episode complete, closing')
     else:
-        from tensorflow_agent import agent
+        from agents.dagger import agent
         if args.record and not args.record_recovery_from_random_actions:
             args.path_follower = True
         agent.run(args.experiment_name,
