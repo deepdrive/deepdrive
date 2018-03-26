@@ -104,8 +104,8 @@ def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
 class DeepDriveEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, preprocess_with_tensorflow=False, discrete=False):
-        self.action_space = self._init_action_space(discrete)
+    def __init__(self, preprocess_with_tensorflow=False, is_discrete=False):
+        self.action_space = self._init_action_space(is_discrete)
         self.preprocess_with_tensorflow = preprocess_with_tensorflow
         self.sess = None
         self.prev_observation = None
@@ -139,7 +139,8 @@ class DeepDriveEnv(gym.Env):
         self.fps = None
         self.period = None
         self.experiment = None
-        self.discrete = None
+        self.discrete_actions = None
+        self.is_discrete = is_discrete
 
         if not c.REUSE_OPEN_SIM:
             if utils.get_sim_bin_path() is None:
@@ -715,8 +716,8 @@ class DeepDriveEnv(gym.Env):
                         '**********************************************************************\n'
                         '**********************************************************************\n\n')
 
-    def _init_action_space(self, discrete):
-        if discrete:
+    def _init_action_space(self, is_discrete):
+        if is_discrete:
             num_steer_steps = 30
             steer_step = 1 / ((num_steer_steps - 1) / 2)
 
@@ -725,9 +726,9 @@ class DeepDriveEnv(gym.Env):
             throttle = [0, 0.01, 0.02, 0.04, 0.08, 0.16, 0.32, 0.64, 0.8, 1]
             brake = [0, 0.1, 0.3, 0.7, 1]
 
-            self.discrete = DiscreteActions(steer, throttle, brake)
+            self.discrete_actions = DiscreteActions(steer, throttle, brake)
 
-            learned_space = spaces.Discrete(len(self.discrete.product))
+            learned_space = spaces.Discrete(len(self.discrete_actions.product))
             is_game_driving_space = spaces.Discrete(2)
 
             action_space = spaces.Tuple(

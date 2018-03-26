@@ -8,7 +8,7 @@ import tensorflow as tf
 
 import config as c
 from agents.dagger.net import Net
-from agents.dagger.data_utils import get_dataset
+from agents.dagger.train.data_utils import get_dataset
 from utils import download, has_stuff
 import logs
 
@@ -40,7 +40,7 @@ def visualize_gradients(grads_and_vars):
     tf.summary.scalar("model/var_global_norm", tf.global_norm(var_list))
 
 
-def run(resume_dir=None, recording_dir=c.RECORDING_DIR):
+def run(resume_dir=None, data_dir=c.RECORDING_DIR):
     os.makedirs(c.TENSORFLOW_OUT_DIR, exist_ok=True)
     if resume_dir is not None:
         date_str = resume_dir[resume_dir.rindex('/') + 1:resume_dir.rindex('_')]
@@ -116,8 +116,8 @@ def run(resume_dir=None, recording_dir=c.RECORDING_DIR):
 
     eval_sw = tf.summary.FileWriter(sess_eval_dir)
 
-    train_dataset = get_dataset(recording_dir, log)
-    eval_dataset = get_dataset(recording_dir, log, train=False)
+    train_dataset = get_dataset(data_dir, log)
+    eval_dataset = get_dataset(data_dir, log, train=False)
     config = tf.ConfigProto(allow_soft_placement=True)
     with sv.managed_session(config=config) as sess, sess.as_default():
         train_data_provider = train_dataset.iterate_forever(batch_size)

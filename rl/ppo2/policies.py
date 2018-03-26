@@ -1,9 +1,10 @@
 import numpy as np
 import tensorflow as tf
+from rl.common.distributions import make_pdtype
 from gym import spaces
 
-from agents.rl.a2c.utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch, lstm, lnlstm
-from agents.rl.common.distributions import make_pdtype
+from rl.a2c.utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch, lstm, lnlstm
+
 
 def nature_cnn(unscaled_images):
     """

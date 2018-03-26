@@ -15,7 +15,7 @@ def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=T
           cameras=None, use_sim_start_command=False, render=False, fps=c.DEFAULT_FPS):
     env = gym.make(env)
     env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
-    env.seed(0)
+    env.seed(c.RNG_SEED)
 
     if experiment_name is None:
         experiment_name = ''

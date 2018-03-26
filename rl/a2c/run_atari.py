@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
-from agents.rl import logger
-from agents.rl.common.cmd_util import make_atari_env, atari_arg_parser
-from agents.rl.common.vec_env.vec_frame_stack import VecFrameStack
-from agents.rl.a2c.a2c import learn
-from agents.rl.ppo2.policies import CnnPolicy, LstmPolicy, LnLstmPolicy
+from rl import logger
+from rl.a2c.a2c import learn
+from rl.common.vec_env.vec_frame_stack import VecFrameStack
+from rl.ppo2.policies import CnnPolicy, LstmPolicy, LnLstmPolicy
+
+from rl.common.cmd_util import make_atari_env, atari_arg_parser
+
 
 def train(env_id, num_timesteps, seed, policy, lrschedule, num_env):
     if policy == 'cnn':

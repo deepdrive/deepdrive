@@ -1,21 +1,16 @@
-import os
 import os.path as osp
-import gym
 import time
+
 import joblib
-import logging
 import numpy as np
 import tensorflow as tf
-from agents.rl import logger
+from rl import logger
+from rl.a2c.utils import Scheduler, make_path, find_trainable_variables
+from rl.a2c.utils import cat_entropy, mse
+from rl.a2c.utils import discount_with_dones
+from rl.common import set_global_seeds, explained_variance
+from rl.common import tf_util
 
-from agents.rl.common import set_global_seeds, explained_variance
-from agents.rl.common.vec_env.subproc_vec_env import SubprocVecEnv
-from agents.rl.common.atari_wrappers import wrap_deepmind
-from agents.rl.common import tf_util
-
-from agents.rl.a2c.utils import discount_with_dones
-from agents.rl.a2c.utils import Scheduler, make_path, find_trainable_variables
-from agents.rl.a2c.utils import cat_entropy, mse
 
 class Model(object):
 

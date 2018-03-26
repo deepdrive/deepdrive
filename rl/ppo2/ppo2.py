@@ -1,13 +1,15 @@
 import os
+import os.path as osp
 import time
+from collections import deque
+
 import joblib
 import numpy as np
-import os.path as osp
 # noinspection PyPackageRequirements
 import tensorflow as tf
-from agents.rl import logger
-from collections import deque
-from agents.rl.common.math_util import explained_variance
+from rl import logger
+
+from rl.common.math_util import explained_variance
 
 
 class Model(object):
@@ -232,9 +234,9 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
         fps = int(nbatch / (tnow - tstart))
         if update % log_interval == 0 or update == 1:
             ev = explained_variance(values, returns)
-            logger.logkv("serial_timesteps", update*nsteps)
+            logger.logkv("serial_timesteps", update * nsteps)
             logger.logkv("nupdates", update)
-            logger.logkv("total_timesteps", update*nbatch)
+            logger.logkv("total_timesteps", update * nbatch)
             logger.logkv("fps", fps)
             logger.logkv("explained_variance", float(ev))
             logger.logkv('eprewmean', safemean([epinfo['r'] for epinfo in epinfobuf]))

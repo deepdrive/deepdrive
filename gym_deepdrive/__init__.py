@@ -23,6 +23,6 @@ register(
     entry_point='gym_deepdrive.envs.deepdrive_gym_env:DeepDriveEnv',
     kwargs=dict(
         preprocess_with_tensorflow=False,
-        discrete=True,
+        is_discrete=True,
     ),
 )

@@ -1,15 +1,15 @@
 import argparse
 import glob
 import logging
-
 import os
 
 import tensorflow as tf
 
 import camera_config
 import config as c
-import logs
 import deepdrive
+import logs
+from agents.dagger.agent import ensure_baseline_weights
 
 
 def main():
@@ -44,8 +44,6 @@ def main():
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
     parser.add_argument('--agent', nargs='?', default='dagger', help='Agent type (dagger, bootstrap)')
 
-
-
     args = parser.parse_args()
     if args.verbose:
         logs.set_level(logging.DEBUG)
@@ -67,39 +65,29 @@ def main():
             '''
             Really it's just the first iteration of DAgger where our policy is random.
             This seems to be sufficient for exploring the types of mistakes our AI makes and labeling
-            the corrections to those mistakes and does a better job at handling edge cases that
+            corrections to those mistakes. This does a better job at handling edge cases that
             the agent would not encounter acting under its own policy during training.
-            In this way, we come a little closer to reinforcement learning, as we explore randomly covering
+            In this way, we come a little closer to reinforcement learning, as we explore randomly and cover
             a larger number of possibilities.
             '''
             from agents.dagger.train import train
-            train.run(resume_dir=args.resume_train, recording_dir=args.recording_dir)
+            train.run(resume_dir=args.resume_train, data_dir=args.recording_dir)
         elif args.agent == 'bootstrapped_ppo2':
-            from agents.rl.ppo2.run_deepdrive import train
-            tf_config = tf.ConfigProto(
-                allow_soft_placement=True,
-                intra_op_parallelism_threads=1,
-                inter_op_parallelism_threads=1,
-                gpu_options=tf.GPUOptions(
-                    per_process_gpu_memory_fraction=0.8,
-                    # leave room for the game,
-                    # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
-                    allow_growth=True
-                ),
-            )
-            sess = tf.Session(config=tf_config)
-            sess.as_default()
-            from agents import dagger
+            from agents.bootstrap.train import train
+            if not args.net_path:
+                log.info('Boostrapping from baseline agent')
+                bootstrap_net_path = ensure_baseline_weights(args.net_path)
+            train.run(resume_dir=args.resume_train, bootstrap_net_path=bootstrap_net_path)
 
             # TODO: Make the dagger agent an environment wrapper, where you can call step, reset, etc...
             # Then when you call step, you get the codes back and resets will work as expected from the ppo2 code
             #
 
-            dagger_code_gen = dagger.agent.run(args.experiment_name,
-                                               net_path=args.net_path, env_id=args.env_id,
-                                               run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
-                                               fps=args.fps, bootstrap=True, sess=sess)
-            train(args.env_id, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess, obz_gen=dagger_code_gen)
+            # dagger_code_gen = dagger.agent.run(args.experiment_name,
+            #                                    net_path=args.net_path, env_id=args.env_id,
+            #                                    run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
+            #                                    fps=args.fps, bootstrap=True, sess=sess)
+            # train(args.env_id, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess, obz_gen=dagger_code_gen)
 
         else:
             raise Exception('Agent type not recognized')
@@ -133,8 +121,7 @@ def main():
         log.info('Last episode complete, closing')
     else:
         from agents.dagger import agent
-        if args.record and not args.record_recovery_from_random_actions:
-            args.path_follower = True
+
         agent.run(args.experiment_name,
                   should_record=args.record, net_path=args.net_path, env_id=args.env_id,
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,

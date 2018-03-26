@@ -21,7 +21,7 @@ log = logs.get_log(__name__)
 class Agent(object):
     def __init__(self, action_space, tf_session, env, should_record_recovery_from_random_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
-                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR):
+                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR, output_fc7=False):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space
         self.previous_action = None
@@ -38,6 +38,7 @@ class Agent(object):
         self.performing_random_actions = False
         self.path_follower_mode = path_follower
         self.recording_dir = recording_dir
+        self.output_fc7 = output_fc7
 
         # Recording state
         self.should_record = should_record
@@ -75,7 +76,11 @@ class Agent(object):
             else:
                 image = obz['cameras'][0]['image']
                 net_out = self.get_net_out(image)
-            action = self.get_next_action(obz, net_out)
+            if self.output_fc7:
+                y = net_out[0]
+            else:
+                y = net_out
+            action = self.get_next_action(obz, y)
         else:
             action = Action(has_control=(not self.path_follower_mode))
 
@@ -130,7 +135,10 @@ class Agent(object):
 
         log.debug('desired_steering %f', desired_steering)
         log.debug('desired_throttle %f', desired_throttle)
-        smoothed_steering = 0.2 * self.previous_action.steering + 0.5 * desired_steering
+        if self.previous_action:
+            smoothed_steering = 0.2 * self.previous_action.steering + 0.5 * desired_steering
+        else:
+            smoothed_steering = desired_steering * 0.7
         # desired_throttle = desired_throttle * 1.1
         action = Action(smoothed_steering, desired_throttle)
         return action
@@ -210,13 +218,13 @@ class Agent(object):
         if self.sess is not None:
             self.sess.close()
 
-    def get_net_out(self, image, get_fc7=False):
+    def get_net_out(self, image):
         begin = time.time()
         if self.use_frozen_net:
             out_var = 'prefix/model/add_2'
         else:
             out_var = self.net.p
-        if get_fc7:
+        if self.output_fc7:
             out_var = [out_var, self.net.fc7]
         net_out = self.sess.run(out_var, feed_dict={
             self.net_input_placeholder: image.reshape(1, *image.shape),})
@@ -255,30 +263,23 @@ class Agent(object):
             self.semirandom_sequence_step += 1
 
 
-class State(object):
-    obz = None
-    reward = None
-    done = None
-    info = None
-
-
 def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
-        should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS,
-        bootstrap=False, sess=None):
+        should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
+    reward = 0
+    episode_done = False
     max_episodes = 1000
-    if sess is not None:
-        tf_config = tf.ConfigProto(
-            gpu_options=tf.GPUOptions(
-                per_process_gpu_memory_fraction=0.8,
-                # leave room for the game,
-                # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
-                allow_growth=True
-            ),
-        )
-        sess = tf.Session(config=tf_config)
+    tf_config = tf.ConfigProto(
+        gpu_options=tf.GPUOptions(
+            per_process_gpu_memory_fraction=0.8,
+            # leave room for the game,
+            # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
+            allow_growth=True
+        ),
+    )
+    sess = tf.Session(config=tf_config)
     if camera_rigs:
         cameras = camera_rigs[0]
     else:
@@ -312,26 +313,16 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
 
     session_done = False
     episode = 0
-    s = State()
-    s.reward = 0
-    s.done = False
     try:
         while not session_done:
-            if s.done:
-                s.obz = gym_env.reset()
-                s.done = False
+            if episode_done:
+                obz = gym_env.reset()
+                episode_done = False
             else:
-                s.obz = None
-            while not s.done:
-                action, net_out = agent.act(s.obz, s.reward, s.done)
-                if bootstrap:
-                    def gen_codes(override_action):
-                        s.obz, s.reward, s.done, s.info = gym_env.step(override_action)
-                        return net_out
-                    yield gen_codes
-                else:
-                    s.obz, s.reward, s.done, s.info = gym_env.step(action)
-
+                obz = None
+            while not episode_done:
+                action = agent.act(obz, reward, episode_done)
+                obz, reward, episode_done, _ = gym_env.step(action)
                 if render:
                     gym_env.render()
                 if should_record_recovery_from_random_actions:
@@ -340,7 +331,6 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
                     session_done = True
                 elif should_benchmark and dd_env.done_benchmarking:
                     session_done = True
-
             if session_done:
                 log.info('Session done')
             else:
@@ -350,7 +340,7 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
                     cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
                     dd_env.change_viewpoint(cameras,
-                                        use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
+                                            use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
                 if episode >= max_episodes:
                     session_done = True
     except KeyboardInterrupt:

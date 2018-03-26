@@ -61,7 +61,7 @@ python main.py --path-follower --experiment-name my-path-follower-test
 
 **Record** training data for imitation learning / behavioral cloning
 ```
-python main.py --record --record-recovery-from-random-actions
+python main.py --record --record-recovery-from-random-actions --path-follower
 ```
 
 **Train** on recorded data
