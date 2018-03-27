@@ -1,5 +1,6 @@
 import gym
 import tensorflow as tf
+import numpy as np
 
 import deepdrive
 import config as c
@@ -38,11 +39,16 @@ def run(bootstrap_net_path,
         def step(self, action):
             _obz, _reward, _done, _info = orig_step(action)
             action, net_out = dagger_agent.act(_obz, _reward, _done)
-            return net_out, reward, done, info
+
+            if net_out is None:
+                obz = None
+            else:
+                obz = np.concatenate((net_out[0][0], net_out[1][0]))
+            return obz, reward, done, info
 
         gym_env.step = step.__get__(gym_env, gym.Env)
 
-        train(env_id, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess)
+        train(gym_env, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess)
     #
     # action = deepdrive.action()
     # while not done:

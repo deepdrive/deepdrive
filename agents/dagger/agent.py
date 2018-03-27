@@ -76,7 +76,7 @@ class Agent(object):
             else:
                 image = obz['cameras'][0]['image']
                 net_out = self.get_net_out(image)
-            if self.output_fc7:
+            if net_out is not None and self.output_fc7:
                 y = net_out[0]
             else:
                 y = net_out

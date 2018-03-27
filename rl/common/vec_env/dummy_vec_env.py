@@ -3,10 +3,13 @@ import gym
 from . import VecEnv
 
 class DummyVecEnv(VecEnv):
-    def __init__(self, env_fns):
-        self.envs = [fn() for fn in env_fns]
+    def __init__(self, env_fns=None, envs=None):
+        if envs is None:
+            self.envs = [fn() for fn in env_fns]
+        else:
+            self.envs = envs
         env = self.envs[0]
-        VecEnv.__init__(self, len(env_fns), env.observation_space, env.action_space)
+        VecEnv.__init__(self, len(envs), env.observation_space, env.action_space)
 
         obs_spaces = self.observation_space.spaces if isinstance(self.observation_space, gym.spaces.Tuple) else (self.observation_space,)
         self.buf_obs = [np.zeros((self.num_envs,) + tuple(s.shape), s.dtype) for s in obs_spaces]

@@ -115,12 +115,12 @@ class Runner(object):
             mb_neglogpacs.append(neglogpacs)
             mb_dones.append(self.dones)
 
-            # TODO: Here env needs to return dagger trained codes and actions, not pixels
+
             self.obs[:], rewards, self.dones, infos = self.env.step(actions)
 
             for info in infos:
-                maybeepinfo = info.get('episode')
-                if maybeepinfo: epinfos.append(maybeepinfo)
+                maybe_episode_info = info.get('episode') if info else None
+                if maybe_episode_info: epinfos.append(maybe_episode_info)
             mb_rewards.append(rewards)
         #batch of steps to batch of rollouts
         mb_obs = np.asarray(mb_obs, dtype=self.obs.dtype)
@@ -218,7 +218,8 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
             # envsperbatch = nenvs // nminibatches
             envinds = np.arange(nenvs)
             flatinds = np.arange(nenvs * nsteps).reshape(nenvs, nsteps)
-            envsperbatch = nbatch_train // nsteps
+            envsperbatch = nbatch_train // nsteps  # ((nevns * nsteps) // nminibatches)  // nsteps
+            envsperbatch = max(envsperbatch, 1)
             for _ in range(noptepochs):
                 np.random.shuffle(envinds)
                 for start in range(0, nenvs, envsperbatch):

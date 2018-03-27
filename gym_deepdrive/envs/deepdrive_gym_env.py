@@ -87,6 +87,10 @@ class DiscreteActions(object):
 
         self.product = list(product(steer, throttle, brake))
 
+    def get_components(self, idx):
+        steer, throttle, brake = self.product[idx]
+        return steer, throttle, brake
+
 
 default_cam = Camera(**c.DEFAULT_CAM)  # TODO: Switch camera dicts to this object
 
@@ -105,6 +109,8 @@ class DeepDriveEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, preprocess_with_tensorflow=False, is_discrete=False):
+        self.is_discrete = is_discrete
+        self.discrete_actions = None
         self.action_space = self._init_action_space(is_discrete)
         self.preprocess_with_tensorflow = preprocess_with_tensorflow
         self.sess = None
@@ -139,8 +145,6 @@ class DeepDriveEnv(gym.Env):
         self.fps = None
         self.period = None
         self.experiment = None
-        self.discrete_actions = None
-        self.is_discrete = is_discrete
         if self.is_discrete:
             self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
                                                 high=np.finfo(np.float32).max,
@@ -292,7 +296,11 @@ class DeepDriveEnv(gym.Env):
         self.sess = session
 
     def step(self, action):
-        dd_action = Action.from_gym(action)
+        if self.is_discrete:
+            steer, throttle, brake = self.discrete_actions.get_components(action)
+            dd_action = Action(steering=steer, throttle=throttle, brake=brake)
+        else:
+            dd_action = Action.from_gym(action)
         self.send_control(dd_action)
         obz = self.get_observation()
         if obz and 'is_game_driving' in obz:

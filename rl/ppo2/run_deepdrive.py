@@ -7,7 +7,7 @@ from rl import bench, logger
 from rl.common.cmd_util import continuous_mountain_car_arg_parser
 
 
-def train(env_id, num_timesteps, seed, sess=None):
+def train(env, num_timesteps, seed, sess=None):
     from rl.common.misc_util import set_global_seeds
     from rl.common.vec_env.vec_normalize import VecNormalize
     from rl.ppo2 import ppo2
@@ -23,20 +23,7 @@ def train(env_id, num_timesteps, seed, sess=None):
                                 inter_op_parallelism_threads=ncpu)
         tf.Session(config=config).__enter__()
 
-    def make_env():
-        env = gym.make(env_id)
-        env = bench.Monitor(env, logger.get_dir())
-        pstep = env.step
-
-        def step(action):
-            observation, reward, done, info = pstep(action)
-            # env.render()
-            return observation, reward, done, info
-
-        env.step = step
-        return env
-
-    env = DummyVecEnv([make_env])
+    env = DummyVecEnv(envs=[env])
     env = VecNormalize(env)
 
     set_global_seeds(seed)
@@ -61,12 +48,3 @@ def train(env_id, num_timesteps, seed, sess=None):
                cliprange=lambda f: f * 0.1,
                total_timesteps=num_timesteps)
 
-
-def main():
-    args = continuous_mountain_car_arg_parser().parse_args()
-    logger.configure()
-    train(args.env, num_timesteps=args.num_timesteps, seed=args.seed)
-
-
-if __name__ == '__main__':
-    main()
