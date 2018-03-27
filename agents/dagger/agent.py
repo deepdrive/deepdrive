@@ -321,7 +321,7 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
             else:
                 obz = None
             while not episode_done:
-                action = agent.act(obz, reward, episode_done)
+                action, net_out = agent.act(obz, reward, episode_done)
                 obz, reward, episode_done, _ = gym_env.step(action)
                 if render:
                     gym_env.render()

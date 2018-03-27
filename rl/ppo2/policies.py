@@ -186,6 +186,7 @@ class CnnPolicy(object):
         self.step = step
         self.value = value
 
+
 class MlpPolicy(object):
     def __init__(self, sess, ob_space, ac_space, nbatch, nsteps, reuse=False): #pylint: disable=W0613
         ob_shape = (nbatch,) + ob_space.shape

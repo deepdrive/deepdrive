@@ -23,27 +23,26 @@ def run(bootstrap_net_path,
         ),
     )
     sess = tf.Session(config=tf_config)
-    sess.as_default()
+    with sess.as_default():
+        obz, reward, done, info = None, 0, False, None
+        gym_env = deepdrive.start(experiment, env_id, cameras=cameras, render=render, fps=fps)
+        dd_env = gym_env.env
 
-    obz, reward, done, info = None, 0, False, None
-    gym_env = deepdrive.start(experiment, env_id, cameras=cameras, render=render, fps=fps)
-    dd_env = gym_env.env
+        dagger_agent = DaggerAgent(gym_env.action_space, sess, env=gym_env.env,
+                                   should_record_recovery_from_random_actions=False, should_record=should_record,
+                                   net_path=bootstrap_net_path, output_fc7=True)
 
-    dagger_agent = DaggerAgent(gym_env.action_space, sess, env=gym_env.env,
-                               should_record_recovery_from_random_actions=False, should_record=should_record,
-                               net_path=bootstrap_net_path, output_fc7=True)
+        # Wrap step so we get the pretrained layer activations rather than pixels for our observation
+        orig_step = gym_env.step
 
-    # Wrap step so we get the pretrained layer activations rather than pixels for our observation
-    orig_step = gym_env.step
+        def step(self, action):
+            _obz, _reward, _done, _info = orig_step(action)
+            action, net_out = dagger_agent.act(_obz, _reward, _done)
+            return net_out, reward, done, info
 
-    def step(self, action):
-        _obz, _reward, _done, _info = orig_step(action)
-        action, net_out = dagger_agent.act(_obz, _reward, _done)
-        return net_out, reward, done, info
+        gym_env.step = step.__get__(gym_env, gym.Env)
 
-    gym_env.step = step.__get__(gym_env, gym.Env)
-
-    train(env_id, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess)
+        train(env_id, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess)
     #
     # action = deepdrive.action()
     # while not done:

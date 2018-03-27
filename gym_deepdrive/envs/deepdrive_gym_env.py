@@ -141,6 +141,11 @@ class DeepDriveEnv(gym.Env):
         self.experiment = None
         self.discrete_actions = None
         self.is_discrete = is_discrete
+        if self.is_discrete:
+            self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
+                                                high=np.finfo(np.float32).max,
+                                                shape=(c.NUM_FC7 + c.NUM_TARGETS,),
+                                                dtype=np.float32)
 
         if not c.REUSE_OPEN_SIM:
             if utils.get_sim_bin_path() is None:
@@ -731,8 +736,10 @@ class DeepDriveEnv(gym.Env):
             learned_space = spaces.Discrete(len(self.discrete_actions.product))
             is_game_driving_space = spaces.Discrete(2)
 
-            action_space = spaces.Tuple(
-                (learned_space, is_game_driving_space))
+            # action_space = spaces.Tuple(
+            #     (learned_space, is_game_driving_space))
+
+            action_space = learned_space
 
         else:
             steering_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)

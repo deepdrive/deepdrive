@@ -1,11 +1,12 @@
 import tensorflow as tf
 
 from agents.dagger.layers import conv2d, max_pool_2x2, linear, lrn
+import config as c
 
 
 class Net(object):
     """AlexNet architecture with modified final fully-connected layers regressed on driving control outputs (steering, throttle, etc...)"""
-    def __init__(self, x, num_targets=6, is_training=True):
+    def __init__(self, x, num_targets=6, is_training=True, num_fc7=c.NUM_FC7):
         self.x = x
 
         # phase = tf.placeholder(tf.bool, name='phase')  # Used for batch norm
@@ -35,7 +36,7 @@ class Net(object):
         else:
             fc6 = tf.nn.dropout(fc6, 1.0)
 
-        fc7 = tf.nn.relu(linear(fc6, "fc7", 4096))
+        fc7 = tf.nn.relu(linear(fc6, "fc7", num_fc7))
         # fc7 = tf.contrib.layers.batch_norm(fc7, scope='batchnorm7', is_training=phase)
         if is_training:
             fc7 = tf.nn.dropout(fc7, 0.95)

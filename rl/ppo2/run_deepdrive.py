@@ -11,7 +11,7 @@ def train(env_id, num_timesteps, seed, sess=None):
     from rl.common.misc_util import set_global_seeds
     from rl.common.vec_env.vec_normalize import VecNormalize
     from rl.ppo2 import ppo2
-    from rl.ppo2.policies import MlpPolicy, LstmPolicyFlat
+    from rl.ppo2.policies import CnnPolicy, LstmPolicyFlat
     import gym
     import tensorflow as tf
     from rl.common.vec_env.dummy_vec_env import DummyVecEnv
@@ -43,7 +43,7 @@ def train(env_id, num_timesteps, seed, sess=None):
     if 'LSTM_FLAT' in os.environ:
         policy = LstmPolicyFlat
     else:
-        policy = MlpPolicy
+        policy = LstmPolicyFlat
 
 
     # TODO: Stack 8 (1 second) input frames as is done for atari environments
