@@ -65,7 +65,7 @@ def main():
         os.system('python main.py --baseline')
     else:
         print('Starting sim in path follower mode')
-        os.system('python main.py --let-game-drive')
+        os.system('python main.py --path-follower')
 
 
 def get_tf_valid():
