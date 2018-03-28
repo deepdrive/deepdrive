@@ -37,11 +37,11 @@ def train(env, num_timesteps, seed, sess=None):
 
     ppo2.learn(policy=policy,
                env=env,
-               nsteps=256,
-               nminibatches=32,  # Sweet spot is between 16 and 64 for continuous mountain car @55fps
+               nsteps=40,
+               nminibatches=1,  # Sweet spot is between 16 and 64 for continuous mountain car @55fps
                lam=0.95,
                gamma=0.99,
-               noptepochs=10,
+               noptepochs=3,
                log_interval=1,
                ent_coef=0.0,
                lr=lambda f: f * 2.5e-4,

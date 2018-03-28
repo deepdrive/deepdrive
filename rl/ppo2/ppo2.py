@@ -60,10 +60,13 @@ class Model(object):
             if states is not None:
                 td_map[train_model.S] = states
                 td_map[train_model.M] = masks
-            return sess.run(
+            print('Running graph')
+            ret = sess.run(
                 [pg_loss, vf_loss, entropy, approxkl, clipfrac, _train],
                 td_map
             )[:-1]
+            print('Done running graph')
+            return ret
         self.loss_names = ['policy_loss', 'value_loss', 'policy_entropy', 'approxkl', 'clipfrac']
 
         def save(save_path):
@@ -178,7 +181,12 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
     ob_space = env.observation_space
     ac_space = env.action_space
     nbatch = nenvs * nsteps
-    nbatch_train = nbatch // nminibatches
+
+    if nenvs < nminibatches and 'lstm' in policy.__name__.lower():
+        # We aren't running enough environments to split our observations across
+        nbatch_train = nbatch
+    else:
+        nbatch_train = nbatch // nminibatches
 
     make_model = lambda : Model(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=nenvs, nbatch_train=nbatch_train,
                     nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef,

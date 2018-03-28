@@ -145,11 +145,6 @@ class DeepDriveEnv(gym.Env):
         self.fps = None
         self.period = None
         self.experiment = None
-        if self.is_discrete:
-            self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
-                                                high=np.finfo(np.float32).max,
-                                                shape=(c.NUM_FC7 + c.NUM_TARGETS,),
-                                                dtype=np.float32)
 
         if not c.REUSE_OPEN_SIM:
             if utils.get_sim_bin_path() is None:

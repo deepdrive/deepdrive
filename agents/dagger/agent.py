@@ -133,7 +133,7 @@ class Agent(object):
         desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
         desired_throttle = min(max(desired_throttle, 0.), 1.)
 
-        log.debug('desired_steering %f', desired_steering)
+        log.info('desired_steering %f', desired_steering)
         log.debug('desired_throttle %f', desired_throttle)
         if self.previous_action:
             smoothed_steering = 0.2 * self.previous_action.steering + 0.5 * desired_steering
