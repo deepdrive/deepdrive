@@ -121,7 +121,7 @@ it was trained on.
 (generated with `--record`)
 ```
 cd <the-directory-you-want>
-aws s3 sync s3://deepdrive/data/baseline .
+aws --no-sign-request --region=us-west-1 s3 sync s3://deepdrive/data/baseline .
 ```
 
 If you'd like to check out our Tensorboard training session, you can download the 13GB
