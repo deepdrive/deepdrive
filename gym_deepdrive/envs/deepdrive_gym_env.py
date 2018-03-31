@@ -745,6 +745,10 @@ class DeepDriveEnv(gym.Env):
             action_space = learned_space
 
         else:
+            # TODO(PPO)
+            # I think what we need to do here is normalize the brake and handbrake space to be between -1 and 1 so
+            # that all actions have the same dimension - Then create a single box space. The is_game_driving space
+            # can be ignored for now within the ppo agent.
             steering_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
             throttle_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
             brake_space = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
@@ -755,13 +759,22 @@ class DeepDriveEnv(gym.Env):
         return action_space
 
     def _init_observation_space(self):
-        obz_spaces = []
-        for camera in self.cameras:
-            obz_spaces.append(spaces.Box(low=0, high=255, shape=(camera['capture_width'], camera['capture_height']),
-                                         dtype=np.uint8))
-        observation_space = spaces.Tuple(tuple(obz_spaces))
-        self.observation_space = observation_space
-        return observation_space
+        if len(self.cameras) > 1:
+            log.warning('\n\n\n MULTIPLE CAMERAS OBSERVATION SPACE RETURNS TUPLE - '
+                        'YOU MAY WANT TO IMPLEMENT BETTER SUPPORT DEPENDING ON HOW YOUR '
+                        'AGENT TO DECIDES TO COMBINE CAMERA VIEWS \n\n\n')
+
+            obz_spaces = []
+            for camera in self.cameras:
+                obz_spaces.append(spaces.Box(low=0, high=255, shape=(camera['capture_width'], camera['capture_height']),
+                                             dtype=np.uint8))
+            observation_space = spaces.Tuple(tuple(obz_spaces))
+            self.observation_space = observation_space
+            return observation_space
+        else:
+            camera = self.cameras[0]
+            self.observation_space = spaces.Box(low=0, high=255, shape=(camera['capture_width'], camera['capture_height']),
+                       dtype=np.uint8)
 
     def change_has_control(self, has_control):
         if has_control:

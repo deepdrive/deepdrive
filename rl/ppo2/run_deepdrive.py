@@ -7,11 +7,11 @@ from rl import bench, logger
 from rl.common.cmd_util import continuous_mountain_car_arg_parser
 
 
-def train(env, num_timesteps, seed, sess=None):
+def train(env, num_timesteps, seed, sess=None, is_discrete=True):
     from rl.common.misc_util import set_global_seeds
     from rl.common.vec_env.vec_normalize import VecNormalize
     from rl.ppo2 import ppo2
-    from rl.ppo2.policies import CnnPolicy, LstmPolicyFlat
+    from rl.ppo2.policies import CnnPolicy, LstmPolicyFlat, MlpPolicy
     import gym
     import tensorflow as tf
     from rl.common.vec_env.dummy_vec_env import DummyVecEnv
@@ -29,8 +29,11 @@ def train(env, num_timesteps, seed, sess=None):
     set_global_seeds(seed)
     if 'LSTM_FLAT' in os.environ:
         policy = LstmPolicyFlat
-    else:
+    elif is_discrete:
         policy = LstmPolicyFlat
+    else:
+        # continuous
+        policy = MlpPolicy
 
 
     # TODO: Stack 8 (1 second) input frames as is done for atari environments

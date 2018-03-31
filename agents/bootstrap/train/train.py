@@ -11,13 +11,14 @@ from rl.ppo2.run_deepdrive import train
 
 
 class BootstrapGymEnv(gym.Wrapper):
-    def __init__(self, env, dagger_agent):
+    def __init__(self, env, dagger_agent, is_discrete):
         super(BootstrapGymEnv, self).__init__(env)
         self.dagger_agent = dagger_agent
-        self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
-                                            high=np.finfo(np.float32).max,
-                                            shape=(c.NUM_FC7 + c.NUM_TARGETS,),
-                                            dtype=np.float32)
+        if is_discrete:
+            self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
+                                                high=np.finfo(np.float32).max,
+                                                shape=(c.NUM_FC7 + c.NUM_TARGETS,),
+                                                dtype=np.float32)
 
     def step(self, action):
         obz, reward, done, info = self.env.step(action)
@@ -31,9 +32,10 @@ class BootstrapGymEnv(gym.Wrapper):
     def reset(self):
         return self.env.reset()
 
+
 def run(bootstrap_net_path,
-        resume_dir=None, experiment=None, env_id='DeepDriveDiscrete-v0', cameras=None, render=False, fps=c.DEFAULT_FPS,
-        should_record=False):
+        resume_dir=None, experiment=None, cameras=None, render=False, fps=c.DEFAULT_FPS,
+        should_record=False, is_discrete=True):
     tf_config = tf.ConfigProto(
         allow_soft_placement=True,
         intra_op_parallelism_threads=1,
@@ -45,18 +47,21 @@ def run(bootstrap_net_path,
             allow_growth=True
         ),
     )
+    if is_discrete:
+        env_id = 'DeepDriveDiscrete-v0'
+    else:
+        env_id = 'DeepDrive-v0'
     sess = tf.Session(config=tf_config)
     with sess.as_default():
         dagger_gym_env = deepdrive.start(experiment, env_id, cameras=cameras, render=render, fps=fps)
-
         dagger_agent = DaggerAgent(dagger_gym_env.action_space, sess, env=dagger_gym_env.env,
                                    should_record_recovery_from_random_actions=False, should_record=should_record,
                                    net_path=bootstrap_net_path, output_fc7=True)
 
         # Wrap step so we get the pretrained layer activations rather than pixels for our observation
-        bootstrap_gym_env = BootstrapGymEnv(dagger_gym_env, dagger_agent)
+        bootstrap_gym_env = BootstrapGymEnv(dagger_gym_env, dagger_agent, is_discrete)
 
-        train(bootstrap_gym_env, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess)
+        train(bootstrap_gym_env, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess, is_discrete=is_discrete)
     #
     # action = deepdrive.action()
     # while not done:

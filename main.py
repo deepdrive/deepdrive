@@ -21,6 +21,8 @@ def main():
                         help='Runs pretrained imitation learning based agent')
     parser.add_argument('-t', '--train', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
+    parser.add_argument('--discrete-actions', action='store_true', default=False,
+                        help='Trains tensorflow agent on stored driving data')
     parser.add_argument('--use-last-model', action='store_true', default=False,
                         help='Run the most recently trained model')
     parser.add_argument('--recording-dir', nargs='?', default=c.RECORDING_DIR, help='Where to store and read recorded '
@@ -74,21 +76,12 @@ def main():
             train.run(resume_dir=args.resume_train, data_dir=args.recording_dir)
         elif args.agent == 'bootstrapped_ppo2':
             from agents.bootstrap.train import train
-            if not args.net_path:
+            net_path = args.net_path
+            if not net_path:
                 log.info('Boostrapping from baseline agent')
-                bootstrap_net_path = ensure_baseline_weights(args.net_path)
-            train.run(resume_dir=args.resume_train, bootstrap_net_path=bootstrap_net_path)
-
-            # TODO: Make the dagger agent an environment wrapper, where you can call step, reset, etc...
-            # Then when you call step, you get the codes back and resets will work as expected from the ppo2 code
-            #
-
-            # dagger_code_gen = dagger.agent.run(args.experiment_name,
-            #                                    net_path=args.net_path, env_id=args.env_id,
-            #                                    run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
-            #                                    fps=args.fps, bootstrap=True, sess=sess)
-            # train(args.env_id, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess, obz_gen=dagger_code_gen)
-
+                net_path = ensure_baseline_weights(args.net_path)
+            train.run(resume_dir=args.resume_train, bootstrap_net_path=net_path,
+                      is_discrete=args.discrete_actions)
         else:
             raise Exception('Agent type not recognized')
     elif args.path_follower:
