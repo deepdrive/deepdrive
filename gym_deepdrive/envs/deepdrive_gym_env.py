@@ -762,7 +762,7 @@ class DeepDriveEnv(gym.Env):
         if len(self.cameras) > 1:
             log.warning('\n\n\n MULTIPLE CAMERAS OBSERVATION SPACE RETURNS TUPLE - '
                         'YOU MAY WANT TO IMPLEMENT BETTER SUPPORT DEPENDING ON HOW YOUR '
-                        'AGENT TO DECIDES TO COMBINE CAMERA VIEWS \n\n\n')
+                        'AGENT COMBINES CAMERA VIEWS \n\n\n')
 
             obz_spaces = []
             for camera in self.cameras:

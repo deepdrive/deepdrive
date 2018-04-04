@@ -53,10 +53,13 @@ def run(bootstrap_net_path,
         env_id = 'DeepDrive-v0'
     sess = tf.Session(config=tf_config)
     with sess.as_default():
-        dagger_gym_env = deepdrive.start(experiment, env_id, cameras=cameras, render=render, fps=fps)
+        dagger_gym_env = deepdrive.start(experiment, env_id, cameras=cameras, render=render, fps=fps,
+                                         combine_box_action_spaces=True)
         dagger_agent = DaggerAgent(dagger_gym_env.action_space, sess, env=dagger_gym_env.env,
                                    should_record_recovery_from_random_actions=False, should_record=should_record,
                                    net_path=bootstrap_net_path, output_fc7=True)
+
+
 
         # Wrap step so we get the pretrained layer activations rather than pixels for our observation
         bootstrap_gym_env = BootstrapGymEnv(dagger_gym_env, dagger_agent, is_discrete)

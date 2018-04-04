@@ -179,6 +179,7 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
 
     nenvs = env.num_envs
     ob_space = env.observation_space
+
     ac_space = env.action_space
     nbatch = nenvs * nsteps
 
