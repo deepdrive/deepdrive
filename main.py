@@ -1,15 +1,15 @@
 import argparse
 import glob
 import logging
-
 import os
 
-import time
+import tensorflow as tf
 
 import camera_config
 import config as c
-import logs
 import deepdrive
+import logs
+from agents.dagger.agent import ensure_baseline_weights
 
 
 def main():
@@ -20,6 +20,8 @@ def main():
     parser.add_argument('--baseline', action='store_true', default=False,
                         help='Runs pretrained imitation learning based agent')
     parser.add_argument('-t', '--train', action='store_true', default=False,
+                        help='Trains tensorflow agent on stored driving data')
+    parser.add_argument('--discrete-actions', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
     parser.add_argument('--use-last-model', action='store_true', default=False,
                         help='Run the most recently trained model')
@@ -42,7 +44,7 @@ def main():
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
     parser.add_argument('-n', '--experiment-name', nargs='?', default=None, help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
-
+    parser.add_argument('--agent', nargs='?', default='dagger', help='Agent type (dagger, bootstrap)')
 
     args = parser.parse_args()
     if args.verbose:
@@ -60,9 +62,28 @@ def main():
             args.net_path = get_latest_model()
 
     if args.train:
-        from tensorflow_agent.train import train
         # TODO: Add experiment name here as well, and integrate it into Tensorflow runs, recording names, model checkpoints, etc...
-        train.run(resume_dir=args.resume_train, recording_dir=args.recording_dir)
+        if args.agent == 'dagger':
+            '''
+            Really it's just the first iteration of DAgger where our policy is random.
+            This seems to be sufficient for exploring the types of mistakes our AI makes and labeling
+            corrections to those mistakes. This does a better job at handling edge cases that
+            the agent would not encounter acting under its own policy during training.
+            In this way, we come a little closer to reinforcement learning, as we explore randomly and cover
+            a larger number of possibilities.
+            '''
+            from agents.dagger.train import train
+            train.run(resume_dir=args.resume_train, data_dir=args.recording_dir)
+        elif args.agent == 'bootstrapped_ppo2':
+            from agents.bootstrap.train import train
+            net_path = args.net_path
+            if not net_path:
+                log.info('Boostrapping from baseline agent')
+                net_path = ensure_baseline_weights(args.net_path)
+            train.run(resume_dir=args.resume_train, bootstrap_net_path=net_path,
+                      is_discrete=args.discrete_actions)
+        else:
+            raise Exception('Agent type not recognized')
     elif args.path_follower:
         done = False
         render = False
@@ -92,9 +113,8 @@ def main():
             gym_env.close()
         log.info('Last episode complete, closing')
     else:
-        from tensorflow_agent import agent
-        if args.record and not args.record_recovery_from_random_actions:
-            args.path_follower = True
+        from agents.dagger import agent
+
         agent.run(args.experiment_name,
                   should_record=args.record, net_path=args.net_path, env_id=args.env_id,
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,

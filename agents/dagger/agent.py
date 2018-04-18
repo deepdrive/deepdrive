@@ -11,7 +11,7 @@ import numpy as np
 import config as c
 import deepdrive
 from gym_deepdrive.envs.deepdrive_gym_env import Action
-from tensorflow_agent.net import Net
+from agents.dagger.net import Net
 from utils import save_hdf5, download
 import logs
 
@@ -21,7 +21,7 @@ log = logs.get_log(__name__)
 class Agent(object):
     def __init__(self, action_space, tf_session, env, should_record_recovery_from_random_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
-                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR):
+                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR, output_fc7=False):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space
         self.previous_action = None
@@ -38,6 +38,7 @@ class Agent(object):
         self.performing_random_actions = False
         self.path_follower_mode = path_follower
         self.recording_dir = recording_dir
+        self.output_fc7 = output_fc7
 
         # Recording state
         self.should_record = should_record
@@ -60,6 +61,7 @@ class Agent(object):
             self.sess = None
 
     def act(self, obz, reward, done):
+        net_out = None
         if obz is not None:
             log.debug('steering %r', obz['steering'])
             log.debug('throttle %r', obz['throttle'])
@@ -70,10 +72,14 @@ class Agent(object):
             self.action_count += 1
         elif self.net is not None:
             if obz is None or not obz['cameras']:
-                y = None
+                net_out = None
             else:
                 image = obz['cameras'][0]['image']
-                y = self.get_net_out(image)
+                net_out = self.get_net_out(image)
+            if net_out is not None and self.output_fc7:
+                y = net_out[0]
+            else:
+                y = net_out
             action = self.get_next_action(obz, y)
         else:
             action = Action(has_control=(not self.path_follower_mode))
@@ -92,7 +98,7 @@ class Agent(object):
         self.maybe_save()
 
         action = action.as_gym()
-        return action
+        return action, net_out
 
     def get_next_action(self, obz, y):
         log.debug('getting next action')
@@ -127,9 +133,12 @@ class Agent(object):
         desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
         desired_throttle = min(max(desired_throttle, 0.), 1.)
 
-        log.debug('desired_steering %f', desired_steering)
+        log.info('desired_steering %f', desired_steering)
         log.debug('desired_throttle %f', desired_throttle)
-        smoothed_steering = 0.2 * self.previous_action.steering + 0.5 * desired_steering
+        if self.previous_action:
+            smoothed_steering = 0.2 * self.previous_action.steering + 0.5 * desired_steering
+        else:
+            smoothed_steering = desired_steering * 0.7
         # desired_throttle = desired_throttle * 1.1
         action = Action(smoothed_steering, desired_throttle)
         return action
@@ -215,6 +224,8 @@ class Agent(object):
             out_var = 'prefix/model/add_2'
         else:
             out_var = self.net.p
+        if self.output_fc7:
+            out_var = [out_var, self.net.fc7]
         net_out = self.sess.run(out_var, feed_dict={
             self.net_input_placeholder: image.reshape(1, *image.shape),})
         # print(net_out)
@@ -310,7 +321,7 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
             else:
                 obz = None
             while not episode_done:
-                action = agent.act(obz, reward, episode_done)
+                action, net_out = agent.act(obz, reward, episode_done)
                 obz, reward, episode_done, _ = gym_env.step(action)
                 if render:
                     gym_env.render()
@@ -329,7 +340,7 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
                     cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
                     dd_env.change_viewpoint(cameras,
-                                        use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
+                                            use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
                 if episode >= max_episodes:
                     session_done = True
     except KeyboardInterrupt:

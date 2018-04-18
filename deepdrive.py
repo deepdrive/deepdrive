@@ -8,19 +8,20 @@ import random_name
 
 # noinspection PyUnresolvedReferences
 from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action
+from rl.common.continuous_action_wrapper import CombineBoxSpaceWrapper
+
 log = logs.get_log(__name__)
 
 
 def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=True, should_benchmark=True,
-          cameras=None, use_sim_start_command=False, render=False, fps=c.DEFAULT_FPS):
+          cameras=None, use_sim_start_command=False, render=False, fps=c.DEFAULT_FPS, combine_box_action_spaces=False):
     env = gym.make(env)
-    env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
-    env.seed(0)
+    env.seed(c.RNG_SEED)
 
     if experiment_name is None:
         experiment_name = ''
 
-    dd_env = env.env
+    dd_env = env.unwrapped
     dd_env.fps = fps
     dd_env.experiment = experiment_name.replace(' ', '_')
     dd_env.period = 1. / fps
@@ -29,6 +30,9 @@ def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=T
     if use_sim_start_command:
         input('Press any key when the game has loaded')  # TODO: Find a better way to do this. Waiting for the hwnd and focusing does not work in windows.
     dd_env.connect(cameras, render)
+    if combine_box_action_spaces:
+        env = CombineBoxSpaceWrapper(env)
+    env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
     if sess:
         dd_env.set_tf_session(sess)
     if start_dashboard:

@@ -8,6 +8,7 @@ import numpy as np
 
 # Net
 NUM_TARGETS = 6
+NUM_FC7 = 4096
 BASELINE_IMAGE_SHAPE = (227, 227, 3)
 
 # Normalization
