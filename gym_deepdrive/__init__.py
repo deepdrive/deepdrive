@@ -26,3 +26,14 @@ register(
         is_discrete=True,
     ),
 )
+
+register(
+    id='DeepDriveSync-v0',
+    entry_point='gym_deepdrive.envs.deepdrive_gym_env:DeepDriveEnv',
+    kwargs=dict(
+        preprocess_with_tensorflow=False,
+        is_discrete=False,
+        is_sync=True,
+        sync_step_time=0.125,
+    ),
+)

@@ -10,3 +10,4 @@ requests
 clint
 pillow
 boto
+mpi4py

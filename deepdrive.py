@@ -30,6 +30,7 @@ def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=T
     if use_sim_start_command:
         input('Press any key when the game has loaded')  # TODO: Find a better way to do this. Waiting for the hwnd and focusing does not work in windows.
     dd_env.connect(cameras, render)
+    dd_env.set_step_mode()
     if combine_box_action_spaces:
         env = CombineBoxSpaceWrapper(env)
     env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)

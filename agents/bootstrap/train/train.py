@@ -14,11 +14,18 @@ class BootstrapGymEnv(gym.Wrapper):
     def __init__(self, env, dagger_agent, is_discrete):
         super(BootstrapGymEnv, self).__init__(env)
         self.dagger_agent = dagger_agent
-        if is_discrete:
-            self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
-                                                high=np.finfo(np.float32).max,
-                                                shape=(c.NUM_FC7 + c.NUM_TARGETS,),
-                                                dtype=np.float32)
+
+        # One thing we need to do here is to make each action an bi-modal guassian to avoid averaging 50/50 decisions
+        # i.e. half the time we veer left, half the time veer right - but on average this is go straight and can run us
+        # into an obstacle. right now the DiagGaussianPd is just adding up errors which would not be the right
+        # thing to do for a bi-modal guassian. also, DiagGaussianPd assumes steering and throttle are
+        # independent which is not the case (steering at higher speeds causes more acceleration a = v**2/r),
+        # so that may be a problem as well.
+
+        self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
+                                            high=np.finfo(np.float32).max,
+                                            shape=(c.NUM_FC7 + c.NUM_TARGETS,),
+                                            dtype=np.float32)
 
     def step(self, action):
         obz, reward, done, info = self.env.step(action)
@@ -33,9 +40,9 @@ class BootstrapGymEnv(gym.Wrapper):
         return self.env.reset()
 
 
-def run(bootstrap_net_path,
+def run(env_id, bootstrap_net_path,
         resume_dir=None, experiment=None, cameras=None, render=False, fps=c.DEFAULT_FPS,
-        should_record=False, is_discrete=True):
+        should_record=False, is_discrete=False):
     tf_config = tf.ConfigProto(
         allow_soft_placement=True,
         intra_op_parallelism_threads=1,
@@ -47,10 +54,7 @@ def run(bootstrap_net_path,
             allow_growth=True
         ),
     )
-    if is_discrete:
-        env_id = 'DeepDriveDiscrete-v0'
-    else:
-        env_id = 'DeepDrive-v0'
+
     sess = tf.Session(config=tf_config)
     with sess.as_default():
         dagger_gym_env = deepdrive.start(experiment, env_id, cameras=cameras, render=render, fps=fps,

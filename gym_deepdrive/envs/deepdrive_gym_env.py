@@ -108,8 +108,10 @@ def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
 class DeepDriveEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, preprocess_with_tensorflow=False, is_discrete=False):
+    def __init__(self, preprocess_with_tensorflow=False, is_discrete=False, is_sync=False, sync_step_time=None):
         self.is_discrete = is_discrete
+        self.is_sync = is_sync
+        self.sync_step_time = sync_step_time
         self.discrete_actions = None
         self.action_space = self._init_action_space(is_discrete)
         self.preprocess_with_tensorflow = preprocess_with_tensorflow
@@ -296,7 +298,16 @@ class DeepDriveEnv(gym.Env):
             dd_action = Action(steering=steer, throttle=throttle, brake=brake)
         else:
             dd_action = Action.from_gym(action)
-        self.send_control(dd_action)
+
+        if self.is_sync:
+            start = time.time()
+            seq_number = deepdrive_client.advance_synchronous_stepping(self.client_id, self.sync_step_time,
+                                                                       dd_action.steering, dd_action.throttle,
+                                                                       dd_action.brake, dd_action.handbrake)
+            end = time.time()
+            print('STEP TIME', str(end-start) + 'ms')
+        else:
+            self.send_control(dd_action)
         obz = self.get_observation()
         if obz and 'is_game_driving' in obz:
             self.has_control = not obz['is_game_driving']
@@ -615,6 +626,12 @@ class DeepDriveEnv(gym.Env):
             self.change_has_control(action.has_control)
         deepdrive_client.set_control_values(self.client_id, steering=action.steering, throttle=action.throttle,
                                             brake=action.brake, handbrake=action.handbrake)
+
+    def set_step_mode(self):
+        if self.is_sync:
+            ret = deepdrive_client.activate_synchronous_stepping(self.client_id)
+            if ret != 1:
+                raise RuntimeError('Could not activate synchronous mode - errno %r' % ret)
 
     def connect(self, cameras=None, render=False):
         def _connect():
