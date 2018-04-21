@@ -49,6 +49,8 @@ If you run into issues, try starting the sim directly as Unreal may need to inst
 
 ## Usage
 
+> If you're in PyCharm - make sure you disable the SciView in Settings > Tools > Python Scientific > Show Plots in Toolwindow
+
 Run the **baseline** agent
 ```
 python main.py --baseline --experiment-name my-baseline-test
