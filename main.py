@@ -44,7 +44,7 @@ def main():
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
     parser.add_argument('-n', '--experiment-name', nargs='?', default=None, help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
-    parser.add_argument('--agent', nargs='?', default='dagger', help='Agent type (dagger, bootstrap)')
+    parser.add_argument('--agent', nargs='?', default='dagger', help='Agent type (dagger, bootstrapped_ppo2)')
 
     args = parser.parse_args()
     if args.verbose:
@@ -75,10 +75,10 @@ def main():
             from agents.dagger.train import train
             train.run(resume_dir=args.resume_train, data_dir=args.recording_dir)
         elif args.agent == 'bootstrapped_ppo2':
-            from agents.bootstrap.train import train
+            from agents.bootstrap_rl.train import train
             net_path = args.net_path
             if not net_path:
-                log.info('Boostrapping from baseline agent')
+                log.info('Bootstrapping from baseline agent')
                 net_path = ensure_baseline_weights(args.net_path)
             train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path)
         else:

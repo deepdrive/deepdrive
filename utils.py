@@ -215,18 +215,26 @@ def ensure_executable(path):
 
 def get_sim_bin_path():
     path = None
+
+    def get_from_glob(search_path):
+        paths = glob.glob(search_path)
+        if len(paths) > 1:
+            log.warn('Found multiple sim binaries in search directory - picking the first from %r', paths)
+        if not paths:
+            ret = None
+        else:
+            ret = paths[0]
+        return ret
+
     if c.REUSE_OPEN_SIM:
         return None
     elif c.IS_LINUX:
-        path = c.SIM_PATH + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive'
+        path = get_from_glob(c.SIM_PATH + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive*')
     elif c.IS_MAC:
         raise NotImplementedError('Support for OSX not yet implemented, see FAQs')
     elif c.IS_WINDOWS:
-        paths = glob.glob(os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') + '/Win64/*.exe')
-        if not paths:
-            path = None
-        else:
-            path = paths[0]
+        path = get_from_glob(os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') + '/Win64/*.exe')
+
     if path and not os.path.exists(path):
         path = None
     return path

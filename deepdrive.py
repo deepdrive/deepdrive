@@ -8,7 +8,7 @@ import random_name
 
 # noinspection PyUnresolvedReferences
 from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action
-from rl.common.continuous_action_wrapper import CombineBoxSpaceWrapper
+from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxSpaceWrapper
 
 log = logs.get_log(__name__)
 
