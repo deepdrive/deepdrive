@@ -5,8 +5,10 @@ import os
 import numpy as np
 import scipy.misc
 import tensorflow as tf
+import tensorflow_hub as hub
 
 import config as c
+from agents.dagger import net
 from agents.dagger.net import Net
 from agents.dagger.train.data_utils import get_dataset
 from utils import download, has_stuff
@@ -15,14 +17,14 @@ import logs
 log = logs.get_log(__name__)
 
 
-def visualize_model(model, y):
+def visualize_model(model_in, model_out, y):
     names = ["spin", "direction", "speed", "speed_change", "steering", "throttle"]
     for i in range(6):
-        p = tf.reduce_mean(model.p[:, i])
+        p = tf.reduce_mean(model_out[:, i])
         tf.summary.scalar("losses/{}/p".format(names[i]), tf.reduce_mean(p))
-        err = 0.5 * tf.reduce_mean(tf.square(model.p[:, i] - y[:, i]))
+        err = 0.5 * tf.reduce_mean(tf.square(model_out[:, i] - y[:, i]))
         tf.summary.scalar("losses/{}/error".format(names[i]), err)
-    tf.summary.image("model/x", model.x, max_outputs=10)
+    tf.summary.image("model/x", model_in, max_outputs=10)
 
 
 def visualize_gradients(grads_and_vars):
@@ -40,7 +42,7 @@ def visualize_gradients(grads_and_vars):
     tf.summary.scalar("model/var_global_norm", tf.global_norm(var_list))
 
 
-def run(resume_dir=None, data_dir=c.RECORDING_DIR):
+def run(resume_dir=None, data_dir=c.RECORDING_DIR, net_name=ALEXNET):
     os.makedirs(c.TENSORFLOW_OUT_DIR, exist_ok=True)
     if resume_dir is not None:
         date_str = resume_dir[resume_dir.rindex('/') + 1:resume_dir.rindex('_')]
@@ -54,13 +56,19 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR):
     x = tf.placeholder(tf.float32, (None,) + c.BASELINE_IMAGE_SHAPE)
     y = tf.placeholder(tf.float32, (None, c.NUM_TARGETS))
     log.info('creating model')
-    with tf.variable_scope("model") as vs:
-        model = Net(x, c.NUM_TARGETS)
-        vs.reuse_variables()
-        eval_model = Net(x, c.NUM_TARGETS, is_training=False)
+    with tf.variable_scope("model") as variable_scope:
+        global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.zeros_initializer, trainable=False)
+
+    model_out, model_in, eval_model_out, global_step = None, None, None, None
+    if net_name == net.ALEXNET_NAME:
+        eval_model_out, model_in, model_out = setup_alexnet(x, net_name)
+    elif net_name == net.MOBILENET_V2_NAME:
+        eval_model_out, model_in, model_out = setup_mobilenet_v2(net_name)
+    else:
+        raise NotImplementedError('%r net not implemented' % net_name)
 
     l2_norm = tf.global_norm(tf.trainable_variables())
-    loss = 0.5 * tf.reduce_sum(tf.square(model.p - y)) / tf.to_float(tf.shape(x)[0])
+    loss = 0.5 * tf.reduce_sum(tf.square(model_out - y)) / tf.to_float(tf.shape(x)[0])
     tf.summary.scalar("model/loss", loss)
     tf.summary.scalar("model/l2_norm", l2_norm)
     total_loss = loss + 0.0005 * l2_norm
@@ -68,18 +76,18 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR):
     starter_learning_rate = 2e-6
 
     # TODO: add polyak averaging.
-    learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step=model.global_step,
+    learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step=global_step,
                                                decay_steps=73000, decay_rate=0.5, staircase=True)
 
     opt = tf.train.AdamOptimizer(learning_rate)
     tf.summary.scalar("model/learning_rate", learning_rate)
     grads_and_vars = opt.compute_gradients(total_loss)
-    visualize_model(model, y)
+    visualize_model(model_in, model_out, y)
     visualize_gradients(grads_and_vars)
     summary_op = tf.summary.merge_all()
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
-        train_op = opt.apply_gradients(grads_and_vars, model.global_step)
+        train_op = opt.apply_gradients(grads_and_vars, global_step)
 
     init_op = tf.global_variables_initializer()
     pretrained_var_map = {}
@@ -108,7 +116,7 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR):
                              logdir=sess_train_dir,
                              summary_op=None,  # Automatic summaries don't work with placeholders.
                              saver=saver,
-                             global_step=model.global_step,
+                             global_step=global_step,
                              save_summaries_secs=30,
                              save_model_secs=60,
                              init_op=None,
@@ -134,7 +142,7 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR):
                 images, targets = next(train_data_provider)
                 log.debug('num images %r', len(images))
                 log.debug('num targets %r', len(targets))
-                valid = True
+                valid_target_shape = True
                 for img_idx, img in enumerate(images):
                     img = images[img_idx]
                     if img.shape != c.BASELINE_IMAGE_SHAPE:
@@ -144,8 +152,8 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR):
                 for tgt in targets:
                     if len(tgt) != 6:
                         log.error('invalid target shape %r skipping' % len(tgt))
-                        valid = False
-                if valid:
+                        valid_target_shape = False
+                if valid_target_shape:
                     feed_dict = {x: images, y: targets}  # , 'phase:0': 1}
                     if i % 10 == 0 and i > 0:
                         # Summarize: Do this less frequently to speed up training time, more frequently to debug issues
@@ -161,14 +169,14 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR):
                             sess.run(train_op, feed_dict)
                         except ValueError as e:
                             print('Error processing batch, skipping - error was %r' % e)
-                    step = model.global_step.eval()
+                    step = global_step.eval()
                     log.info('step %d', step)
 
-            step = model.global_step.eval()
+            step = global_step.eval()
             # Do evaluation
             losses = []
             for images, targets in eval_dataset.iterate_once(batch_size):
-                preds = sess.run(eval_model.p, {x: images})
+                preds = sess.run(eval_model_out, {x: images})
                 losses += [np.square(targets - preds)]
             losses = np.concatenate(losses)
             summary = tf.Summary()
@@ -178,6 +186,27 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR):
                 summary.value.add(tag="eval/{}".format(names[i]), simple_value=float(0.5 * losses[:, i].mean()))
             eval_sw.add_summary(summary, step)
             eval_sw.flush()
+
+
+def setup_alexnet(x, net_name):
+    with tf.variable_scope("model") as variable_scope:
+        model = Net(x, c.NUM_TARGETS, name=net.ALEXNET_NAME)
+        model_in, model_out = model.x, model.p
+        variable_scope.reuse_variables()
+        eval_model = Net(x, c.NUM_TARGETS, is_training=False, name=net_name)
+        eval_model_out = eval_model.p
+    return eval_model_out, model_in, model_out
+
+
+def setup_mobilenet_v2(net_name):
+    model = Net(x=None, num_targets=c.NUM_TARGETS, name=net_name)
+
+    # TODO: Make this use an eval graph, to avoid quantization
+    # moving averages being updated by the validation set, though in
+    # practice this makes a negligible difference.
+    eval_model_out, model_in, model_out = model.p, model.x, model.p
+
+    return eval_model_out, model_in, model_out
 
 
 if __name__ == "__main__":

@@ -11,3 +11,5 @@ clint
 pillow
 boto
 mpi4py
+tensorflow_hub
+

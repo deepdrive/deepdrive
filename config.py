@@ -8,7 +8,6 @@ import numpy as np
 
 # Net
 NUM_TARGETS = 6
-NUM_FC7 = 4096
 BASELINE_IMAGE_SHAPE = (227, 227, 3)
 
 # Normalization
@@ -27,6 +26,7 @@ IS_LINUX = sys.platform == 'linux' or sys.platform == 'linux2'
 IS_MAC = sys.platform == 'darwin'
 IS_UNIX = IS_LINUX or IS_MAC or 'bsd' in sys.platform.lower()
 IS_WINDOWS = sys.platform == 'win32'
+
 
 # DEEPDRIVE_DIR
 def _get_deepdrive_dir():

@@ -21,7 +21,8 @@ log = logs.get_log(__name__)
 class Agent(object):
     def __init__(self, action_space, tf_session, env, should_record_recovery_from_random_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
-                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR, output_fc7=False):
+                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR, output_fc7=False,
+                 net_name=net.ALEXNET_NAME):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space
         self.previous_action = None
@@ -209,6 +210,7 @@ class Agent(object):
             self.net = graph
 
         else:
+            if self.env.id
             with tf.variable_scope("model") as _vs:
                 self.net = Net(self.net_input_placeholder, c.NUM_TARGETS, is_training=False)
             saver = tf.train.Saver()
@@ -299,7 +301,6 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
                                   fps=fps)
     dd_env = gym_env.env
 
-    # Perform random actions to reduce sampling error in the recorded dataset
     agent = Agent(gym_env.action_space, sess, env=gym_env.env,
                   should_record_recovery_from_random_actions=should_record_recovery_from_random_actions,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,

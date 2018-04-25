@@ -11,7 +11,7 @@ from vendor.openai.baselines.ppo2.run_deepdrive import train
 
 
 class BootstrapRLGymEnv(gym.Wrapper):
-    def __init__(self, env, dagger_agent, is_discrete):
+    def __init__(self, env, dagger_agent, input_size):
         super(BootstrapRLGymEnv, self).__init__(env)
         self.dagger_agent = dagger_agent
 
@@ -24,7 +24,8 @@ class BootstrapRLGymEnv(gym.Wrapper):
 
         self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
                                             high=np.finfo(np.float32).max,
-                                            shape=(c.NUM_FC7 + c.NUM_TARGETS,),
+                                            # shape=(c.ALEXNET_FC7 + c.NUM_TARGETS,),
+                                            shape=(input_size,),
                                             dtype=np.float32)
 
     def step(self, action):
@@ -66,7 +67,7 @@ def run(env_id, bootstrap_net_path,
 
 
         # Wrap step so we get the pretrained layer activations rather than pixels for our observation
-        bootstrap_gym_env = BootstrapRLGymEnv(dagger_gym_env, dagger_agent, is_discrete)
+        bootstrap_gym_env = BootstrapRLGymEnv(dagger_gym_env, dagger_agent, )
 
         train(bootstrap_gym_env, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess, is_discrete=is_discrete)
     #

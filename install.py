@@ -96,7 +96,7 @@ def get_tf_valid():
         print(error_msg % 'Tensorflow not working', file=sys.stderr)
         return False
 
-    min_version = '1.1'
+    min_version = '1.7'
     if semvar(tf.__version__) < semvar(min_version):
         warn_msg = 'Tensorflow %s is less than the minimum required version (%s)' % (tf.__version__, min_version)
         print(error_msg % warn_msg, file=sys.stderr)
