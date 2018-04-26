@@ -44,7 +44,8 @@ def main():
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
     parser.add_argument('-n', '--experiment-name', nargs='?', default=None, help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
-    parser.add_argument('--agent', nargs='?', default='dagger', help='Agent type (dagger, bootstrapped_ppo2)')
+    parser.add_argument('--agent', nargs='?', default='dagger', help='Agent type (dagger, dagger_mobilenet_v2, '
+                                                                     'bootstrapped_ppo2)')
 
     args = parser.parse_args()
     if args.verbose:
@@ -63,7 +64,7 @@ def main():
 
     if args.train:
         # TODO: Add experiment name here as well, and integrate it into Tensorflow runs, recording names, model checkpoints, etc...
-        if args.agent == 'dagger':
+        if args.agent == 'dagger' or args.agent == 'dagger_mobilenet_v2':
             '''
             Really it's just the first iteration of DAgger where our policy is random.
             This seems to be sufficient for exploring the types of mistakes our AI makes and labeling
@@ -73,7 +74,7 @@ def main():
             a larger number of possibilities.
             '''
             from agents.dagger.train import train
-            train.run(resume_dir=args.resume_train, data_dir=args.recording_dir)
+            train.run(resume_dir=args.resume_train, data_dir=args.recording_dir, agent_name=args.agent)
         elif args.agent == 'bootstrapped_ppo2':
             from agents.bootstrap_rl.train import train
             net_path = args.net_path

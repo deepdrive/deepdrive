@@ -5,7 +5,6 @@ import os
 import numpy as np
 import scipy.misc
 import tensorflow as tf
-import tensorflow_hub as hub
 
 import config as c
 from agents.dagger import net
@@ -42,7 +41,14 @@ def visualize_gradients(grads_and_vars):
     tf.summary.scalar("model/var_global_norm", tf.global_norm(var_list))
 
 
-def run(resume_dir=None, data_dir=c.RECORDING_DIR, net_name=ALEXNET):
+def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None):
+    # TODO: Clean up the net_name stuff
+    if agent_name is None:
+        net_name = net.ALEXNET_NAME
+    elif agent_name == 'dagger_mobilenet_v2':
+        net_name = net.MOBILENET_V2_NAME
+    else:
+        raise NotImplementedError('%r agent_name not associated with trunk net' % agent_name)
     os.makedirs(c.TENSORFLOW_OUT_DIR, exist_ok=True)
     if resume_dir is not None:
         date_str = resume_dir[resume_dir.rindex('/') + 1:resume_dir.rindex('_')]
@@ -52,14 +58,17 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, net_name=ALEXNET):
     sess_eval_dir = '%s/%s_eval' % (c.TENSORFLOW_OUT_DIR, date_str)
     os.makedirs(sess_train_dir, exist_ok=True)
     os.makedirs(sess_eval_dir, exist_ok=True)
-    batch_size = 32  # Change this to fit in your GPU's memory
+
+    # Decrease this to fit in your GPU's memory
+    # If you increase, remember that it decreases accuracy https://arxiv.org/abs/1711.00489
+    batch_size = 32
+
     x = tf.placeholder(tf.float32, (None,) + c.BASELINE_IMAGE_SHAPE)
     y = tf.placeholder(tf.float32, (None, c.NUM_TARGETS))
     log.info('creating model')
-    with tf.variable_scope("model") as variable_scope:
+    with tf.variable_scope("model"):
         global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.zeros_initializer, trainable=False)
 
-    model_out, model_in, eval_model_out, global_step = None, None, None, None
     if net_name == net.ALEXNET_NAME:
         eval_model_out, model_in, model_out = setup_alexnet(x, net_name)
     elif net_name == net.MOBILENET_V2_NAME:
@@ -90,26 +99,13 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, net_name=ALEXNET):
         train_op = opt.apply_gradients(grads_and_vars, global_step)
 
     init_op = tf.global_variables_initializer()
-    pretrained_var_map = {}
-    for v in tf.trainable_variables():
-        found = False
-        for bad_layer in ["fc6", "fc7", "fc8"]:
-            if bad_layer in v.name:
-                found = True
-        if found:
-            continue
 
-        pretrained_var_map[v.op.name[6:]] = v
-
-    alexnet_saver = tf.train.Saver(pretrained_var_map)
-
-    def init_fn(ses):
-        log.info('Initializing parameters.')
-        if not has_stuff(c.BVLC_CKPT_PATH):
-            print('\n--------- ImageNet checkpoint not found, downloading ----------')
-            download(c.BVLC_CKPT_URL, c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
-        ses.run(init_op)
-        alexnet_saver.restore(ses, c.BVLC_CKPT_PATH)
+    if net_name == net.ALEXNET_NAME:
+        init_fn = load_alexnet_pretrained(init_op)
+    else:
+        def init_fn(ses):
+            log.info('Initializing parameters.')
+            ses.run(init_op)
 
     saver = tf.train.Saver()
     sv = tf.train.Supervisor(is_chief=True,
@@ -188,23 +184,47 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, net_name=ALEXNET):
             eval_sw.flush()
 
 
+def load_alexnet_pretrained(init_op):
+    pretrained_var_map = {}
+    for v in tf.trainable_variables():
+        found = False
+        for bad_layer in ["fc6", "fc7", "fc8"]:
+            if bad_layer in v.name:
+                found = True
+        if found:
+            continue
+
+        pretrained_var_map[v.op.name[6:]] = v
+    alexnet_saver = tf.train.Saver(pretrained_var_map)
+
+    def init_fn(ses):
+        log.info('Initializing parameters.')
+        if not has_stuff(c.BVLC_CKPT_PATH):
+            print('\n--------- ImageNet checkpoint not found, downloading ----------')
+            download(c.BVLC_CKPT_URL, c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
+        ses.run(init_op)
+        alexnet_saver.restore(ses, c.BVLC_CKPT_PATH)
+
+    return init_fn
+
+
 def setup_alexnet(x, net_name):
     with tf.variable_scope("model") as variable_scope:
-        model = Net(x, c.NUM_TARGETS, name=net.ALEXNET_NAME)
-        model_in, model_out = model.x, model.p
+        model = Net(x, c.NUM_TARGETS, net_name=net.ALEXNET_NAME)
+        model_in, model_out = model.input, model.out
         variable_scope.reuse_variables()
-        eval_model = Net(x, c.NUM_TARGETS, is_training=False, name=net_name)
-        eval_model_out = eval_model.p
+        eval_model = Net(x, c.NUM_TARGETS, is_training=False, net_name=net_name)
+        eval_model_out = eval_model.out
     return eval_model_out, model_in, model_out
 
 
 def setup_mobilenet_v2(net_name):
-    model = Net(x=None, num_targets=c.NUM_TARGETS, name=net_name)
+    model = Net(x=None, num_targets=c.NUM_TARGETS, net_name=net_name)
 
     # TODO: Make this use an eval graph, to avoid quantization
     # moving averages being updated by the validation set, though in
     # practice this makes a negligible difference.
-    eval_model_out, model_in, model_out = model.p, model.x, model.p
+    eval_model_out, model_in, model_out = model.out, model.input, model.out
 
     return eval_model_out, model_in, model_out
 

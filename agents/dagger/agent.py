@@ -10,6 +10,7 @@ import numpy as np
 
 import config as c
 import deepdrive
+from agents.dagger import net
 from gym_deepdrive.envs.deepdrive_gym_env import Action
 from agents.dagger.net import Net
 from utils import save_hdf5, download
@@ -28,6 +29,7 @@ class Agent(object):
         self.previous_action = None
         self.step = 0
         self.env = env
+        self.net_name = net_name
 
         # State for toggling random actions
         self.should_record_recovery_from_random_actions = should_record_recovery_from_random_actions
@@ -210,9 +212,11 @@ class Agent(object):
             self.net = graph
 
         else:
-            if self.env.id
-            with tf.variable_scope("model") as _vs:
-                self.net = Net(self.net_input_placeholder, c.NUM_TARGETS, is_training=False)
+            if self.net_name == net.MOBILENET_V2_NAME:
+                self.net = Net(self.net_input_placeholder, c.NUM_TARGETS, is_training=False, net_name=self.net_name)
+            else:
+                with tf.variable_scope("model"):
+                    self.net = Net(self.net_input_placeholder, c.NUM_TARGETS, is_training=False, net_name=self.net_name)
             saver = tf.train.Saver()
             saver.restore(self.sess, net_path)
 

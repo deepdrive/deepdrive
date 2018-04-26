@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow_hub as hub
 
 from agents.dagger.layers import conv2d, max_pool_2x2, linear, lrn
 import config as c
@@ -17,22 +18,27 @@ FAKE_QUANT_OPS = ('FakeQuantWithMinMaxVars',
 
 
 class Net(object):
-    def __init__(self, x, num_targets=c.NUM_TARGETS, is_training=True, num_last_hidden=ALEXNET_FC7, name=ALEXNET_NAME):
-        self.x = x
+    def __init__(self, x, num_targets=c.NUM_TARGETS, is_training=True, num_last_hidden=ALEXNET_FC7, net_name=ALEXNET_NAME):
+        self.input = x
         self.num_targets = num_targets
         self.is_training = is_training
         self.num_last_hidden = num_last_hidden
-        if name == ALEXNET_NAME:
-            self.init_alexnet()
-        elif name == MOBILENET_V2_NAME:
-            self.init_mobilenet_v2()
+        self.net_name = net_name
+        if net_name == ALEXNET_NAME:
+            init_fn = self.init_alexnet
+        elif net_name == MOBILENET_V2_NAME:
+            init_fn = self.init_mobilenet_v2
+        else:
+            raise NotImplementedError('net_name %r not recognized' % net_name)
+
+        self.last_hidden_layer_activations, self.out = init_fn()
 
     def init_alexnet(self):
         """AlexNet architecture with modified final fully-connected layers regressed on driving control outputs (steering, throttle, etc...)"""
 
         # phase = tf.placeholder(tf.bool, name='phase')  # Used for batch norm
 
-        conv1 = tf.nn.relu(conv2d(self.x, "conv1", 96, 11, 4, 1))
+        conv1 = tf.nn.relu(conv2d(self.input, "conv1", 96, 11, 4, 1))
         lrn1 = lrn(conv1)
         maxpool1 = max_pool_2x2(lrn1)
         conv2 = tf.nn.relu(conv2d(maxpool1, "conv2", 256, 5, 1, 2))
@@ -66,62 +72,62 @@ class Net(object):
             fc7 = tf.nn.dropout(fc7, 1.0)
 
         fc8 = linear(fc7, "fc8", self.num_targets)
-        self.fc7 = fc7
 
-        # TODO: Get rid of all of these legacy aliases
-        self.p, self.out = fc8
-        self.input = self.x
+        return fc7, fc8
 
     def init_mobilenet_v2(self):
         module_spec = hub.load_module_spec(MOBILENET_V2_TFHUB_MODULE)
         height, width = hub.get_expected_image_size(module_spec)
-        with tf.Graph().as_default() as graph:
-            resized_input_tensor = tf.placeholder(tf.float32, [None, height, width, 3])
-            hub_module = hub.Module(module_spec, trainable=False)
-            input_tensor = hub_module(resized_input_tensor)
-            wants_quantization = any(node.op in FAKE_QUANT_OPS
-                                     for node in graph.as_graph_def().node)
+        graph = tf.get_default_graph()
+        resized_input_tensor = tf.placeholder(tf.float32, [None, height, width, 3])
+        hub_module = hub.Module(module_spec, trainable=False)
+        pretrained_output_tensor = hub_module(resized_input_tensor)
+        wants_quantization = any(node.op in FAKE_QUANT_OPS
+                                 for node in graph.as_graph_def().node)
 
-            add_tfhub_retrain_ops(input_tensor)
+        self.input = resized_input_tensor
+        return self.add_tfhub_retrain_ops(pretrained_output_tensor)
 
+    def add_tfhub_retrain_ops(self, last_hidden_layer_activations):
+        batch_size, input_tensor_size = last_hidden_layer_activations.get_shape().as_list()
+        assert batch_size is None, 'We want to work with arbitrary batch size.'
+        with tf.name_scope('input'):
+            fc_input_placeholder = tf.placeholder_with_default(
+                last_hidden_layer_activations,
+                shape=[batch_size, input_tensor_size],
+                name='TfHubInputPlaceHolder')
 
-def add_tfhub_retrain_ops(input_tensor):
-    batch_size, input_tensor_size = input_tensor.get_shape().as_list()
-    assert batch_size is None, 'We want to work with arbitrary batch size.'
-    with tf.name_scope('input'):
-        bottleneck_input = tf.placeholder_with_default(
-            input_tensor,
-            shape=[batch_size, input_tensor_size],
-            name='TfHubInputPlaceHolder')
+            variable_summaries(fc_input_placeholder)
 
-        variable_summaries(bottleneck_input)
+            # ground_truth_input = tf.placeholder(
+            #     tf.int64, [batch_size], name='GroundTruthInput')
+        # Organizing the following ops so they are easier to see in TensorBoard.
+        layer_name = 'final_retrain_ops'
+        with tf.name_scope(layer_name):
+            with tf.name_scope('weights'):
+                initial_value1 = tf.truncated_normal(
+                    [input_tensor_size, input_tensor_size], stddev=0.001)
+                initial_value2 = tf.truncated_normal(
+                    [input_tensor_size, c.NUM_TARGETS], stddev=0.001)
+                fc_weights_1 = tf.Variable(initial_value1, name='fc_1')
+                fc_weights_2 = tf.Variable(initial_value2, name='fc_2')
+                variable_summaries(fc_weights_1)
+                variable_summaries(fc_weights_2)
 
-        ground_truth_input = tf.placeholder(
-            tf.int64, [batch_size], name='GroundTruthInput')
-    # Organizing the following ops so they are easier to see in TensorBoard.
-    layer_name = 'final_retrain_ops'
-    with tf.name_scope(layer_name):
-        with tf.name_scope('weights'):
-            initial_value1 = tf.truncated_normal(
-                [input_tensor_size, input_tensor_size], stddev=0.001)
-            initial_value2 = tf.truncated_normal(
-                [input_tensor_size, c.NUM_TARGETS], stddev=0.001)
-            fc_1 = tf.Variable(initial_value1, name='fc_1')
-            fc_2 = tf.Variable(initial_value2, name='fc_2')
-            variable_summaries(fc_1)
-            variable_summaries(fc_2)
+            with tf.name_scope('biases'):
+                fc_biases_1 = tf.Variable(tf.zeros([input_tensor_size]), name='fc_biases_1')
+                fc_biases_2 = tf.Variable(tf.zeros([c.NUM_TARGETS]), name='fc_biases_2')
+                variable_summaries(fc_biases_1)
+                variable_summaries(fc_biases_2)
 
-        with tf.name_scope('biases'):
-            fc_biases_1 = tf.Variable(tf.zeros([input_tensor_size]), name='fc_biases_1')
-            fc_biases_2 = tf.Variable(tf.zeros([c.NUM_TARGETS]), name='fc_biases_2')
-            variable_summaries(fc_biases_1)
-            variable_summaries(fc_biases_2)
+            with tf.name_scope('Wx_plus_b'):
+                fc_1_activations = tf.nn.relu(tf.matmul(fc_input_placeholder, fc_weights_1) + fc_biases_1)
+                fc_2_activations = tf.matmul(fc_1_activations, fc_weights_2) + fc_biases_2
+                tf.summary.histogram('fc_1_activations', fc_1_activations)
+                tf.summary.histogram('fc_2_activations', fc_2_activations)
 
-        with tf.name_scope('Wx_plus_b'):
-            fc_1_activations = tf.nn.relu(tf.matmul(bottleneck_input, fc_1) + fc_biases_1)
-            fc_2_activations = tf.matmul(fc_1_activations, fc_2) + fc_biases_2
-            tf.summary.histogram('fc_relu', fc_2_activations)
-            tf.summary.histogram('pre_activations', fc_2_activations)
+            return fc_1_activations, fc_2_activations
+
 
 def variable_summaries(var):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
