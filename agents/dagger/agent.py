@@ -57,6 +57,10 @@ class Agent(object):
         self.sess = tf_session
         self.use_frozen_net = use_frozen_net
         if net_path is not None:
+            if net_name == net.ALEXNET_NAME:
+                input_shape = net.ALEXNET_IMAGE_SHAPE
+            elif net_name == net.MOBILENET_V2_NAME:
+                input_shape = net.MOBILENET_V2_IMAGE_SHAPE
             self.load_net(net_path, use_frozen_net)
         else:
             self.net = None
@@ -180,7 +184,7 @@ class Agent(object):
                 self.performing_random_actions = True
         return action
 
-    def load_net(self, net_path, is_frozen=False):
+    def load_net(self, net_path, is_frozen=False, image_shape=None):
         '''
         Frozen nets can be generated with something like 
         
@@ -188,7 +192,7 @@ class Agent(object):
         
         where model/add_2 is the auto-generated name for self.net.p 
         '''
-        self.net_input_placeholder = tf.placeholder(tf.float32, (None,) + c.BASELINE_IMAGE_SHAPE)
+        self.net_input_placeholder = tf.placeholder(tf.float32, (None,) + image_shape)
         if is_frozen:
             # TODO: Get frozen nets working
 

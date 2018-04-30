@@ -8,7 +8,6 @@ import numpy as np
 
 # Net
 NUM_TARGETS = 6
-BASELINE_IMAGE_SHAPE = (227, 227, 3)
 
 # Normalization
 SPIN_THRESHOLD = 1.0
@@ -27,6 +26,10 @@ IS_MAC = sys.platform == 'darwin'
 IS_UNIX = IS_LINUX or IS_MAC or 'bsd' in sys.platform.lower()
 IS_WINDOWS = sys.platform == 'win32'
 
+# AGENTS
+DAGGER = 'dagger'
+DAGGER_MNET2 = 'dagger_mobilenet_v2'
+BOOTSTRAPPED_PPO2 = 'bootstrapped_ppo2'
 
 # DEEPDRIVE_DIR
 def _get_deepdrive_dir():
@@ -112,3 +115,4 @@ DEFAULT_CAM = dict(name='forward cam 227x227 60 FOV', field_of_view=60, capture_
          relative_rotation=[0.0, 0.0, 0.0])
 
 DEFAULT_FPS = 8
+

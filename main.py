@@ -44,8 +44,9 @@ def main():
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
     parser.add_argument('-n', '--experiment-name', nargs='?', default=None, help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
-    parser.add_argument('--agent', nargs='?', default='dagger', help='Agent type (dagger, dagger_mobilenet_v2, '
-                                                                     'bootstrapped_ppo2)')
+    parser.add_argument('--agent', nargs='?', default='dagger', help='Agent type (%s, %s, %s)' % (c.DAGGER,
+                                                                                                  c.DAGGER_MNET2,
+                                                                                                  c.BOOTSTRAPPED_PPO2))
 
     args = parser.parse_args()
     if args.verbose:
