@@ -42,9 +42,9 @@ class Net(object):
 class MobileNetV2(Net):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.starter_learning_rate = 1.0
+        self.starter_learning_rate = 1e-3
         self.learning_rate = tf.train.exponential_decay(self.starter_learning_rate, global_step=self.global_step,
-                                                        decay_steps=255, decay_rate=0.5, staircase=True)
+                                                        decay_steps=73000, decay_rate=0.5, staircase=True)
 
     def get_tf_init_fn(self, init_op):
         def ret(ses):
