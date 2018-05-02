@@ -24,10 +24,13 @@ FAKE_QUANT_OPS = ('FakeQuantWithMinMaxVars',
 
 
 class Net(object):
-    def __init__(self, global_step, num_targets=c.NUM_TARGETS, is_training=True):
+    def __init__(self, global_step, num_targets=c.NUM_TARGETS, is_training=True, freeze_pretrained=False, overfit=False):
         self.num_targets = num_targets
         self.is_training = is_training
         self.global_step = global_step
+        self.freeze_pretrained = freeze_pretrained  # TODO: Implement for AlexNet
+        self.overfit = overfit
+        self.batch_size = None
         self.input, self.last_hidden, self.out, self.eval_out = self._init_net()
         self.input_image_shape = (self.input.shape[1].value, self.input.shape[2].value, self.input.shape[3].value)
         self.num_last_hidden = self.last_hidden.shape[1].value
@@ -41,10 +44,22 @@ class Net(object):
 
 class MobileNetV2(Net):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.starter_learning_rate = 1e-3
+        super(MobileNetV2, self).__init__(*args, **kwargs)
+
+        # Decrease this to fit in your GPU's memory
+        # If you increase, remember that it decreases accuracy https://arxiv.org/abs/1711.00489
+        self.batch_size = 48
+
+        self.starter_learning_rate = 2e-6
         self.learning_rate = tf.train.exponential_decay(self.starter_learning_rate, global_step=self.global_step,
-                                                        decay_steps=73000, decay_rate=0.5, staircase=True)
+                                                        decay_steps=55000, decay_rate=0.5, staircase=True)
+
+        if self.overfit:
+            self.weight_decay = 0.
+        else:
+            self.weight_decay = 0.00004  # same as mobilenet2 paper https://arxiv.org/pdf/1801.04381.pdf
+
+        self.mute_spurious_targets = True
 
     def get_tf_init_fn(self, init_op):
         def ret(ses):
@@ -58,7 +73,7 @@ class MobileNetV2(Net):
         height, width = hub.get_expected_image_size(module_spec)
         graph = tf.get_default_graph()
         in_tensor = tf.placeholder(tf.float32, [None, height, width, 3])
-        hub_module = hub.Module(module_spec, trainable=False)
+        hub_module = hub.Module(module_spec, trainable=(self.is_training and not self.freeze_pretrained))
         pretrained_output_tensor = hub_module(in_tensor)
         wants_quantization = any(node.op in FAKE_QUANT_OPS
                                  for node in graph.as_graph_def().node)
@@ -120,11 +135,22 @@ class AlexNet(Net):
         self.num_last_hidden = ALEXNET_FC7
         self.net_name = ALEXNET_NAME
         self.starter_learning_rate = 2e-6
-        super().__init__(*args, **kwargs)
+        super(AlexNet, self).__init__(*args, **kwargs)
+
+        # Decrease this to fit in your GPU's memory
+        # If you increase, remember that it decreases accuracy https://arxiv.org/abs/1711.00489
+        self.batch_size = 32
 
         # TODO: add polyak averaging.
         self.learning_rate = tf.train.exponential_decay(self.starter_learning_rate, global_step=self.global_step,
                                                         decay_steps=73000, decay_rate=0.5, staircase=True)
+
+        if self.overfit:
+            self.weight_decay = 0.
+        else:
+            self.weight_decay = 0.0005
+
+        self.mute_spurious_targets = False  # TODO: Try turning this on
 
     def _init_net(self):
         in_tensor = tf.placeholder(tf.float32, (None,) + self.input_image_shape)

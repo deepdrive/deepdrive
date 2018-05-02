@@ -33,6 +33,9 @@ def main():
                         help='Whether to occasionally perform random actions and record recovery from them')
     parser.add_argument('--path-follower', action='store_true', default=False,
                         help='Whether to let the in-game path follower drive')
+    parser.add_argument('--overfit', action='store_true', default=False,
+                        help='Whether or not to overfit to a small test set during training to sanity check '
+                             'convergability')
     parser.add_argument('--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
@@ -75,7 +78,8 @@ def main():
             a larger number of possibilities.
             '''
             from agents.dagger.train import train
-            train.run(resume_dir=args.resume_train, data_dir=args.recording_dir, agent_name=args.agent)
+            train.run(resume_dir=args.resume_train, data_dir=args.recording_dir, agent_name=args.agent,
+                      overfit=args.overfit)
         elif args.agent == 'bootstrapped_ppo2':
             from agents.bootstrap_rl.train import train
             net_path = args.net_path

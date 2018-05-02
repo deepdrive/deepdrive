@@ -60,9 +60,11 @@ class BackgroundGenerator(threading.Thread):
         return next_item
 
 
-def get_file_names(hdf5_path, train=True):
+def get_file_names(hdf5_path, train=True, overfit=False):
     files = glob.glob(hdf5_path + '/**/*.hdf5', recursive=True)
-    if train:
+    if overfit:
+        files = files[-1:]
+    elif train:
         files = files[1:]
     else:
         files = files[0:1]
@@ -71,23 +73,22 @@ def get_file_names(hdf5_path, train=True):
     return files
 
 
-def load_file(h5_filename):
-    frames = []
+def load_file(h5_filename, overfit=False, mute_spurious_targets=False):
     out_images = []
     out_targets = []
     try:
-        frames = read_hdf5(h5_filename)
+        frames = read_hdf5(h5_filename, overfit=overfit)
         c.RNG.shuffle(frames)
         for frame in frames:
             out_images.append(frame['cameras'][0]['image'])  # Just use one camera for now
-            out_targets.append([*normalize_frame(frame)])
+            out_targets.append([*normalize_frame(frame, mute_spurious_targets)])
     except Exception as e:
-        log.error('Could not load %s - skipping', h5_filename)
+        log.error('Could not load %s - skipping - error was: %r', h5_filename, e)
 
     return out_images, out_targets
 
 
-def normalize_frame(frame):
+def normalize_frame(frame, mute_spurious_targets=False):
     spin = frame['angular_velocity'][2]
     if spin <= -c.SPIN_THRESHOLD:
         direction = -1.0
@@ -97,42 +98,62 @@ def normalize_frame(frame):
         direction = 0.0
     spin = spin / c.SPIN_NORMALIZATION_FACTOR
     speed = frame['speed'] / c.SPEED_NORMALIZATION_FACTOR
-    speed_change = np.dot(frame['acceleration'], frame['forward_vector']) / c.SPEED_NORMALIZATION_FACTOR
+    if mute_spurious_targets:
+        speed_change = 0.
+        direction = 0.
+        spin = 0.
+    else:
+        speed_change = np.dot(frame['acceleration'], frame['forward_vector']) / c.SPEED_NORMALIZATION_FACTOR
     steering = frame['steering']
     throttle = frame['throttle']
     return spin, direction, speed, speed_change, steering, throttle
 
 
-def file_loader(file_stream):
+def file_loader(file_stream, overfit=False, mute_spurious_targets=False):
     for h5_filename in file_stream:
         log.info('loading %s', h5_filename)
-        yield load_file(h5_filename)
+        yield load_file(h5_filename, overfit, mute_spurious_targets)
     log.info('finished training files')
 
 
-def batch_gen(file_stream, batch_size):
-    gen = BackgroundGenerator(file_loader(file_stream), should_shuffle=False)
+def batch_gen(file_stream, batch_size, overfit=False, mute_spurious_targets=False):
+    gen = BackgroundGenerator(file_loader(file_stream, overfit, mute_spurious_targets), should_shuffle=False)
     for images, targets in gen:
-        num_iters = len(images) // batch_size
-        print('num iters', num_iters)
+        if overfit:
+            images, targets = images[0:batch_size], targets[0:batch_size]
+            num_repeats, remainder = divmod(batch_size, len(images))
+            if num_repeats > 1:
+                images = images * num_repeats
+                targets = targets * num_repeats
+                if remainder > 0:
+                    images = images + images[:remainder]
+                    targets = targets + targets[:remainder]
+            yield images, targets
+        else:
+            num_iters = len(images) // batch_size
+        # print('num iters', num_iters)
         # print('images', images)
-        for i in range(num_iters):
-            yield images[i * batch_size:(i+1) * batch_size], targets[i * batch_size:(i+1) * batch_size]
+
+            for i in range(num_iters):
+                yield images[i * batch_size:(i+1) * batch_size], targets[i * batch_size:(i+1) * batch_size]
+
     print('finished batch gen')
 
 
 class Dataset(object):
-    def __init__(self, files, log):
+    def __init__(self, files, log, overfit=False, mute_spurious_targets=False):
         # TODO: Avoid passing log object around, https://stackoverflow.com/questions/5974273
         self._files = files
         self.log = log
+        self.overfit = overfit
+        self.mute_spurious_targets = mute_spurious_targets
 
     def iterate_once(self, batch_size):
         def file_stream():
             for file_name in self._files:
                 self.log.info('queueing data from %s for iterate once', file_name)
                 yield file_name
-        yield from batch_gen(file_stream(), batch_size)
+        yield from batch_gen(file_stream(), batch_size, mute_spurious_targets=self.mute_spurious_targets)
 
     def iterate_forever(self, batch_size):
         def file_stream():
@@ -145,12 +166,12 @@ class Dataset(object):
         # TODO: Make Python 2 compatible with something like
         # for x in batch_gen(file_stream(), batch_size):
         #     yield x
-        yield from batch_gen(file_stream(), batch_size)
+        yield from batch_gen(file_stream(), batch_size, self.overfit, self.mute_spurious_targets)
 
 
-def get_dataset(hdf5_path, log, train=True):
-    file_names = get_file_names(hdf5_path, train=train)
-    return Dataset(file_names, log)
+def get_dataset(hdf5_path, log, train=True, overfit=False, mute_spurious_targets=False):
+    file_names = get_file_names(hdf5_path, train=train, overfit=overfit)
+    return Dataset(file_names, log, overfit, mute_spurious_targets)
 
 
 def run():
@@ -163,6 +184,7 @@ def run():
         for image in images:
             if image.shape != (227,227,3):
                 log.info('FOUND %r', image.shape)
+
 
 if __name__ == "__main__":
     run()

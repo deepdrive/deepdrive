@@ -42,15 +42,12 @@ def visualize_gradients(grads_and_vars):
     tf.summary.scalar("model/var_global_norm", tf.global_norm(var_list))
 
 
-def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None):
+def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=False):
     with tf.variable_scope("model"):
         global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.zeros_initializer, trainable=False)
     agent_net = get_agent_net(agent_name, global_step)
+    log.info('starter learning rate is %f', agent_net.starter_learning_rate)
     sess_eval_dir, sess_train_dir = get_dirs(resume_dir)
-
-    # Decrease this to fit in your GPU's memory
-    # If you increase, remember that it decreases accuracy https://arxiv.org/abs/1711.00489
-    batch_size = 32
 
     targets_tensor = tf.placeholder(tf.float32, (None, agent_net.num_targets))
     total_loss = setup_loss(agent_net, targets_tensor)
@@ -60,11 +57,11 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None):
 
     eval_sw = tf.summary.FileWriter(sess_eval_dir)
 
-    train_dataset = get_dataset(data_dir, log)
-    eval_dataset = get_dataset(data_dir, log, train=False)
+    train_dataset = get_dataset(data_dir, log, overfit=overfit, mute_spurious_targets=agent_net.mute_spurious_targets)
+    eval_dataset = get_dataset(data_dir, log, train=False, mute_spurious_targets=agent_net.mute_spurious_targets)
     config = tf.ConfigProto(allow_soft_placement=True)
     with sv.managed_session(config=config) as sess, sess.as_default():
-        train_data_provider = train_dataset.iterate_forever(batch_size)
+        train_data_provider = train_dataset.iterate_forever(agent_net.batch_size)
         log.info('\n\n*********************************************************************\n'
                  'Start tensorboard with \n\n\ttensorboard --logdir="' + c.TENSORFLOW_OUT_DIR +
                  '"\n\n(In Windows tensorboard will be in your python env\'s Scripts folder, '
@@ -79,10 +76,10 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None):
                                    train_op, total_loss)
                 step = global_step.eval()
 
-                log.info('step %d loss %d', step, loss)
+                log.info('step %d loss %f', step, loss)
 
             step = global_step.eval()
-            perform_eval(step, agent_net, batch_size, eval_dataset, eval_sw, sess)
+            perform_eval(step, agent_net, agent_net.batch_size, eval_dataset, eval_sw, sess)
 
 
 def get_dirs(resume_dir):
@@ -98,13 +95,14 @@ def get_dirs(resume_dir):
     return sess_eval_dir, sess_train_dir
 
 
-def get_agent_net(agent_name, global_step):
+def get_agent_net(agent_name, global_step, overfit=False):
     if agent_name is None or agent_name == c.DAGGER:
-        agent_net = AlexNet(global_step)
+        agent_net_fn = AlexNet
     elif agent_name == c.DAGGER_MNET2:
-        agent_net = MobileNetV2(global_step)
+        agent_net_fn = MobileNetV2
     else:
         raise NotImplementedError('%r agent_name not supported' % agent_name)
+    agent_net = agent_net_fn(global_step, overfit=overfit)
     return agent_net
 
 
@@ -135,7 +133,7 @@ def setup_loss(agent_net, targets_tensor):
     loss = 0.5 * tf.reduce_sum(tf.square(agent_net.out - targets_tensor)) / tf.to_float(tf.shape(agent_net.input)[0])
     tf.summary.scalar("model/loss", loss)
     tf.summary.scalar("model/l2_norm", l2_norm)
-    total_loss = loss + 0.0005 * l2_norm
+    total_loss = loss + agent_net.weight_decay * l2_norm
     tf.summary.scalar("model/total_loss", total_loss)
     return total_loss
 
@@ -145,7 +143,7 @@ def train_batch(agent_net, i, sess, summary_op, sv, targets_tensor, train_data_p
     log.debug('num images %r', len(images))
     log.debug('num targets %r', len(targets))
     valid_target_shape = True
-    resize_images(agent_net, images)
+    resize_images(agent_net.input_image_shape, images)
     loss = None
     for tgt in targets:
         if len(tgt) != 6:
@@ -173,26 +171,31 @@ def train_batch(agent_net, i, sess, summary_op, sv, targets_tensor, train_data_p
 def perform_eval(step, agent_net, batch_size, eval_dataset, eval_sw, sess):
     losses = []
     for images, targets in eval_dataset.iterate_once(batch_size):
-        resize_images(agent_net, images)
-        predictions = sess.run(agent_net.eval_out, {agent_net.input: images})
+        resize_images(agent_net.input_image_shape, images)
+        predictions = sess.run(agent_net.eval_out, {agent_net.input: images, 'is_training': False})
         losses += [np.square(targets - predictions)]
     losses = np.concatenate(losses)
     summary = tf.Summary()
-    summary.value.add(tag="eval/loss", simple_value=float(0.5 * losses.sum() / losses.shape[0]))
+    eval_loss = float(0.5 * losses.sum() / losses.shape[0])
+    log.info('eval loss %f', eval_loss)
+    summary.value.add(tag="eval/loss", simple_value=eval_loss)
     names = ["spin", "direction", "speed", "speed_change", "steering", "throttle"]
     for i in range(len(names)):
-        summary.value.add(tag="eval/{}".format(names[i]), simple_value=float(0.5 * losses[:, i].mean()))
+        loss_component = float(0.5 * losses[:, i].mean())
+        loss_name = names[i]
+        summary.value.add(tag="eval/{}".format(loss_name), simple_value=loss_component)
+        log.info('%s loss %f', loss_name, loss_component)
     eval_sw.add_summary(summary, step)
     eval_sw.flush()
 
 
-def resize_images(agent_net, images):
+def resize_images(input_image_shape, images):
     for img_idx, img in enumerate(images):
         img = images[img_idx]
-        if img.shape != agent_net.input_image_shape:
+        if img.shape != input_image_shape:
             log.debug('invalid image shape %s - resizing', str(img.shape))
-            images[img_idx] = scipy.misc.imresize(img, (agent_net.input_image_shape[0],
-                                                        agent_net.input_image_shape[1]))
+            images[img_idx] = scipy.misc.imresize(img, (input_image_shape[0],
+                                                        input_image_shape[1]))
 
 
 if __name__ == "__main__":

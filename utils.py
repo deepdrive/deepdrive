@@ -102,7 +102,7 @@ def save_hdf5_thread(out, filename):
     log.info('Saved to %s', filename)
 
 
-def read_hdf5(filename, save_png_dir=None):
+def read_hdf5(filename, save_png_dir=None, overfit=False):
     ret = []
     with h5py.File(filename, 'r') as file:
         for i, frame_name in enumerate(file):
@@ -119,6 +119,10 @@ def read_hdf5(filename, save_png_dir=None):
                     save_camera(out_camera['image'], out_camera['depth'], save_dir=save_png_dir, name=str(i).zfill(10))
             out_frame['cameras'] = out_cameras
             ret.append(out_frame)
+            if overfit:
+                log.info('overfitting to %r, image# %d', filename, i)
+                if i == 1:
+                    break
     return ret
 
 
