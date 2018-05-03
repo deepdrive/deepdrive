@@ -14,8 +14,7 @@ ALEXNET_FC7 = 4096
 ALEXNET_IMAGE_SHAPE = (227, 227, 3)
 
 MOBILENET_V2_NAME = 'MobileNetV2'
-MOBILENET_V2_IMAGE_SHAPE = (192, 192, 3)
-MOBILENET_V2_TFHUB_MODULE = 'https://tfhub.dev/google/imagenet/mobilenet_v2_100_192/feature_vector/1'
+MOBILENET_V2_TFHUB_MODULE = 'https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/feature_vector/1'
 
 # A module is understood as instrumented for quantization with TF-Lite
 # if it contains any of these ops.
@@ -46,11 +45,13 @@ class MobileNetV2(Net):
     def __init__(self, *args, **kwargs):
         super(MobileNetV2, self).__init__(*args, **kwargs)
 
-        # Decrease this to fit in your GPU's memory
-        # If you increase, remember that it decreases accuracy https://arxiv.org/abs/1711.00489
-        self.batch_size = 48
+        if self.freeze_pretrained:
+            self.batch_size = 48  # Decrease this to fit in your GPU's memory
+            self.starter_learning_rate = 1e-3
+        else:
+            self.batch_size = 32  # Decrease this to fit in your GPU's memory
+            self.starter_learning_rate = 1e-3
 
-        self.starter_learning_rate = 2e-6
         self.learning_rate = tf.train.exponential_decay(self.starter_learning_rate, global_step=self.global_step,
                                                         decay_steps=55000, decay_rate=0.5, staircase=True)
 
@@ -69,6 +70,8 @@ class MobileNetV2(Net):
         return ret
 
     def _init_net(self):
+        # TODO: Allow loading deepdrive trained net
+
         module_spec = hub.load_module_spec(MOBILENET_V2_TFHUB_MODULE)
         height, width = hub.get_expected_image_size(module_spec)
         graph = tf.get_default_graph()

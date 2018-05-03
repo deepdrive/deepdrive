@@ -3,7 +3,6 @@ import subprocess
 import deepdrive_client
 import deepdrive_capture
 import os
-import queue
 import random
 import time
 from collections import deque, OrderedDict

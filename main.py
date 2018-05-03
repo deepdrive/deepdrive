@@ -36,12 +36,17 @@ def main():
     parser.add_argument('--overfit', action='store_true', default=False,
                         help='Whether or not to overfit to a small test set during training to sanity check '
                              'convergability')
+    parser.add_argument('--eval-only', help='Whether to just run evaluation phase of training', action='store_true',
+                        default=False)
     parser.add_argument('--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
     parser.add_argument('--resume-train', nargs='?', default=None,
-                        help='Path to the tensorflow training session you want to resume, '
-                             'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train')
+                        help='Name of the tensorflow training session you want to resume within %s, '
+                             'i.e. 2018-01-01__11-11-11AM_train' % c.TENSORFLOW_OUT_DIR)
+    parser.add_argument('--tf-debug', action='store_true', default=False, help='Run a tf_debug session')
+    parser.add_argument('--freeze-pretrained', action='store_true', default=False, help='Freeze pretrained layers '
+                                                                                        'during training')
     parser.add_argument('-v', '--verbose', help='Increase output verbosity',
                         action='store_true')
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
@@ -79,7 +84,8 @@ def main():
             '''
             from agents.dagger.train import train
             train.run(resume_dir=args.resume_train, data_dir=args.recording_dir, agent_name=args.agent,
-                      overfit=args.overfit)
+                      overfit=args.overfit, eval_only=args.eval_only, tf_debug=args.tf_debug,
+                      freeze_pretrained=args.freeze_pretrained)
         elif args.agent == 'bootstrapped_ppo2':
             from agents.bootstrap_rl.train import train
             net_path = args.net_path

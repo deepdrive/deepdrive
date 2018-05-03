@@ -42,10 +42,11 @@ def visualize_gradients(grads_and_vars):
     tf.summary.scalar("model/var_global_norm", tf.global_norm(var_list))
 
 
-def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=False):
+def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=False, eval_only=False, tf_debug=False,
+        freeze_pretrained=False):
     with tf.variable_scope("model"):
         global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.zeros_initializer, trainable=False)
-    agent_net = get_agent_net(agent_name, global_step)
+    agent_net = get_agent_net(agent_name, global_step, eval_only=eval_only, freeze_pretrained=freeze_pretrained)
     log.info('starter learning rate is %f', agent_net.starter_learning_rate)
     sess_eval_dir, sess_train_dir = get_dirs(resume_dir)
 
@@ -61,6 +62,9 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
     eval_dataset = get_dataset(data_dir, log, train=False, mute_spurious_targets=agent_net.mute_spurious_targets)
     config = tf.ConfigProto(allow_soft_placement=True)
     with sv.managed_session(config=config) as sess, sess.as_default():
+        if tf_debug:
+            from tensorflow.python import debug as tf_debug
+            sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
         train_data_provider = train_dataset.iterate_forever(agent_net.batch_size)
         log.info('\n\n*********************************************************************\n'
                  'Start tensorboard with \n\n\ttensorboard --logdir="' + c.TENSORFLOW_OUT_DIR +
@@ -71,12 +75,13 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
                  'Sometimes you may just need to restart training if you get CUDA device errors.'
                  '\n*********************************************************************\n\n')
         while True:
-            for i in range(1000):
-                loss = train_batch(agent_net, i, sess, summary_op, sv, targets_tensor, train_data_provider,
-                                   train_op, total_loss)
-                step = global_step.eval()
+            if not eval_only:
+                for i in range(100):  # Change this to eval less or more often
+                    loss = train_batch(agent_net, i, sess, summary_op, sv, targets_tensor, train_data_provider,
+                                       train_op, total_loss)
+                    step = global_step.eval()
 
-                log.info('step %d loss %f', step, loss)
+                    log.info('step %d loss %f', step, loss)
 
             step = global_step.eval()
             perform_eval(step, agent_net, agent_net.batch_size, eval_dataset, eval_sw, sess)
@@ -85,24 +90,25 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
 def get_dirs(resume_dir):
     os.makedirs(c.TENSORFLOW_OUT_DIR, exist_ok=True)
     if resume_dir is not None:
-        date_str = resume_dir[resume_dir.rindex('/') + 1:resume_dir.rindex('_')]
+        sess_dir = resume_dir
     else:
-        date_str = c.DATE_STR
-    sess_train_dir = '%s/%s_train' % (c.TENSORFLOW_OUT_DIR, date_str)
-    sess_eval_dir = '%s/%s_eval' % (c.TENSORFLOW_OUT_DIR, date_str)
+        sess_dir = c.DATE_STR
+    sess_train_dir = '%s/%s_train' % (c.TENSORFLOW_OUT_DIR, sess_dir)
+    sess_eval_dir = '%s/%s_eval' % (c.TENSORFLOW_OUT_DIR, sess_dir)
     os.makedirs(sess_train_dir, exist_ok=True)
     os.makedirs(sess_eval_dir, exist_ok=True)
     return sess_eval_dir, sess_train_dir
 
 
-def get_agent_net(agent_name, global_step, overfit=False):
+def get_agent_net(agent_name, global_step, overfit=False, eval_only=False, freeze_pretrained=False):
     if agent_name is None or agent_name == c.DAGGER:
         agent_net_fn = AlexNet
     elif agent_name == c.DAGGER_MNET2:
         agent_net_fn = MobileNetV2
     else:
         raise NotImplementedError('%r agent_name not supported' % agent_name)
-    agent_net = agent_net_fn(global_step, overfit=overfit)
+    agent_net = agent_net_fn(global_step, overfit=overfit, is_training=(not eval_only),
+                             freeze_pretrained=freeze_pretrained)
     return agent_net
 
 
@@ -169,10 +175,11 @@ def train_batch(agent_net, i, sess, summary_op, sv, targets_tensor, train_data_p
 
 
 def perform_eval(step, agent_net, batch_size, eval_dataset, eval_sw, sess):
+    log.info('performing evaluation')
     losses = []
     for images, targets in eval_dataset.iterate_once(batch_size):
         resize_images(agent_net.input_image_shape, images)
-        predictions = sess.run(agent_net.eval_out, {agent_net.input: images, 'is_training': False})
+        predictions = sess.run(agent_net.eval_out, {agent_net.input: images})
         losses += [np.square(targets - predictions)]
     losses = np.concatenate(losses)
     summary = tf.Summary()

@@ -1,4 +1,10 @@
-import queue
+import sys
+
+is_py2 = sys.version[0] == '2'
+if is_py2:
+    import Queue as queue
+else:
+    import queue as queue
 from collections import deque, OrderedDict
 
 import numpy as np

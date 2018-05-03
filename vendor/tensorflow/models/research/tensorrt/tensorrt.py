@@ -187,6 +187,7 @@ def convert_savedmodel_to_frozen_graph(savedmodel_dir, output_dir):
       meta_graph,
       tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY)
 
+  # TODO(py27): dict.iterkeys(), dict.iteritems() and dict.itervalues() methods are not available in py3
   outputs = [v.name for v in signature_def.outputs.itervalues()]
   output_names = [node.split(":")[0] for node in outputs]
 
