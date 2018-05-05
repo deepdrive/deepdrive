@@ -202,7 +202,7 @@ class DeepDriveEnv(gym.Env):
             pass
         else:
             log.info('Starting simulator at %s (takes a few seconds the first time).', utils.get_sim_bin_path())
-            self.sim_process = Popen([utils.get_sim_bin_path()])
+            self.sim_process = Popen([utils.get_sim_bin_path(), 'ResX=400', 'ResY=300'])
 
     def close_sim(self):
         log.info('Closing sim')
