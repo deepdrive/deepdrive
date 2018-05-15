@@ -6,8 +6,11 @@ import glob
 from datetime import datetime
 import numpy as np
 
+# General
+CONTROL_NAMES = ['spin', 'direction', 'speed', 'speed_change', 'steering', 'throttle']
+
 # Net
-NUM_TARGETS = 6
+NUM_TARGETS = len(CONTROL_NAMES)
 
 # Normalization
 SPIN_THRESHOLD = 1.0
@@ -32,6 +35,7 @@ DAGGER = 'dagger'
 DAGGER_MNET2 = 'dagger_mobilenet_v2'
 BOOTSTRAPPED_PPO2 = 'bootstrapped_ppo2'
 
+
 # DEEPDRIVE_DIR
 def _get_deepdrive_dir():
     dir_config_file = os.path.join(DEEPDRIVE_CONFIG_DIR, 'deepdrive_dir')
@@ -41,7 +45,7 @@ def _get_deepdrive_dir():
     else:
         default_dir = os.path.join(os.path.expanduser('~'), 'Deepdrive')
         ret = input('Where would you like to store Deepdrive files '
-                              '(i.e. sim binaries (1GB), checkpoints (200MB), recordings, and logs)? [Default - %s] ' % default_dir)
+                    '(i.e. sim binaries (1GB), checkpoints (200MB), recordings, and logs)? [Default - %s] ' % default_dir)
         deepdrive_dir_set = False
         while not deepdrive_dir_set:
             ret = ret or default_dir
@@ -49,10 +53,10 @@ def _get_deepdrive_dir():
                 ret = os.path.join(ret, 'Deepdrive')
             if not os.path.isabs(ret):
                 ret = input('Path: %s is not absolute, please specify a different path [Default - %s] ' %
-                                      (ret, default_dir))
+                            (ret, default_dir))
             if os.path.isfile(ret):
                 ret = input('Path: %s is already a file, please specify a different path [Default - %s] ' %
-                                      (ret, default_dir))
+                            (ret, default_dir))
             else:
                 deepdrive_dir_set = True
         with open(dir_config_file, 'w') as dcf:
@@ -62,10 +66,12 @@ def _get_deepdrive_dir():
     os.makedirs(ret, exist_ok=True)
     return ret
 
+
 def _ensure_python_bin_config():
     py_bin = os.path.join(DEEPDRIVE_CONFIG_DIR, 'python_bin')
     with open(py_bin, 'w') as _dpbf:
         _dpbf.write(sys.executable)
+
 
 DEEPDRIVE_DIR = os.environ.get('DEEPDRIVE_DIR')
 DEEPDRIVE_CONFIG_DIR = os.path.expanduser('~') + '/.deepdrive'
@@ -74,11 +80,10 @@ if DEEPDRIVE_DIR is None:
     DEEPDRIVE_DIR = _get_deepdrive_dir()
 _ensure_python_bin_config()
 
-
 # Data directories
 DIR_DATE_FORMAT = '%Y-%m-%d__%I-%M-%S%p'
 DATE_STR = datetime.now().strftime(DIR_DATE_FORMAT)
-RECORDING_DIR = os.path.join(DEEPDRIVE_DIR, 'recordings')
+RECORDING_DIR = os.environ.get('DEEPDRIVE_RECORDING_DIR') or os.path.join(DEEPDRIVE_DIR, 'recordings')
 GYM_DIR = os.path.join(DEEPDRIVE_DIR, 'gym')
 LOG_DIR = os.path.join(DEEPDRIVE_DIR, 'log')
 BENCHMARK_DIR = os.path.join(DEEPDRIVE_DIR, 'benchmark')
@@ -112,8 +117,7 @@ REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
 SIM_PATH = os.path.join(DEEPDRIVE_DIR, 'sim')
 
 DEFAULT_CAM = dict(name='forward cam 227x227 60 FOV', field_of_view=60, capture_width=227, capture_height=227,
-         relative_position=[150, 1.0, 200],
-         relative_rotation=[0.0, 0.0, 0.0])
+                   relative_position=[150, 1.0, 200],
+                   relative_rotation=[0.0, 0.0, 0.0])
 
 DEFAULT_FPS = 8
-

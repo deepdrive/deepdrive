@@ -61,13 +61,16 @@ class BackgroundGenerator(threading.Thread):
 
 
 def get_file_names(hdf5_path, train=True, overfit=False):
-    files = glob.glob(hdf5_path + '/**/*.hdf5', recursive=True)
+    files = glob.glob(hdf5_path + '/**/*.hdf5', recursive=True) or glob.glob(hdf5_path + '*.hdf5', recursive=True)
     if overfit:
         files = files[-1:]
-    elif train:
+    elif train and len(files) > 1:
         files = files[1:]
-    else:
+    elif not train and len(files) > 1:  # eval
         files = files[0:1]
+    elif not train and len(files) <= 1:
+        raise NotImplementedError('only one file, eval not supported yet')
+
     if len(files) == 0:
         raise Exception('zero %s hdf5 files, aborting!' % 'train' if train else 'eval')
     return files
@@ -141,17 +144,15 @@ def batch_gen(file_stream, batch_size, overfit=False, mute_spurious_targets=Fals
 
 
 class Dataset(object):
-    def __init__(self, files, log, overfit=False, mute_spurious_targets=False):
-        # TODO: Avoid passing log object around, https://stackoverflow.com/questions/5974273
+    def __init__(self, files, overfit=False, mute_spurious_targets=False):
         self._files = files
-        self.log = log
         self.overfit = overfit
         self.mute_spurious_targets = mute_spurious_targets
 
     def iterate_once(self, batch_size):
         def file_stream():
             for file_name in self._files:
-                self.log.info('queueing data from %s for iterate once', file_name)
+                log.info('queueing data from %s for iterate once', file_name)
                 yield file_name
         yield from batch_gen(file_stream(), batch_size, mute_spurious_targets=self.mute_spurious_targets)  # TODO(py27): Python versions < 3.3 do not support this syntax. Delegating to a subgenerator is available since Python 3.3; use explicit iteration over subgenerator instead.
 
@@ -160,7 +161,7 @@ class Dataset(object):
             while True:
                 c.RNG.shuffle(self._files)  # File order will be the same every epoch
                 for file_name in self._files:
-                    self.log.info('queueing data from %s for iterate forever', file_name)
+                    log.info('queueing data from %s for iterate forever', file_name)
                     yield file_name
 
         # TODO: Make Python 2 compatible with something like
@@ -169,15 +170,15 @@ class Dataset(object):
         yield from batch_gen(file_stream(), batch_size, self.overfit, self.mute_spurious_targets)  # TODO(py27): Python versions < 3.3 do not support this syntax. Delegating to a subgenerator is available since Python 3.3; use explicit iteration over subgenerator instead.
 
 
-def get_dataset(hdf5_path, log, train=True, overfit=False, mute_spurious_targets=False):
+def get_dataset(hdf5_path, train=True, overfit=False, mute_spurious_targets=False):
     file_names = get_file_names(hdf5_path, train=train, overfit=overfit)
-    return Dataset(file_names, log, overfit, mute_spurious_targets)
+    return Dataset(file_names, overfit, mute_spurious_targets)
 
 
 def run():
     hdf5_path = c.RECORDING_DIR
     log.info(get_file_names(hdf5_path, train=True))
-    dataset = get_dataset(hdf5_path, log, train=True)
+    dataset = get_dataset(hdf5_path, train=True)
     log.info(dataset)
     log.info('Iterating through recordings')
     for images, targets in dataset.iterate_once(64):

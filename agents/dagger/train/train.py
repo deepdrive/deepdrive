@@ -18,12 +18,11 @@ log = logs.get_log(__name__)
 
 
 def visualize_model(model_in, model_out, y):
-    names = ["spin", "direction", "speed", "speed_change", "steering", "throttle"]
-    for i in range(6):
+    for i in range(len(c.CONTROL_NAMES)):
         p = tf.reduce_mean(model_out[:, i])
-        tf.summary.scalar("losses/{}/p".format(names[i]), tf.reduce_mean(p))
+        tf.summary.scalar("losses/{}/p".format(c.CONTROL_NAMES[i]), tf.reduce_mean(p))
         err = 0.5 * tf.reduce_mean(tf.square(model_out[:, i] - y[:, i]))
-        tf.summary.scalar("losses/{}/error".format(names[i]), err)
+        tf.summary.scalar("losses/{}/error".format(c.CONTROL_NAMES[i]), err)
     tf.summary.image("model/x", model_in, max_outputs=10)
 
 
@@ -58,8 +57,8 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
 
     eval_sw = tf.summary.FileWriter(sess_eval_dir)
 
-    train_dataset = get_dataset(data_dir, log, overfit=overfit, mute_spurious_targets=agent_net.mute_spurious_targets)
-    eval_dataset = get_dataset(data_dir, log, train=False, mute_spurious_targets=agent_net.mute_spurious_targets)
+    train_dataset = get_dataset(data_dir, overfit=overfit, mute_spurious_targets=agent_net.mute_spurious_targets)
+    eval_dataset = get_dataset(data_dir, train=False, mute_spurious_targets=agent_net.mute_spurious_targets)
     config = tf.ConfigProto(allow_soft_placement=True)
     with sv.managed_session(config=config) as sess, sess.as_default():
         if tf_debug:
@@ -186,10 +185,9 @@ def perform_eval(step, agent_net, batch_size, eval_dataset, eval_sw, sess):
     eval_loss = float(0.5 * losses.sum() / losses.shape[0])
     log.info('eval loss %f', eval_loss)
     summary.value.add(tag="eval/loss", simple_value=eval_loss)
-    names = ["spin", "direction", "speed", "speed_change", "steering", "throttle"]
-    for i in range(len(names)):
+    for i in range(len(c.CONTROL_NAMES)):
         loss_component = float(0.5 * losses[:, i].mean())
-        loss_name = names[i]
+        loss_name = c.CONTROL_NAMES[i]
         summary.value.add(tag="eval/{}".format(loss_name), simple_value=loss_component)
         log.info('%s loss %f', loss_name, loss_component)
     eval_sw.add_summary(summary, step)

@@ -12,4 +12,5 @@ pillow
 boto
 mpi4py
 tensorflow_hub
+future
 
