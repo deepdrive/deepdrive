@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import glob
 import os
 
 from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
@@ -8,6 +9,7 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
                              str, super, zip)
 
 import sys
+from multiprocessing import Pool
 import tensorflow as tf
 
 from agents.dagger.train.data_utils import get_dataset
@@ -15,6 +17,7 @@ from agents.dagger.train.train import resize_images
 from utils import read_hdf5
 import logs
 import config as c
+
 
 log = logs.get_log(__name__)
 
@@ -45,60 +48,131 @@ def _floats_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value.reshape(-1)))
 
 
-def save_dataset(dataset, buffer_size, filename):
-    # open the TFRecords file
-    writer = tf.python_io.TFRecordWriter(filename)
+def add_total_to_tfrecord_files(directory, filename_prefix):
+    all_files = glob.glob(os.path.join(directory, filename_prefix) + '_' + '[0-9]' * 5 + '*.tfrecord')
+    files_to_rename = []
+    for file in all_files:
+        if os.path.getsize(file) == 0:
+            os.remove(file)
+        else:
+            files_to_rename.append(file)
+    mid_fix = '-of-%s' % str(len(files_to_rename)).zfill(5)
+    for i, file in enumerate(sorted(files_to_rename)):
+        fname = os.path.basename(file)
+        os.rename(file, os.path.join(directory, fname[:16] + str(i).zfill(5) + mid_fix + '.tfrecord'))
+
+
+def save_dataset(dataset, buffer_size, filename, parallelize=True):
+    if parallelize:
+        def get_callback(_file_idx):
+            log.info('getting callback for %d', _file_idx)
+            
+            def callback(result):
+                log.info('inside callback for %r', _file_idx)
+                imgs, tgts = result
+                save_tfrecord_file(_file_idx, filename, imgs, tgts)
+            return callback
+
+        dataset.iterate_parallel_once(get_callback)
+    else:
+        file_idx = 0
+        for images, targets in dataset.iterate_once(buffer_size):
+            log.info('starting file %d', file_idx)
+            save_tfrecord_file(file_idx, filename, images, targets)
+            file_idx += 1
+
+    add_total_to_tfrecord_files(filename)
+
+
+def save_tfrecord_file(file_idx, filename, images, targets):
     colorspace = b'RGB'
     channels = 3
     image_format = b'RAW'
-    for images, targets in dataset.iterate_once(buffer_size):
+    writer = tf.python_io.TFRecordWriter(filename + '_' + str(file_idx).zfill(5) + '.tfrecord')
+    valid_target_shape = True
+    resize_images(INPUT_IMAGE_SHAPE, images)
+    for tgt in targets:
+        if len(tgt) != c.NUM_TARGETS:
+            log.error('invalid target shape %r skipping' % len(tgt))
+            valid_target_shape = False
+    if valid_target_shape:
+        pass
+    for image_idx in range(len(images)):
 
-        valid_target_shape = True
+        # print how many images are saved every 1000 images
+        if not image_idx % 1000:
+            log.info('Train data: {}/{}'.format(image_idx, len(images)))
 
-        resize_images(INPUT_IMAGE_SHAPE, images)
-        for tgt in targets:
-            if len(tgt) != c.NUM_TARGETS:
-                log.error('invalid target shape %r skipping' % len(tgt))
-                valid_target_shape = False
-        if valid_target_shape:
-            pass
+        image = images[image_idx]
+        target = targets[image_idx]
 
-        for image_idx in range(len(images)):
+        feature_dict = {
+            'image/width': _int64_feature(image.shape[0]),
+            'image/height': _int64_feature(image.shape[1]),
+            'image/colorspace': _bytes_feature(colorspace),
+            'image/channels': _int64_feature(channels),
+            'image/format': _bytes_feature(image_format),
+            'image/encoded': _bytes_feature(tf.compat.as_bytes(image.tostring()))}
 
-            # print how many images are saved every 1000 images
-            if not image_idx % 1000:
-                log.info('Train data: {}/{}'.format(image_i-dx, len(images)))
+        for name_idx, name in enumerate(c.CONTROL_NAMES):
+            feature_dict['image/control/' + name] = _float_feature(target[name_idx])
 
-            image = images[image_idx]
-            target = targets[image_idx]
+        example = tf.train.Example(features=tf.train.Features(feature=feature_dict))
 
-            feature_dict = {
-                'image/width': _int64_feature(image.shape[0]),
-                'image/height': _int64_feature(image.shape[1]),
-                'image/colorspace': _bytes_feature(colorspace),
-                'image/channels': _int64_feature(channels),
-                'image/format': _bytes_feature(image_format),
-                'image/encoded':  _bytes_feature(tf.compat.as_bytes(image.tostring()))}
-
-            for name_idx, name in enumerate(c.CONTROL_NAMES):
-                feature_dict['image/control/' + name] = _float_feature(target[name_idx])
-
-            example = tf.train.Example(features=tf.train.Features(feature=feature_dict))
-
-            # Serialize to string and write on the file
-            writer.write(example.SerializeToString())
-
+        # Serialize to string and write on the file
+        writer.write(example.SerializeToString())
     writer.close()
 
 
-def do_it():
+def encode():
     hdf5_path = c.RECORDING_DIR
     train_dataset = get_dataset(hdf5_path, train=True)
     eval_dataset = get_dataset(hdf5_path, train=False)
     buffer_size = 1000
-    save_dataset(train_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_train.tfrecord'))
-    save_dataset(eval_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_eval.tfrecord'))
+    save_dataset(train_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_train'))
+    save_dataset(eval_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_eval'))
+
+
+def decode():
+    data_path = c.RECORDING_DIR + 'deepdrive_train.tfrecord'
+
+    with tf.Session() as sess:
+        feature = {
+            'image/width': tf.FixedLenFeature([], tf.int64),
+            'image/height': tf.FixedLenFeature([], tf.int64),
+            'image/colorspace': tf.FixedLenFeature([], tf.string),
+            'image/channels': tf.FixedLenFeature([], tf.int64),
+            'image/format': tf.FixedLenFeature([], tf.string),
+            'image/encoded': tf.FixedLenFeature([], tf.string)}
+
+        # Create a list of filenames and pass it to a queue
+        filename_queue = tf.train.string_input_producer([data_path], num_epochs=1)
+        # Define a reader and read the next record
+        reader = tf.TFRecordReader()
+        _, serialized_example = reader.read(filename_queue)
+        # Decode the record read by the reader
+        features = tf.parse_single_example(serialized_example, features=feature)
+        # Convert the image data from string back to the numbers
+        image = tf.decode_raw(features['image/encoded'], tf.float32)
+
+        # Cast label data into int32
+        label = tf.cast(features['train/label'], tf.int32)
+        # Reshape image data into the original shape
+        image = tf.reshape(image, [224, 224, 3])
+
+        # Any preprocessing here ...
+
+        # Creates batches by randomly shuffling tensors
+        images, labels = tf.train.shuffle_batch([image, label], batch_size=10, capacity=30, num_threads=1,
+                                                min_after_dequeue=10)
 
 
 if __name__ == '__main__':
-    do_it()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == 'decode':
+            decode()
+        elif sys.argv[1] == 'rename-only':
+            add_total_to_tfrecord_files(c.RECORDING_DIR, 'deepdrive_train')
+            add_total_to_tfrecord_files(c.RECORDING_DIR, 'deepdrive_eval')
+    else:
+        encode()

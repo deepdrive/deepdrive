@@ -1,6 +1,9 @@
 import glob
+import multiprocessing
 import threading
 from collections import deque
+from multiprocessing import Pool
+
 
 import numpy as np
 
@@ -23,21 +26,24 @@ class BackgroundGenerator(threading.Thread):
 
     def run(self):
         for item in self.generator:
-            with self.cv:
-                log.debug('queue length %r', len(self.queue))
-                while len(self.queue) > c.NUM_TRAIN_FILES_TO_QUEUE:
-                    log.debug('waiting for queue size to decrease')
-                    self.cv.wait()
-                if self.should_shuffle:
-                    queue_index = c.RNG.randint(0, len(self.queue))
-                    log.debug('inserting randomly at', queue_index)
-                    self.queue.insert(queue_index, item)
-                else:
-                    self.queue.append(item)
-                log.debug('inserted, queue length is %r item was None %r', len(self.queue), item is None)
-                self.cv.notify()  # Tell consumer we have more
+            self._insert_item(item)
         log.debug('inserting none')
         self.queue.append(None)
+
+    def _insert_item(self, item):
+        with self.cv:
+            log.debug('queue length %r', len(self.queue))
+            while len(self.queue) > c.NUM_TRAIN_FILES_TO_QUEUE:
+                log.debug('waiting for queue size to decrease')
+                self.cv.wait()
+            if self.should_shuffle:
+                queue_index = c.RNG.randint(0, len(self.queue))
+                log.debug('inserting randomly at', queue_index)
+                self.queue.insert(queue_index, item)
+            else:
+                self.queue.append(item)
+            log.debug('inserted, queue length is %r item was None %r', len(self.queue), item is None)
+            self.cv.notify()  # Tell consumer we have more
 
     def __iter__(self):
         return self
@@ -77,6 +83,7 @@ def get_file_names(hdf5_path, train=True, overfit=False):
 
 
 def load_file(h5_filename, overfit=False, mute_spurious_targets=False):
+    log.info('loading %s', h5_filename)
     out_images = []
     out_targets = []
     try:
@@ -88,6 +95,7 @@ def load_file(h5_filename, overfit=False, mute_spurious_targets=False):
     except Exception as e:
         log.error('Could not load %s - skipping - error was: %r', h5_filename, e)
 
+    log.info('finished loading %s', h5_filename)
     return out_images, out_targets
 
 
@@ -168,6 +176,15 @@ class Dataset(object):
         # for x in batch_gen(file_stream(), batch_size):
         #     yield x
         yield from batch_gen(file_stream(), batch_size, self.overfit, self.mute_spurious_targets)  # TODO(py27): Python versions < 3.3 do not support this syntax. Delegating to a subgenerator is available since Python 3.3; use explicit iteration over subgenerator instead.
+
+    def iterate_parallel_once(self, get_callback):
+        with Pool(max(multiprocessing.cpu_count() - 2, 1)) as p:
+            for i, file in enumerate(self._files):
+                # get_callback(i)(load_file(file, self.overfit, self.mute_spurious_targets))
+                p.apply_async(load_file, (file, self.overfit, self.mute_spurious_targets), callback=get_callback(i))
+            p.close()
+            p.join()
+
 
 
 def get_dataset(hdf5_path, train=True, overfit=False, mute_spurious_targets=False):
