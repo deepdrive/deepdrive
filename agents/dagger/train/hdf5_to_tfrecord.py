@@ -81,7 +81,7 @@ def save_dataset(dataset, buffer_size, filename, parallelize=True):
             save_tfrecord_file(file_idx, filename, images, targets)
             file_idx += 1
 
-    add_total_to_tfrecord_files(filename)
+    add_total_to_tfrecord_files(c.RECORDING_DIR, filename)
 
 
 def save_tfrecord_file(file_idx, filename, images, targets):
@@ -134,7 +134,7 @@ def encode():
 
 
 def decode():
-    data_path = c.RECORDING_DIR + 'deepdrive_train.tfrecord'
+    data_path = os.path.join(c.RECORDING_DIR, 'deepdrive_train_00000-of-00162.tfrecord')
 
     with tf.Session() as sess:
         feature = {
@@ -153,18 +153,30 @@ def decode():
         # Decode the record read by the reader
         features = tf.parse_single_example(serialized_example, features=feature)
         # Convert the image data from string back to the numbers
-        image = tf.decode_raw(features['image/encoded'], tf.float32)
+        image = tf.decode_raw(features['image/encoded'], tf.uint8)
 
-        # Cast label data into int32
-        label = tf.cast(features['train/label'], tf.int32)
-        # Reshape image data into the original shape
-        image = tf.reshape(image, [224, 224, 3])
+        sess.run(tf.local_variables_initializer())
+        sess.run(tf.global_variables_initializer())
 
-        # Any preprocessing here ...
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
+        for i in range(1000):
+            example = sess.run(image)
+            print(example)
+        coord.request_stop()
+        coord.join(threads)
+        # image_np = sess.run(image)
 
-        # Creates batches by randomly shuffling tensors
-        images, labels = tf.train.shuffle_batch([image, label], batch_size=10, capacity=30, num_threads=1,
-                                                min_after_dequeue=10)
+        # # Cast label data into int32
+        # label = tf.cast(features['train/label'], tf.int32)
+        # # Reshape image data into the original shape
+        # image = tf.reshape(image, [224, 224, 3])
+        #
+        # # Any preprocessing here ...
+        #
+        # # Creates batches by randomly shuffling tensors
+        # images, labels = tf.train.shuffle_batch([image, label], batch_size=10, capacity=30, num_threads=1,
+        #                                         min_after_dequeue=10)
 
 
 if __name__ == '__main__':
