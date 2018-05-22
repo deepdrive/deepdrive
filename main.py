@@ -9,6 +9,7 @@ import camera_config
 import config as c
 import deepdrive
 import logs
+from agents.dagger import net
 from agents.dagger.agent import ensure_baseline_weights
 
 
@@ -41,6 +42,8 @@ def main():
     parser.add_argument('--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
+    parser.add_argument('--net-type', nargs='?', default=net.ALEXNET_NAME,
+                        help='Your model type - i.e. AlexNet or MobileNetV2')
     parser.add_argument('--resume-train', nargs='?', default=None,
                         help='Name of the tensorflow training session you want to resume within %s, '
                              'i.e. 2018-01-01__11-11-11AM_train' % c.TENSORFLOW_OUT_DIR)
@@ -130,7 +133,7 @@ def main():
                   should_record=args.record, net_path=args.net_path, env_id=args.env_id,
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
                   should_record_recovery_from_random_actions=args.record_recovery_from_random_actions,
-                  path_follower=args.path_follower, fps=args.fps)
+                  path_follower=args.path_follower, fps=args.fps, net_name=args.net_type)
 
 
 def get_latest_model():

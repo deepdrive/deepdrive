@@ -147,7 +147,65 @@ def mobilenet(input_tensor,
   with slim.arg_scope((lib.depth_multiplier,), **depth_args):
     return lib.mobilenet(
         input_tensor,
-        num_classes=num_classes,
+        num_targets=num_classes,
+        conv_defs=conv_defs,
+        scope=scope,
+        multiplier=depth_multiplier,
+        **kwargs)
+
+@slim.add_arg_scope
+def mobilenet_deepdrive(input_tensor,
+              num_targets=6,
+              depth_multiplier=1.0,
+              scope='MobilenetV2',
+              conv_defs=None,
+              finegrain_classification_mode=False,
+              min_depth=None,
+              divisible_by=None,
+              **kwargs):
+  """Creates mobilenet V2 network.
+
+  Inference mode is created by default. To create training use training_scope
+  below.
+
+  with tf.contrib.slim.arg_scope(mobilenet_v2.training_scope()):
+     logits, endpoints = mobilenet_v2.mobilenet(input_tensor)
+
+  Args:
+    input_tensor: The input tensor
+    num_classes: number of classes
+    depth_multiplier: The multiplier applied to scale number of
+    channels in each layer. Note: this is called depth multiplier in the
+    paper but the name is kept for consistency with slim's model builder.
+    scope: Scope of the operator
+    conv_defs: Allows to override default conv def.
+    finegrain_classification_mode: When set to True, the model
+    will keep the last layer large even for small multipliers. Following
+    https://arxiv.org/abs/1801.04381
+    suggests that it improves performance for ImageNet-type of problems.
+      *Note* ignored if final_endpoint makes the builder exit earlier.
+    min_depth: If provided, will ensure that all layers will have that
+    many channels after application of depth multiplier.
+    divisible_by: If provided will ensure that all layers # channels
+    will be divisible by this number.
+    **kwargs: passed directly to mobilenet.mobilenet:
+      prediction_fn- what prediction function to use.
+      reuse-: whether to reuse variables (if reuse set to true, scope
+      must be given).
+  Returns:
+    logits/endpoints pair
+
+  Raises:
+    ValueError: On invalid arguments
+  """
+  if conv_defs is None:
+    conv_defs = V2_DEF
+  depth_args = {}
+
+  with slim.arg_scope((lib.depth_multiplier,), **depth_args):
+    return lib.mobilenet_deepdrive(
+        input_tensor,
+        num_targets=num_targets,
         conv_defs=conv_defs,
         scope=scope,
         multiplier=depth_multiplier,

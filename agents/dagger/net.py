@@ -5,6 +5,7 @@ from agents.dagger.layers import conv2d, max_pool_2x2, linear, lrn
 import config as c
 import logs
 from utils import download, has_stuff
+from vendor.tensorflow.models.research.slim.nets import nets_factory
 
 log = logs.get_log(__name__)
 
@@ -15,6 +16,8 @@ ALEXNET_IMAGE_SHAPE = (227, 227, 3)
 
 MOBILENET_V2_NAME = 'MobileNetV2'
 MOBILENET_V2_TFHUB_MODULE = 'https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/feature_vector/1'
+MOBILENET_V2_USE_TENSORHUB = False  # TODO: Delete all the tensorhub stuff once we've verified our slim training drives well
+MOBILENET_V2_IMAGE_SHAPE = (224, 224, 3)
 
 # A module is understood as instrumented for quantization with TF-Lite
 # if it contains any of these ops.
@@ -32,7 +35,7 @@ class Net(object):
         self.batch_size = None
         self.input, self.last_hidden, self.out, self.eval_out = self._init_net()
         self.input_image_shape = (self.input.shape[1].value, self.input.shape[2].value, self.input.shape[3].value)
-        self.num_last_hidden = self.last_hidden.shape[1].value
+        self.num_last_hidden = self.last_hidden.shape[-1]
 
     def get_tf_init_fn(self, init_op):
         raise NotImplementedError('get_tf_init_fn not implemented')
@@ -70,23 +73,33 @@ class MobileNetV2(Net):
         return ret
 
     def _init_net(self):
-        # TODO: Allow loading deepdrive trained net
+        if not MOBILENET_V2_USE_TENSORHUB:
+            in_tensor = tf.placeholder(tf.float32, [None] + list(MOBILENET_V2_IMAGE_SHAPE))
+            network_fn = nets_factory.get_network_fn(
+                'mobilenet_v2_deepdrive',
+                num_classes=None,
+                num_targets=6,
+                is_training=False,)
+            log.info('Loading mobilenet v2')
+            out, endpoints = network_fn(in_tensor)
+            last_hidden = endpoints['global_pool']
+            eval_out = out
+        else:
+            module_spec = hub.load_module_spec(MOBILENET_V2_TFHUB_MODULE)
+            height, width = hub.get_expected_image_size(module_spec)
+            graph = tf.get_default_graph()
+            in_tensor = tf.placeholder(tf.float32, [None, height, width, 3])
+            hub_module = hub.Module(module_spec, trainable=(self.is_training and not self.freeze_pretrained))
+            pretrained_output_tensor = hub_module(in_tensor)
+            wants_quantization = any(node.op in FAKE_QUANT_OPS
+                                     for node in graph.as_graph_def().node)
 
-        module_spec = hub.load_module_spec(MOBILENET_V2_TFHUB_MODULE)
-        height, width = hub.get_expected_image_size(module_spec)
-        graph = tf.get_default_graph()
-        in_tensor = tf.placeholder(tf.float32, [None, height, width, 3])
-        hub_module = hub.Module(module_spec, trainable=(self.is_training and not self.freeze_pretrained))
-        pretrained_output_tensor = hub_module(in_tensor)
-        wants_quantization = any(node.op in FAKE_QUANT_OPS
-                                 for node in graph.as_graph_def().node)
+            last_hidden, out = self._add_tfhub_retrain_ops(pretrained_output_tensor)
 
-        last_hidden, out = self._add_tfhub_retrain_ops(pretrained_output_tensor)
-
-        # TODO: Make this use an eval graph, to avoid quantization
-        # moving averages being updated by the validation set, though in
-        # practice this makes a negligible difference.
-        eval_out = out
+            # TODO: Make this use an eval graph, to avoid quantization
+            # moving averages being updated by the validation set, though in
+            # practice this makes a negligible difference.
+            eval_out = out
 
         return in_tensor, last_hidden, out, eval_out
 

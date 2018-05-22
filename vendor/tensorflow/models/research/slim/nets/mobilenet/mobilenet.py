@@ -269,6 +269,90 @@ def _scope_all(scope, default_scope=None):
 
 
 @slim.add_arg_scope
+def mobilenet_deepdrive(inputs,
+                        num_targets=6,
+                        prediction_fn=None,
+                        reuse=None,
+                        scope='Mobilenet',
+                        base_only=False,
+                        **mobilenet_args):
+  """Mobilenet model for classification, supports both V1 and V2.
+
+  Note: default mode is inference, use mobilenet.training_scope to create
+  training network.
+
+
+  Args:
+    inputs: a tensor of shape [batch_size, height, width, channels].
+    num_targets: number of targets. If 0 or None, the logits layer
+      is omitted and the input features to the logits layer (before dropout)
+      are returned instead.
+    prediction_fn: a function to get predictions out of logits
+      (default softmax).
+    reuse: whether or not the network and its variables should be reused. To be
+      able to reuse 'scope' must be given.
+    scope: Optional variable_scope.
+    base_only: if True will only create the base of the network (no pooling
+    and no logits).
+    **mobilenet_args: passed to mobilenet_base verbatim.
+      - conv_defs: list of conv defs
+      - multiplier: Float multiplier for the depth (number of channels)
+      for all convolution ops. The value must be greater than zero. Typical
+      usage will be to set this value in (0, 1) to reduce the number of
+      parameters or computation cost of the model.
+      - output_stride: will ensure that the last layer has at most total stride.
+      If the architecture calls for more stride than that provided
+      (e.g. output_stride=16, but the architecture has 5 stride=2 operators),
+      it will replace output_stride with fractional convolutions using Atrous
+      Convolutions.
+
+  Returns:
+    logits: the pre-softmax activations, a tensor of size
+      [batch_size, num_classes]
+    end_points: a dictionary from components of the network to the corresponding
+      activation tensor.
+
+  Raises:
+    ValueError: Input rank is invalid.
+  """
+  is_training = mobilenet_args.get('is_training', False)
+  input_shape = inputs.get_shape().as_list()
+  if len(input_shape) != 4:
+    raise ValueError('Expected rank 4 input, was: %d' % len(input_shape))
+
+  with tf.variable_scope(scope, 'Mobilenet', reuse=reuse) as scope:
+    inputs = tf.identity(inputs, 'input')
+    net, end_points = mobilenet_base(inputs, scope=scope, **mobilenet_args)
+    if base_only:
+      return net, end_points
+
+    net = tf.identity(net, name='embedding')
+
+    with tf.variable_scope('Logits'):
+      net = global_pool(net)
+      end_points['global_pool'] = net
+      if not num_targets:
+        return net, end_points
+      net = slim.dropout(net, scope='Dropout', is_training=is_training)
+      # 1 x 1 x num_targets
+      # Note: legacy scope name.
+      logits = slim.conv2d(
+          net,
+          num_targets, [1, 1],
+          activation_fn=None,
+          normalizer_fn=None,
+          biases_initializer=tf.zeros_initializer(),
+          scope='Conv2d_1c_1x1')
+
+      logits = tf.squeeze(logits, [1, 2])
+
+      logits = tf.identity(logits, name='output')
+    end_points['Logits'] = logits
+    if prediction_fn:
+      end_points['Predictions'] = prediction_fn(logits, 'Predictions')
+  return logits, end_points
+
+@slim.add_arg_scope
 def mobilenet(inputs,
               num_classes=1001,
               prediction_fn=slim.softmax,

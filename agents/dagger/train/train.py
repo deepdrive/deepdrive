@@ -88,12 +88,14 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
 
 def get_dirs(resume_dir):
     os.makedirs(c.TENSORFLOW_OUT_DIR, exist_ok=True)
+    date_str = c.DATE_STR
+
     if resume_dir is not None:
-        sess_dir = resume_dir
+        sess_train_dir = resume_dir
+        sess_eval_dir = '%s/%s_eval' % (resume_dir, date_str)
     else:
-        sess_dir = c.DATE_STR
-    sess_train_dir = '%s/%s_train' % (c.TENSORFLOW_OUT_DIR, sess_dir)
-    sess_eval_dir = '%s/%s_eval' % (c.TENSORFLOW_OUT_DIR, sess_dir)
+        sess_train_dir = '%s/%s_train' % (c.TENSORFLOW_OUT_DIR, date_str)
+        sess_eval_dir = '%s/%s_eval' % (c.TENSORFLOW_OUT_DIR, date_str)
     os.makedirs(sess_train_dir, exist_ok=True)
     os.makedirs(sess_eval_dir, exist_ok=True)
     return sess_eval_dir, sess_train_dir
@@ -135,6 +137,9 @@ def get_train_ops(agent_net, global_step, opt, sess_train_dir, targets_tensor, t
 
 def setup_loss(agent_net, targets_tensor):
     l2_norm = tf.global_norm(tf.trainable_variables())
+    steering_error = tf.reduce_mean(tf.abs(agent_net.out[:, 4] - y[:, 4]))
+    tf.summary.scalar("steering_error/train", steering_error)
+    # l2_norm = tf.Print(l2_norm, [steering_error], 'TRAIN STEERING ERROR IS!!!!!!!!! ', summarize=100)
     loss = 0.5 * tf.reduce_sum(tf.square(agent_net.out - targets_tensor)) / tf.to_float(tf.shape(agent_net.input)[0])
     tf.summary.scalar("model/loss", loss)
     tf.summary.scalar("model/l2_norm", l2_norm)

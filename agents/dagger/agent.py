@@ -12,7 +12,7 @@ import config as c
 import deepdrive
 from agents.dagger import net
 from gym_deepdrive.envs.deepdrive_gym_env import Action
-from agents.dagger.net import Net
+from agents.dagger.net import AlexNet, MobileNetV2
 from utils import save_hdf5, download
 import logs
 
@@ -22,7 +22,7 @@ log = logs.get_log(__name__)
 class Agent(object):
     def __init__(self, action_space, tf_session, env, should_record_recovery_from_random_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
-                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR, output_fc7=False,
+                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR, output_last_hidden=False,
                  net_name=net.ALEXNET_NAME):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space
@@ -41,7 +41,7 @@ class Agent(object):
         self.performing_random_actions = False
         self.path_follower_mode = path_follower
         self.recording_dir = recording_dir
-        self.output_fc7 = output_fc7
+        self.output_last_hidden = output_last_hidden
 
         # Recording state
         self.should_record = should_record
@@ -61,7 +61,9 @@ class Agent(object):
                 input_shape = net.ALEXNET_IMAGE_SHAPE
             elif net_name == net.MOBILENET_V2_NAME:
                 input_shape = net.MOBILENET_V2_IMAGE_SHAPE
-            self.load_net(net_path, use_frozen_net)
+            else:
+                raise NotImplementedError(net_name + ' not recognized')
+            self.load_net(net_path, use_frozen_net, input_shape)
         else:
             self.net = None
             self.net_input_placeholder = None
@@ -83,7 +85,7 @@ class Agent(object):
             else:
                 image = obz['cameras'][0]['image']
                 net_out = self.get_net_out(image)
-            if net_out is not None and self.output_fc7:
+            if net_out is not None and self.output_last_hidden:
                 y = net_out[0]
             else:
                 y = net_out
@@ -185,13 +187,15 @@ class Agent(object):
         return action
 
     def load_net(self, net_path, is_frozen=False, image_shape=None):
-        '''
-        Frozen nets can be generated with something like 
-        
+        """
+        Frozen nets can be generated with something like
+
         `python freeze_graph.py --input_graph="C:\tmp\deepdrive\tensorflow_random_action\train\graph.pbtxt" --input_checkpoint="C:\tmp\deepdrive\tensorflow_random_action\train\model.ckpt-273141" --output_graph="C:\tmp\deepdrive\tensorflow_random_action\frozen_graph.pb" --output_node_names="model/add_2"`
-        
-        where model/add_2 is the auto-generated name for self.net.p 
-        '''
+
+        where model/add_2 is the auto-generated name for self.net.p
+        """
+        if image_shape is None:
+            raise RuntimeError('Image shape not defined')
         self.net_input_placeholder = tf.placeholder(tf.float32, (None,) + image_shape)
         if is_frozen:
             # TODO: Get frozen nets working
@@ -217,10 +221,10 @@ class Agent(object):
 
         else:
             if self.net_name == net.MOBILENET_V2_NAME:
-                self.net = Net(self.net_input_placeholder, c.NUM_TARGETS, is_training=False, net_name=self.net_name)
+                self.net = MobileNetV2(self.net_input_placeholder, c.NUM_TARGETS, is_training=False)
             else:
                 with tf.variable_scope("model"):
-                    self.net = Net(self.net_input_placeholder, c.NUM_TARGETS, is_training=False, net_name=self.net_name)
+                    self.net = AlexNet(self.net_input_placeholder, c.NUM_TARGETS, is_training=False)
             saver = tf.train.Saver()
             saver.restore(self.sess, net_path)
 
@@ -233,11 +237,12 @@ class Agent(object):
         if self.use_frozen_net:
             out_var = 'prefix/model/add_2'
         else:
-            out_var = self.net.p
-        if self.output_fc7:
+            out_var = self.net.out
+        if self.output_last_hidden:
             out_var = [out_var, self.net.fc7]
+
         net_out = self.sess.run(out_var, feed_dict={
-            self.net_input_placeholder: image.reshape(1, *image.shape),})
+            self.net_input_placeholder: image.reshape(1, *self.net.input_image_shape),})
         # print(net_out)
         end = time.time()
         log.debug('inference time %s', end - begin)
@@ -275,7 +280,8 @@ class Agent(object):
 
 def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
-        should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS):
+        should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS,
+        net_name=net.ALEXNET_NAME):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
     reward = 0
@@ -312,7 +318,7 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
     agent = Agent(gym_env.action_space, sess, env=gym_env.env,
                   should_record_recovery_from_random_actions=should_record_recovery_from_random_actions,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,
-                  path_follower=path_follower)
+                  path_follower=path_follower, net_name=net_name)
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
 
@@ -376,6 +382,7 @@ def randomize_cameras(cameras):
         cam['capture_height'] += round(np.random.random() * 0.01 * cam['capture_height'])
         cam['capture_width'] += round(np.random.random() * 0.01 * cam['capture_width'])
         pass
+
 
 def random_use_sim_start_command(should_rotate_sim_types):
     use_sim_start_command = should_rotate_sim_types and np.random.random() < 0.5
