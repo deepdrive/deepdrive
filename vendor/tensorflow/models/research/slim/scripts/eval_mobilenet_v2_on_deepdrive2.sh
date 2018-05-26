@@ -24,12 +24,6 @@
 # Should see steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, train steering error: ~0.08
 set -ev
 
-# Where the pre-trained InceptionV3 checkpoint is saved to.
-PRETRAINED_CHECKPOINT_DIR=/home/a/mnet-test/checkpoints
-
-# Where the training (fine-tuned) checkpoint and logs will be saved to.
-TRAIN_DIR=/home/a/mnet-test/models
-
 # Where the dataset is saved to.
 DATASET_DIR=/media/a/data-ext4/deepdrive-data
 

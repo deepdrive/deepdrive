@@ -104,6 +104,10 @@ def save_tfrecord_file(file_idx, filename, images, targets):
             log.info('Train data: {}/{}'.format(image_idx, len(images)))
 
         image = images[image_idx]
+        # TODO: Add mean pixel back to image, check min is zero, convert to uint8
+        image += c.MEAN_PIXEL
+        assert(min(image) == 0)
+
         target = targets[image_idx]
 
         feature_dict = {
@@ -124,13 +128,16 @@ def save_tfrecord_file(file_idx, filename, images, targets):
     writer.close()
 
 
-def encode():
+# TODO: See whether HDF5 images have negative, mean subtracted values. If so, it must be the tf record process that gets rid of those
+def encode(parallelize=True):
     hdf5_path = c.RECORDING_DIR
     train_dataset = get_dataset(hdf5_path, train=True)
     eval_dataset = get_dataset(hdf5_path, train=False)
     buffer_size = 1000
-    save_dataset(train_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_train'))
-    save_dataset(eval_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_eval'))
+    save_dataset(train_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_train'),
+                 parallelize=parallelize)
+    save_dataset(eval_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_eval'),
+                 parallelize=parallelize)
 
 
 def decode():
@@ -180,11 +187,10 @@ def decode():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        if sys.argv[1] == 'decode':
-            decode()
-        elif sys.argv[1] == 'rename-only':
-            add_total_to_tfrecord_files(c.RECORDING_DIR, 'deepdrive_train')
-            add_total_to_tfrecord_files(c.RECORDING_DIR, 'deepdrive_eval')
+    if 'decode' in sys.argv:
+        decode()
+    elif 'rename-only' in sys.argv:
+        add_total_to_tfrecord_files(c.RECORDING_DIR, 'deepdrive_train')
+        add_total_to_tfrecord_files(c.RECORDING_DIR, 'deepdrive_eval')
     else:
-        encode()
+        encode(parallelize=('sync' not in sys.argv))

@@ -6,6 +6,7 @@ import config as c
 import logs
 from utils import download, has_stuff
 from vendor.tensorflow.models.research.slim.nets import nets_factory
+from vendor.tensorflow.models.research.slim.preprocessing import preprocessing_factory
 
 log = logs.get_log(__name__)
 
@@ -15,6 +16,7 @@ ALEXNET_FC7 = 4096
 ALEXNET_IMAGE_SHAPE = (227, 227, 3)
 
 MOBILENET_V2_NAME = 'MobileNetV2'
+MOBILENET_V2_SLIM_NAME = 'mobilenet_v2_deepdrive'
 MOBILENET_V2_TFHUB_MODULE = 'https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/feature_vector/1'
 MOBILENET_V2_USE_TENSORHUB = False  # TODO: Delete all the tensorhub stuff once we've verified our slim training drives well
 MOBILENET_V2_IMAGE_SHAPE = (224, 224, 3)
@@ -26,19 +28,24 @@ FAKE_QUANT_OPS = ('FakeQuantWithMinMaxVars',
 
 
 class Net(object):
-    def __init__(self, global_step, num_targets=c.NUM_TARGETS, is_training=True, freeze_pretrained=False, overfit=False):
+    def __init__(self, global_step=None, num_targets=c.NUM_TARGETS, is_training=True, freeze_pretrained=False, overfit=False):
         self.num_targets = num_targets
         self.is_training = is_training
         self.global_step = global_step
         self.freeze_pretrained = freeze_pretrained  # TODO: Implement for AlexNet
         self.overfit = overfit
         self.batch_size = None
+        self.learning_rate = None
+        self.starter_learning_rate = None
+        self.weight_decay = None
         self.input, self.last_hidden, self.out, self.eval_out = self._init_net()
-        self.input_image_shape = (self.input.shape[1].value, self.input.shape[2].value, self.input.shape[3].value)
         self.num_last_hidden = self.last_hidden.shape[-1]
 
     def get_tf_init_fn(self, init_op):
         raise NotImplementedError('get_tf_init_fn not implemented')
+
+    def preprocess(self, image):
+        return image
 
     def _init_net(self):
         raise NotImplementedError('init_net not implemented')
@@ -46,37 +53,41 @@ class Net(object):
 
 class MobileNetV2(Net):
     def __init__(self, *args, **kwargs):
+        self.input_image_shape = MOBILENET_V2_IMAGE_SHAPE
+        self.image_preprocessing_fn = preprocessing_factory.get_preprocessing(MOBILENET_V2_SLIM_NAME, is_training=False)
         super(MobileNetV2, self).__init__(*args, **kwargs)
-
-        if self.freeze_pretrained:
-            self.batch_size = 48  # Decrease this to fit in your GPU's memory
-            self.starter_learning_rate = 1e-3
-        else:
-            self.batch_size = 32  # Decrease this to fit in your GPU's memory
-            self.starter_learning_rate = 1e-3
-
-        self.learning_rate = tf.train.exponential_decay(self.starter_learning_rate, global_step=self.global_step,
-                                                        decay_steps=55000, decay_rate=0.5, staircase=True)
-
-        if self.overfit:
-            self.weight_decay = 0.
-        else:
-            self.weight_decay = 0.00004  # same as mobilenet2 paper https://arxiv.org/pdf/1801.04381.pdf
-
-        self.mute_spurious_targets = True
+        if self.is_training:
+            if self.freeze_pretrained:
+                self.batch_size = 48
+                self.starter_learning_rate = 1e-3
+            else:
+                self.batch_size = 32
+                self.starter_learning_rate = 1e-3
+            self.learning_rate = tf.train.exponential_decay(self.starter_learning_rate, global_step=self.global_step,
+                                                            decay_steps=55000, decay_rate=0.5, staircase=True)
+            if self.overfit:
+                self.weight_decay = 0.
+            else:
+                self.weight_decay = 0.00004  # same as mobilenet2 paper https://arxiv.org/pdf/1801.04381.pdf
+            self.mute_spurious_targets = True
 
     def get_tf_init_fn(self, init_op):
         def ret(ses):
             log.info('Initializing parameters.')
             ses.run(init_op)
-
         return ret
+
+    def preprocess(self, image):
+        image = self.image_preprocessing_fn(image, self.input_image_shape[0], self.input_image_shape[1])
+        image = tf.expand_dims(image, 0)
+        return image
 
     def _init_net(self):
         if not MOBILENET_V2_USE_TENSORHUB:
-            in_tensor = tf.placeholder(tf.float32, [None] + list(MOBILENET_V2_IMAGE_SHAPE))
+            in_tensor = tf.placeholder(tf.uint8, [None] + list(MOBILENET_V2_IMAGE_SHAPE))
             network_fn = nets_factory.get_network_fn(
-                'mobilenet_v2_deepdrive',
+                MOBILENET_V2_SLIM_NAME,
+                preprocess=self.preprocess,
                 num_classes=None,
                 num_targets=6,
                 is_training=False,)

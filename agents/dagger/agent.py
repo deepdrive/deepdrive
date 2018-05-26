@@ -11,6 +11,7 @@ import numpy as np
 import config as c
 import deepdrive
 from agents.dagger import net
+from agents.dagger.train.train import resize_images
 from gym_deepdrive.envs.deepdrive_gym_env import Action
 from agents.dagger.net import AlexNet, MobileNetV2
 from utils import save_hdf5, download
@@ -66,7 +67,6 @@ class Agent(object):
             self.load_net(net_path, use_frozen_net, input_shape)
         else:
             self.net = None
-            self.net_input_placeholder = None
             self.sess = None
 
     def act(self, obz, reward, done):
@@ -196,7 +196,6 @@ class Agent(object):
         """
         if image_shape is None:
             raise RuntimeError('Image shape not defined')
-        self.net_input_placeholder = tf.placeholder(tf.float32, (None,) + image_shape)
         if is_frozen:
             # TODO: Get frozen nets working
 
@@ -221,10 +220,10 @@ class Agent(object):
 
         else:
             if self.net_name == net.MOBILENET_V2_NAME:
-                self.net = MobileNetV2(self.net_input_placeholder, c.NUM_TARGETS, is_training=False)
+                self.net = MobileNetV2(is_training=False)
             else:
                 with tf.variable_scope("model"):
-                    self.net = AlexNet(self.net_input_placeholder, c.NUM_TARGETS, is_training=False)
+                    self.net = AlexNet(is_training=False)
             saver = tf.train.Saver()
             saver.restore(self.sess, net_path)
 
@@ -241,18 +240,23 @@ class Agent(object):
         if self.output_last_hidden:
             out_var = [out_var, self.net.fc7]
 
+        image = image.reshape(1, *self.net.input_image_shape)
         net_out = self.sess.run(out_var, feed_dict={
-            self.net_input_placeholder: image.reshape(1, *self.net.input_image_shape),})
+            self.net.input: image,})
+
         # print(net_out)
         end = time.time()
         log.debug('inference time %s', end - begin)
         return net_out
 
+    # noinspection PyMethodMayBeStatic
     def preprocess_obz(self, obz):
         for camera in obz['cameras']:
             image = camera['image']
             image = image.astype(np.float32)
             image -= c.MEAN_PIXEL
+            if isinstance(self.net, MobileNetV2):
+                image = resize_images(self.net.input_image_shape, [image], always=True)[0]
             camera['image'] = image
         return obz
 

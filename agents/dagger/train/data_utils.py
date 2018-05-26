@@ -186,7 +186,6 @@ class Dataset(object):
             p.join()
 
 
-
 def get_dataset(hdf5_path, train=True, overfit=False, mute_spurious_targets=False):
     file_names = get_file_names(hdf5_path, train=train, overfit=overfit)
     return Dataset(file_names, overfit, mute_spurious_targets)

@@ -17,6 +17,8 @@ from subprocess import Popen, PIPE
 import config as c
 import logs
 
+log = logs.get_log(__name__)
+
 
 def normalize(a):
     amax = a.max()
@@ -139,10 +141,10 @@ def show_camera(image, depth):
     input('Enter any key to continue')
 
 
-def read_hdf5_manual(recording_dir):
+def read_hdf5_manual(recording_dir=c.RECORDING_DIR):
     save_png_dir = os.path.join(recording_dir, 'test_view')
-    os.makedirs(save_png_dir)
-    read_hdf5(os.path.join(recording_dir, '2017-11-22_0105_26AM', '0000000001.hdf5'), save_png_dir=save_png_dir)
+    os.makedirs(save_png_dir, exist_ok=True)
+    read_hdf5(os.path.join(recording_dir, '2018-01-18__05-14-48PM', '0000000001.hdf5'), save_png_dir=save_png_dir)
 
 
 def is_debugging():
@@ -267,7 +269,7 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
             print(err_msg)
     return result, process.returncode
 
-log = logs.get_log(__name__)
 
 if __name__ == '__main__':
-    download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
+    # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
+    read_hdf5_manual()

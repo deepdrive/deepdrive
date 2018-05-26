@@ -199,13 +199,17 @@ def perform_eval(step, agent_net, batch_size, eval_dataset, eval_sw, sess):
     eval_sw.flush()
 
 
-def resize_images(input_image_shape, images):
+def resize_images(input_image_shape, images, always=False):
     for img_idx, img in enumerate(images):
         img = images[img_idx]
-        if img.shape != input_image_shape:
+        if img.shape != input_image_shape or always:
+            # Interesting bug here. Since resize converts mean subtracted floats (~-120 to ~130) to 0-255 uint8,
+            # but we don't always resize since randomize_cameras does nothing to the size 5% of the time.
+            # This actually worked surprisingly well. Need to test whether this bug actually improves things or not.
             log.debug('invalid image shape %s - resizing', str(img.shape))
             images[img_idx] = scipy.misc.imresize(img, (input_image_shape[0],
                                                         input_image_shape[1]))
+    return images
 
 
 if __name__ == "__main__":

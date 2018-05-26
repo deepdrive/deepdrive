@@ -24,7 +24,8 @@ import tensorflow as tf
 # from preprocessing import inception_preprocessing
 # from preprocessing import lenet_preprocessing
 # from preprocessing import vgg_preprocessing
-from preprocessing import deepdrive_preprocessing
+# from preprocessing import deepdrive_preprocessing
+from vendor.tensorflow.models.research.slim.preprocessing import deepdrive_preprocessing
 
 slim = tf.contrib.slim
 

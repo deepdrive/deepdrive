@@ -30,10 +30,11 @@ import tensorflow as tf
 # from nets import resnet_v1
 # from nets import resnet_v2
 # from nets import vgg
-from nets.mobilenet import mobilenet_v2
+# from nets.mobilenet import mobilenet_v2
 
 # from nets.nasnet import nasnet
 # from nets.nasnet import pnasnet
+from vendor.tensorflow.models.research.slim.nets.mobilenet import mobilenet_v2
 
 slim = tf.contrib.slim
 
@@ -105,7 +106,7 @@ arg_scopes_map = {
 }
 
 
-def get_network_fn(name, num_classes, weight_decay=0.0, is_training=False, num_targets=None):
+def get_network_fn(name, num_classes, weight_decay=0.0, is_training=False, num_targets=None, preprocess=None):
     """Returns a network_fn such as `logits, end_points = network_fn(images)`.
 
     Args:
@@ -145,6 +146,8 @@ def get_network_fn(name, num_classes, weight_decay=0.0, is_training=False, num_t
         arg_scope = arg_scopes_map[name](weight_decay=weight_decay)
         with slim.arg_scope(arg_scope):
             out_dim = num_targets if num_targets is not None else num_classes
+            if preprocess is not None:
+                images = preprocess(images)
             return func(images, out_dim, is_training=is_training, **kwargs)
 
     if hasattr(func, 'default_image_size'):

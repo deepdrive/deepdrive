@@ -28,9 +28,12 @@ set -ev
 
 # Where the dataset is saved to.
 DATASET_DIR=/media/a/data-ext4/deepdrive-data
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SLIM_DIR="$(dirname "$DIR")"
+export PYTHONPATH=${PYTHONPATH}:
 
 ### Fine-tune only the new layers
-python train_image_classifier.py \
+python ${SLIM_DIR}/train_image_classifier.py \
   --dataset_name=deepdrive \
   --dataset_split_name=train \
   --dataset_dir=${DATASET_DIR} \
@@ -49,7 +52,7 @@ python train_image_classifier.py \
   --optimizer=rmsprop \
   --weight_decay=0.00004
 
-python eval_image_classifier.py \
+python ${SLIM_DIR}/eval_image_classifier.py \
   --dataset_name=deepdrive \
   --dataset_split_name=eval \
   --dataset_dir=${DATASET_DIR} \
@@ -57,7 +60,7 @@ python eval_image_classifier.py \
   --eval_image_size=224
 
 # Fine-tune all layers
-python train_image_classifier.py \
+python ${SLIM_DIR}/train_image_classifier.py \
   --dataset_name=deepdrive \
   --resume_deepdrive \
   --dataset_split_name=train \
@@ -75,10 +78,28 @@ python train_image_classifier.py \
   --weight_decay=0.00004
 
 
-python eval_image_classifier.py \
+python ${SLIM_DIR}/eval_image_classifier.py \
   --dataset_name=deepdrive \
   --dataset_split_name=eval \
   --dataset_dir=${DATASET_DIR} \
   --model_name=mobilenet_v2_deepdrive \
   --eval_image_size=224
 
+
+#  --dataset_name=deepdrive 
+#  --dataset_split_name=train 
+#  --dataset_dir=${DATASET_DIR} 
+#  --model_name=mobilenet_v2_deepdrive 
+#  --train_image_size=224 
+#  --checkpoint_path=/home/a/mnet-test/checkpoints/mobilenet_v2_1.0_224.ckpt 
+#  --checkpoint_exclude_scopes=MobilenetV2/Logits,MobilenetV2/Predictions,MobilenetV2/predics 
+#  --trainable_scopes=MobilenetV2/Logits,MobilenetV2/Predictions,MobilenetV2/predics 
+#  --max_number_of_steps=2000 
+#  --batch_size=32 
+#  --learning_rate=0.0001 
+#  --learning_rate_decay_type=fixed 
+#  --save_interval_secs=10 
+#  --save_summaries_secs=60 
+#  --log_every_n_steps=20 
+#  --optimizer=rmsprop 
+#  --weight_decay=0.00004
