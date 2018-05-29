@@ -28,6 +28,7 @@ class Agent(object):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space
         self.previous_action = None
+        self.previous_net_out = None
         self.step = 0
         self.env = env
         self.net_name = net_name
@@ -86,10 +87,10 @@ class Agent(object):
                 image = obz['cameras'][0]['image']
                 net_out = self.get_net_out(image)
             if net_out is not None and self.output_last_hidden:
-                y = net_out[0]
+                y_hat = net_out[0]
             else:
-                y = net_out
-            action = self.get_next_action(obz, y)
+                y_hat = net_out
+            action = self.get_next_action(obz, y_hat)
         else:
             action = Action(has_control=(not self.path_follower_mode))
 
@@ -109,13 +110,16 @@ class Agent(object):
         action = action.as_gym()
         return action, net_out
 
-    def get_next_action(self, obz, y):
+    def get_next_action(self, obz, net_out):
         log.debug('getting next action')
-        if y is None:
+        if net_out is None:
             log.debug('net out is None')
             return self.previous_action or Action()
 
-        desired_spin, desired_direction, desired_speed, desired_speed_change, desired_steering, desired_throttle = y[0]
+        net_out = net_out[0]  # We currently only have one environment
+
+        desired_spin, desired_direction, desired_speed, desired_speed_change, desired_steering, desired_throttle = \
+            net_out
 
         desired_spin = desired_spin * c.SPIN_NORMALIZATION_FACTOR
         desired_speed = desired_speed * c.SPEED_NORMALIZATION_FACTOR
@@ -134,20 +138,36 @@ class Agent(object):
         log.debug('actual_speed %f', actual_speed)
         log.debug('desired_speed %f', desired_speed)
 
-        target_speed = 9 * 100
+        if isinstance(self.net, MobileNetV2):
+            # target_speed = 8 * 100
+            target_speed = desired_speed
+            # desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
+            # desired_throttle = min(max(desired_throttle, 0.), 1.)
+            target_speed = 8 * 100
+            desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
+            desired_throttle = min(max(desired_throttle, 0.), 1.)
+
+            # if self.previous_net_out:
+            #     desired_throttle = 0.2 * self.previous_action.throttle + 0.7 * desired_throttle
+            # else:
+            # desired_throttle = desired_throttle * 0.95
+
+        else:
+            # AlexNet
+            target_speed = 9 * 100
+            # Network overfit on speed, plus it's nice to be able to change it,
+            # so we just ignore output speed of net
+            desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
+            desired_throttle = min(max(desired_throttle, 0.), 1.)
         log.debug('actual_speed %r' % actual_speed)
 
-        # Network overfit on speed, plus it's nice to be able to change it,
-        # so we just ignore output speed of net
-        desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
-        desired_throttle = min(max(desired_throttle, 0.), 1.)
-
-        log.info('desired_steering %f', desired_steering)
-        log.debug('desired_throttle %f', desired_throttle)
+        # log.info('desired_steering %f', desired_steering)
+        # log.info('desired_throttle %f', desired_throttle)
         if self.previous_action:
             smoothed_steering = 0.2 * self.previous_action.steering + 0.5 * desired_steering
         else:
             smoothed_steering = desired_steering * 0.7
+
         # desired_throttle = desired_throttle * 1.1
         action = Action(smoothed_steering, desired_throttle)
         return action
@@ -252,12 +272,16 @@ class Agent(object):
     # noinspection PyMethodMayBeStatic
     def preprocess_obz(self, obz):
         for camera in obz['cameras']:
+            prepro_start = time.time()
             image = camera['image']
             image = image.astype(np.float32)
             image -= c.MEAN_PIXEL
             if isinstance(self.net, MobileNetV2):
+                resize_start = time.time()
                 image = resize_images(self.net.input_image_shape, [image], always=True)[0]
+                log.debug('resize took %fs', time.time() - resize_start)
             camera['image'] = image
+            log.debug('prepro took %fs',  time.time() - prepro_start)
         return obz
 
     def set_random_action_repeat_count(self):
@@ -340,8 +364,15 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
             else:
                 obz = None
             while not episode_done:
+
+                act_start = time.time()
                 action, net_out = agent.act(obz, reward, episode_done)
+                log.debug('act took %fs',  time.time() - act_start)
+
+                env_step_start = time.time()
                 obz, reward, episode_done, _ = gym_env.step(action)
+                log.debug('env step took %fs', time.time() - env_step_start)
+
                 if render:
                     gym_env.render()
                 if should_record_recovery_from_random_actions:

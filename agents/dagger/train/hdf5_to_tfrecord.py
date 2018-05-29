@@ -104,7 +104,6 @@ def save_tfrecord_file(file_idx, filename, images, targets):
             log.info('Train data: {}/{}'.format(image_idx, len(images)))
 
         image = images[image_idx]
-        # TODO: Add mean pixel back to image, check min is zero, convert to uint8
         image += c.MEAN_PIXEL
         assert(min(image) == 0)
 

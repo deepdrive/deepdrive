@@ -18,6 +18,7 @@ import numpy as np
 from boto.s3.connection import S3Connection
 from gym import spaces
 from gym.utils import seeding
+import zmq
 try:
     import pyglet
     from pyglet.gl import GLubyte
@@ -28,7 +29,7 @@ import config as c
 import logs
 import utils
 from utils import obj2dict, download
-from dashboard import dashboard_fn
+from dashboard import dashboard_fn, DashboardPub
 
 log = logs.get_log(__name__)
 SPEED_LIMIT_KPH = 64.
@@ -128,7 +129,7 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['time']                          = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 250,  'units': 's'}
         self.display_stats['episode score']                 = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 2000, 'units': ''}
         self.dashboard_process = None
-        self.dashboard_queue = None
+        self.dashboard_pub = None
         self.should_exit = False
         self.sim_process = None
         self.client_id = None
@@ -278,15 +279,13 @@ class DeepDriveEnv(gym.Env):
 
     def start_dashboard(self):
         if utils.is_debugging():
-            # TODO: Deal with plot UI not being in the main thread somehow - (move to browser?)
+            # TODO: Deal with plot UI not being in the main thread somehow - (move to Unreal HUD)
             log.warning('Dashboard not supported in debug mode')
             return
-        q = Queue(maxsize=10)
-        p = Process(target=dashboard_fn, args=(q,))
-        print('DEBUG - after starting dashboard')
+        p = Process(target=dashboard_fn)
         p.start()
         self.dashboard_process = p
-        self.dashboard_queue = q
+        self.dashboard_pub = DashboardPub()
 
     def set_tf_session(self, session):
         self.sess = session
@@ -299,30 +298,39 @@ class DeepDriveEnv(gym.Env):
             dd_action = Action.from_gym(action)
 
         if self.is_sync:
-            start = time.time()
+            sync_start = time.time()
             seq_number = deepdrive_client.advance_synchronous_stepping(self.client_id, self.sync_step_time,
                                                                        dd_action.steering, dd_action.throttle,
                                                                        dd_action.brake, dd_action.handbrake)
-            end = time.time()
-            print('STEP TIME', str(end-start) + 'ms')
+            log.debug('sync step took %fs',  time.time() - sync_start)
+
         else:
+            send_control_start = time.time()
             self.send_control(dd_action)
+            log.debug('send_control took %fs', time.time() - send_control_start)
+
         obz = self.get_observation()
         if obz and 'is_game_driving' in obz:
             self.has_control = not obz['is_game_driving']
         now = time.time()
         done = False
+
+        start_reward_stuff = time.time()
         reward = self.get_reward(obz, now)
         done = self.compute_lap_statistics(done, obz)
         self.prev_step_time = now
 
-        if self.dashboard_queue is not None:
-            self.dashboard_queue.put({'display_stats': self.display_stats, 'should_stop': False})
+        if self.dashboard_pub is not None:
+            start_dashboard_put = time.time()
+            self.dashboard_pub.put(OrderedDict({'display_stats': list(self.display_stats.items()), 'should_stop': False}))
+            log.debug('dashboard put took %fs', time.time() - start_dashboard_put)
+
         if self.is_stuck(obz):  # TODO: derive this from collision, time elapsed, and distance as well
             done = True
             reward -= -10000  # reward is in scale of meters
         info = {}
         self.step_num += 1
+        log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
 
         self.regulate_fps()
 
@@ -341,6 +349,7 @@ class DeepDriveEnv(gym.Env):
         self.previous_action_time = now
 
     def compute_lap_statistics(self, done, obz):
+        start_compute_lap_stats = time.time()
         if not obz:
             return done
         lap_number = obz.get('lap_number')
@@ -357,9 +366,12 @@ class DeepDriveEnv(gym.Env):
             done = True  # One lap per episode
             self.log_up_time()
         self.lap_number = lap_number
+        log.debug('compute lap stats took %fs', time.time() - start_compute_lap_stats)
+
         return done
 
     def get_reward(self, obz, now):
+        start_get_reward = time.time()
         reward = 0
         if obz:
             if self.prev_step_time is not None:
@@ -368,6 +380,7 @@ class DeepDriveEnv(gym.Env):
                 step_time = None
             now = time.time()
             time_penalty = now - self.score.start_time - self.score.episode_time
+            # self.score.time_penalty ++
             self.score.episode_time = now - self.score.start_time
             if self.score.episode_time < 2.5:
                 # Give time to get on track after spawn
@@ -386,6 +399,8 @@ class DeepDriveEnv(gym.Env):
 
             log.debug('reward %r', reward)
             log.debug('score %r', self.score.total)
+
+        log.debug('get reward took %fs', time.time() - start_get_reward)
 
         return reward
 
@@ -431,6 +446,7 @@ class DeepDriveEnv(gym.Env):
         return progress_reward
 
     def is_stuck(self, obz):
+        start_is_stuck = time.time()
         # TODO: Get this from the game instead
         ret = False
         if 'TEST_BENCHMARK_WRITE' in os.environ:
@@ -456,6 +472,8 @@ class DeepDriveEnv(gym.Env):
                 ret = True
         else:
             self.set_forward_progress()
+        log.debug('is stuck took %fs', time.time() - start_is_stuck)
+
         return ret
 
     def log_benchmark_trial(self):
@@ -477,7 +495,7 @@ class DeepDriveEnv(gym.Env):
             for i, score in enumerate(self.trial_scores):
                 if i == 0:
                     writer.writerow(['episode #', 'score', 'progress reward', 'lane deviation penalty',
-                                     'gforce penalty', 'got stuck', 'start', 'end', 'lap time'])
+                                     'gforce penalty', 'time penalty', 'got stuck', 'start', 'end', 'lap time'])
                 writer.writerow([i + 1, score.total,
                                  score.progress_reward, score.lane_deviation_penalty,
                                  score.gforce_penalty, score.got_stuck, str(arrow.get(score.start_time).to('local')),
@@ -537,9 +555,9 @@ class DeepDriveEnv(gym.Env):
         self.close()
 
     def close(self):
-        if self.dashboard_queue is not None:
-            self.dashboard_queue.put({'should_stop': True})
-            self.dashboard_queue.close()
+        if self.dashboard_pub is not None:
+            self.dashboard_pub.put({'should_stop': True})
+            self.dashboard_pub.close()
         if self.dashboard_process is not None:
             self.dashboard_process.join()
         deepdrive_capture.close()
@@ -606,8 +624,11 @@ class DeepDriveEnv(gym.Env):
         return ret
 
     def get_observation(self):
+        start_get_obz = time.time()
         try:
             obz = deepdrive_capture.step()
+            end_get_obz = time.time()
+            log.debug('get obz took %fs', end_get_obz - start_get_obz)
         except SystemError as e:
             log.error('caught error during step' + str(e))
             ret = None

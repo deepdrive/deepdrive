@@ -1,4 +1,9 @@
+import json
 import sys
+import time
+from threading import Thread
+
+# TODO: Replace matplotlib UI with Unreal based HUD - and do comms via exsiting Python to Unreal channels
 
 is_py2 = sys.version[0] == '2'
 if is_py2:
@@ -8,14 +13,21 @@ else:
 from collections import deque, OrderedDict
 
 import numpy as np
+import zmq
 
 import logs
 
+ZMQ_PREFIX = 'deepdrive-dashboard'
+ZMQ_CONN_STRING = "tcp://127.0.0.1:5681"
 
 log = logs.get_log(__name__)
 
-def dashboard_fn(dash_queue):
-    print('DEBUG - starting dashboard')
+
+def dashboard_fn():
+    log.info('Starting dashboard')
+
+    message_q = get_message_q()
+
     import matplotlib.animation as animation
     import matplotlib
     try:
@@ -33,27 +45,32 @@ def dashboard_fn(dash_queue):
         x_lists = {}
         y_lists = {}
 
-    def get_next(block=False):
+    def get_next():
         try:
-            q_next = dash_queue.get(block=block)
-            if q_next['should_stop']:
+            message = message_q.pop()
+            message = message[len(ZMQ_PREFIX) + 1:]
+            q_next = OrderedDict(json.loads(message.decode('utf8').replace("'", '"')))
+            if q_next.get('should_stop', False):
                 print('Stopping dashboard')
                 try:
                     anim._fig.canvas._tkcanvas.master.quit()  # Hack to avoid "Exiting Abnormally"
                 finally:
                     exit()
             else:
-                Disp.stats = q_next['display_stats']
-        except queue.Empty:
+                Disp.stats = OrderedDict(q_next['display_stats'])
+        except IndexError:
             # Reuuse old stats
             pass
 
-    get_next(block=True)
+    get_next()
+    while not Disp.stats.items():
+        get_next()
+        time.sleep(0.1)
 
     font = {'size': 8}
-
     matplotlib.rc('font', **font)
 
+    log.debug('Populating graph parts with %r', Disp.stats.items())
     for i, (stat_name, stat) in enumerate(Disp.stats.items()):
         stat = Disp.stats[stat_name]
         stat_label_subplot = plt.subplot2grid((len(Disp.stats), 3), (i, 0))
@@ -108,3 +125,52 @@ def dashboard_fn(dash_queue):
     # TODO: Add blit=True and deal with updating the text if performance becomes unacceptable
     anim = animation.FuncAnimation(fig, animate, init_func=init, frames=200, interval=100)
     plt.show()
+
+
+# ZMQ stuff (multiprocessing queue was taking 80ms, so switched to faster zmq) -----------------------------------------
+
+class DashboardPub(object):
+    def __init__(self):
+        # ZeroMQ Context
+        context = zmq.Context()
+
+        # Define the socket using the "Context"
+        sock = context.socket(zmq.PUB)
+        sock.bind(ZMQ_CONN_STRING)
+        self.sock = sock
+
+    def put(self, display_stats):
+        # Message [prefix][message]
+        message = "{prefix}-{msg}".format(prefix=ZMQ_PREFIX, msg=json.dumps(list(display_stats.items())))
+        log.debug('dashpub put %s', message)
+        start = time.time()
+        self.sock.send_string(message)
+        log.debug('took %fs', time.time() - start)
+
+    def close(self):
+        self.sock.close()
+
+
+def get_message_q():
+    q = deque(maxlen=10)
+    zmq_socket = start_zmq_sub()
+    thread = Thread(target=poll_zmq, args=(zmq_socket, q))
+    thread.start()
+    return q
+
+
+def poll_zmq(zmq_socket, q):
+    while True:
+        message = zmq_socket.recv()
+        log.debug('dashsub pull %s', message)
+        q.appendleft(message)
+
+
+def start_zmq_sub():
+    # ZeroMQ Context
+    context = zmq.Context()
+    # Define the socket using the "Context"
+    sock = context.socket(zmq.SUB)
+    sock.setsockopt_string(zmq.SUBSCRIBE, ZMQ_PREFIX)
+    sock.connect(ZMQ_CONN_STRING)
+    return sock
