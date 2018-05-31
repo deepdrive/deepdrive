@@ -518,7 +518,6 @@ class DeepDriveEnv(gym.Env):
             writer.writerow(['env', self.spec.id])
             writer.writerow(['command', sys.argv])
             writer.writerow(['commit', utils.run_command('git rev-parse --short HEAD')[0]])
-            writer.writerow(['diff file', diff_filename])
             writer.writerow(['experiment name', self.experiment or 'n/a'])
             writer.writerow(['os', sys.platform])
             try:
