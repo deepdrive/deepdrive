@@ -164,20 +164,21 @@ class AlexNet(Net):
         self.starter_learning_rate = 2e-6
         super(AlexNet, self).__init__(*args, **kwargs)
 
-        # Decrease this to fit in your GPU's memory
-        # If you increase, remember that it decreases accuracy https://arxiv.org/abs/1711.00489
-        self.batch_size = 32
+        if self.is_training:
+            # Decrease this to fit in your GPU's memory
+            # If you increase, remember that it decreases accuracy https://arxiv.org/abs/1711.00489
+            self.batch_size = 32
 
-        # TODO: add polyak averaging.
-        self.learning_rate = tf.train.exponential_decay(self.starter_learning_rate, global_step=self.global_step,
-                                                        decay_steps=73000, decay_rate=0.5, staircase=True)
+            # TODO: add polyak averaging.
+            self.learning_rate = tf.train.exponential_decay(self.starter_learning_rate, global_step=self.global_step,
+                                                            decay_steps=73000, decay_rate=0.5, staircase=True)
 
-        if self.overfit:
-            self.weight_decay = 0.
-        else:
-            self.weight_decay = 0.0005
+            if self.overfit:
+                self.weight_decay = 0.
+            else:
+                self.weight_decay = 0.0005
 
-        self.mute_spurious_targets = False  # TODO: Try turning this on
+            self.mute_spurious_targets = False
 
     def _init_net(self):
         in_tensor = tf.placeholder(tf.float32, (None,) + self.input_image_shape)

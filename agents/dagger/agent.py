@@ -242,8 +242,7 @@ class Agent(object):
             if self.net_name == net.MOBILENET_V2_NAME:
                 self.net = MobileNetV2(is_training=False)
             else:
-                with tf.variable_scope("model"):
-                    self.net = AlexNet(is_training=False)
+                self.net = AlexNet(is_training=False)
             saver = tf.train.Saver()
             saver.restore(self.sess, net_path)
 

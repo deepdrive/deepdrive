@@ -4,6 +4,7 @@ import deepdrive_client
 import deepdrive_capture
 import os
 import random
+import sys
 import time
 from collections import deque, OrderedDict
 from multiprocessing import Process, Queue
@@ -11,10 +12,12 @@ from subprocess import Popen
 import pkg_resources
 from distutils.version import LooseVersion as semvar
 from itertools import product
+from enum import Enum
 
 import arrow
 import gym
 import numpy as np
+from GPUtil import GPUtil
 from boto.s3.connection import S3Connection
 from gym import spaces
 from gym.utils import seeding
@@ -39,6 +42,7 @@ class Score(object):
     total = 0
     gforce_penalty = 0
     lane_deviation_penalty = 0
+    time_penalty = 0
     progress_reward = 0
     got_stuck = False
 
@@ -92,6 +96,9 @@ class DiscreteActions(object):
         return steer, throttle, brake
 
 
+RushLevel = Enum('RushLevel', 'CRUISING NORMAL LATE HOSPITAL CHASE')
+
+
 default_cam = Camera(**c.DEFAULT_CAM)  # TODO: Switch camera dicts to this object
 
 
@@ -108,26 +115,25 @@ def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
 class DeepDriveEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, preprocess_with_tensorflow=False, is_discrete=False, is_sync=False, sync_step_time=None):
-        self.is_discrete = is_discrete
-        self.is_sync = is_sync
-        self.sync_step_time = sync_step_time
+    def __init__(self):
+        self.is_discrete = None
+        self.is_sync = None
+        self.sync_step_time = None
         self.discrete_actions = None
-        self.action_space = self._init_action_space(is_discrete)
-        self.preprocess_with_tensorflow = preprocess_with_tensorflow
+        self.preprocess_with_tensorflow = None
         self.sess = None
         self.prev_observation = None
         self.start_time = time.time()
         self.step_num = 0
         self.prev_step_time = None
         self.display_stats = OrderedDict()
-        self.display_stats['g-forces']                      = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 3,    'units': 'g'}
-        self.display_stats['gforce penalty']                = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 0,    'units': ''}
-        self.display_stats['lane deviation penalty']        = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 0,    'units': ''}
-        self.display_stats['lap progress']                  = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 100,  'units': '%'}
-        self.display_stats['episode #']                     = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 5,    'units': ''}
-        self.display_stats['time']                          = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 250,  'units': 's'}
-        self.display_stats['episode score']                 = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 2000, 'units': ''}
+        self.display_stats['g-forces']               = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 3,    'units': 'g'}
+        self.display_stats['gforce penalty']         = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 0,    'units': ''}
+        self.display_stats['lane deviation penalty'] = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 0,    'units': ''}
+        self.display_stats['lap progress']           = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 100,  'units': '%'}
+        self.display_stats['episode #']              = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 5,    'units': ''}
+        self.display_stats['time']                   = {'total': 0, 'value': 0, 'ymin': 0,     'ymax': 250,  'units': 's'}
+        self.display_stats['episode score']          = {'total': 0, 'value': 0, 'ymin': -500,  'ymax': 2000, 'units': ''}
         self.dashboard_process = None
         self.dashboard_pub = None
         self.should_exit = False
@@ -379,9 +385,10 @@ class DeepDriveEnv(gym.Env):
             else:
                 step_time = None
             now = time.time()
-            time_penalty = now - self.score.start_time - self.score.episode_time
-            # self.score.time_penalty ++
-            self.score.episode_time = now - self.score.start_time
+            new_episode_time = now - self.score.start_time
+            time_penalty = new_episode_time - self.score.episode_time  # Time elapsed since last get reward
+            self.score.time_penalty += time_penalty
+            self.score.episode_time = new_episode_time
             if self.score.episode_time < 2.5:
                 # Give time to get on track after spawn
                 reward = 0
@@ -490,6 +497,7 @@ class DeepDriveEnv(gym.Env):
         log.info('benchmark lap #%d score: %f - average: %f', len(self.trial_scores), self.score.total, average)
         file_prefix = self.experiment + '_' if self.experiment else ''
         filename = os.path.join(c.BENCHMARK_DIR, '%s%s.csv' % (file_prefix, c.DATE_STR))
+        diff_filename = os.path.join(c.BENCHMARK_DIR, '%s%s.diff' % (file_prefix, c.DATE_STR))
         with open(filename, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
             for i, score in enumerate(self.trial_scores):
@@ -498,7 +506,7 @@ class DeepDriveEnv(gym.Env):
                                      'gforce penalty', 'time penalty', 'got stuck', 'start', 'end', 'lap time'])
                 writer.writerow([i + 1, score.total,
                                  score.progress_reward, score.lane_deviation_penalty,
-                                 score.gforce_penalty, score.got_stuck, str(arrow.get(score.start_time).to('local')),
+                                 score.gforce_penalty, score.time_penalty, score.got_stuck, str(arrow.get(score.start_time).to('local')),
                                  str(arrow.get(score.end_time).to('local')),
                                  score.episode_time])
             writer.writerow([])
@@ -507,6 +515,20 @@ class DeepDriveEnv(gym.Env):
             writer.writerow(['std', std])
             writer.writerow(['high score', high])
             writer.writerow(['low score', low])
+            writer.writerow(['env', self.spec.id])
+            writer.writerow(['command', sys.argv])
+            writer.writerow(['commit', utils.run_command('git rev-parse --short HEAD')[0]])
+            writer.writerow(['diff file', diff_filename])
+            writer.writerow(['experiment name', self.experiment or 'n/a'])
+            writer.writerow(['os', sys.platform])
+            try:
+                gpus = GPUtil.getGPUs()
+            except:
+                gpus = 'n/a'
+            writer.writerow(['gpus', str(gpus)])
+
+        with open(diff_filename, 'w') as diff_file:
+            diff_file.write(utils.run_command('git diff')[0])
 
         log.info('median score %r', median)
         log.info('avg score %r', average)
@@ -515,6 +537,7 @@ class DeepDriveEnv(gym.Env):
         log.info('low score %r', low)
         log.info('progress_reward %r', self.score.progress_reward)
         log.info('lane_deviation_penalty %r', self.score.lane_deviation_penalty)
+        log.info('time_penalty %r', self.score.time_penalty)
         log.info('gforce_penalty %r', self.score.gforce_penalty)
         log.info('episode_time %r', self.score.episode_time)
         log.info('wrote results to %s', os.path.normpath(filename))
@@ -761,8 +784,8 @@ class DeepDriveEnv(gym.Env):
                         '**********************************************************************\n'
                         '**********************************************************************\n\n')
 
-    def _init_action_space(self, is_discrete):
-        if is_discrete:
+    def init_action_space(self):
+        if self.is_discrete:
             num_steer_steps = 30
             steer_step = 1 / ((num_steer_steps - 1) / 2)
 
@@ -793,6 +816,7 @@ class DeepDriveEnv(gym.Env):
             is_game_driving_space = spaces.Discrete(2)
             action_space = spaces.Tuple(
                 (steering_space, throttle_space, brake_space, handbrake_space, is_game_driving_space))
+        self.action_space = action_space
         return action_space
 
     def _init_observation_space(self):

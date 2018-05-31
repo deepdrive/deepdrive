@@ -15,3 +15,5 @@ tensorflow_hub
 future
 tf-slim
 pyzmq
+enum34
+gputil
