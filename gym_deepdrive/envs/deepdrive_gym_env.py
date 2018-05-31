@@ -522,10 +522,10 @@ class DeepDriveEnv(gym.Env):
             writer.writerow(['experiment name', self.experiment or 'n/a'])
             writer.writerow(['os', sys.platform])
             try:
-                gpus = GPUtil.getGPUs()
+                gpus = ','.join([gpu.name for gpu in GPUtil.getGPUs()])
             except:
                 gpus = 'n/a'
-            writer.writerow(['gpus', str(gpus)])
+            writer.writerow(['gpus', gpus])
 
         with open(diff_filename, 'w') as diff_file:
             diff_file.write(utils.run_command('git diff')[0])
