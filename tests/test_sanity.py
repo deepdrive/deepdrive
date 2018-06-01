@@ -1,3 +1,9 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
+                             int, map, next, oct, open, pow, range, round,
+                             str, super, zip)
 import numpy as np
 import pytest
 from numpy.random import RandomState
@@ -60,22 +66,40 @@ def test_gforce_penalty():
 
 
 def test_progress_reward():
-    reward = DeepDriveRewardCalculator.get_progress_reward(progress=100, time_passed=0.1)
-    assert reward == pytest.approx(1)
-    reward = DeepDriveRewardCalculator.get_progress_reward(progress=100, time_passed=1)
-    assert reward == pytest.approx(1)
-    reward = DeepDriveRewardCalculator.get_progress_reward(progress=3, time_passed=0.1)
-    assert reward == pytest.approx(0.03)
-    reward = DeepDriveRewardCalculator.get_progress_reward(progress=3, time_passed=1e-8)
-    assert reward == pytest.approx(0.03, abs=1e-6)
-    reward = DeepDriveRewardCalculator.get_progress_reward(progress=0, time_passed=0.1)
-    assert reward == pytest.approx(0)
-    reward = DeepDriveRewardCalculator.get_progress_reward(progress=-10, time_passed=0.1)
-    assert reward == pytest.approx(-0.1)
-    reward = DeepDriveRewardCalculator.get_progress_reward(progress=1e8, time_passed=0.1)
-    assert reward == pytest.approx(100)
-    reward = DeepDriveRewardCalculator.get_progress_reward(progress=-1e8, time_passed=0.1)
-    assert reward == pytest.approx(0)  # lap complete
+    progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=100, time_passed=0.1)
+    assert progress_reward == pytest.approx(1.) and rate_reward == pytest.approx(0.5)
+    progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=100, time_passed=1)
+    assert progress_reward == pytest.approx(1.) and rate_reward == pytest.approx(0.05)
+    progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=3, time_passed=0.1)
+    assert progress_reward == pytest.approx(0.03) and rate_reward == pytest.approx(0.00045)
+    progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=3, time_passed=1e-8)
+    assert progress_reward == pytest.approx(0.03, abs=1e-6) and rate_reward == pytest.approx(100.0)  # Should clip
+    progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=0, time_passed=0.1)
+    assert progress_reward == pytest.approx(0.) and rate_reward == pytest.approx(0.)
+    progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=-10, time_passed=0.1)
+    assert progress_reward == pytest.approx(-0.1) and rate_reward == pytest.approx(-0.005)
+    progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=1e8, time_passed=0.1)
+    assert progress_reward == pytest.approx(100.) and rate_reward == pytest.approx(100.)  # Should clip
+    progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=-1e8, time_passed=0.1)
+    assert progress_reward == pytest.approx(0.) and rate_reward == pytest.approx(0.)  # lap complete, zero out
+
+    # Test invariance of sampling frequency
+    p1, r1 = episode_progress_reward(hz=1,   total_secs=10)
+    p2, r2 = episode_progress_reward(hz=2,   total_secs=10)
+    p3, r3 = episode_progress_reward(hz=0.5, total_secs=10)
+    assert p1 == pytest.approx(p2) and r1 == pytest.approx(r2) and p2 == pytest.approx(p3) and r2 == pytest.approx(r3)
+
+
+def episode_progress_reward(hz, total_secs):
+    total_progress = total_rate_reward = 0
+    time_passed = 1 / hz
+    progress = 1000 / hz
+    for i in range(int(total_secs * hz)):
+        progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=progress,
+                                                                                     time_passed=time_passed)
+        total_progress += progress_reward
+        total_rate_reward += rate_reward
+    return total_progress, total_rate_reward
 
 
 def test_preprocess_image(tf_sess):
