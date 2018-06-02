@@ -7,16 +7,16 @@ import config as c
 import random_name
 
 # noinspection PyUnresolvedReferences
-from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action, RushLevel
+from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action, Urgency
 from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxSpaceWrapper
 
 log = logs.get_log(__name__)
 
 
-def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=True, should_benchmark=True,
+def start(experiment_name=None, env='Deepdrive-v0', sess=None, start_dashboard=True, should_benchmark=True,
           cameras=None, use_sim_start_command=False, render=False, fps=c.DEFAULT_FPS, combine_box_action_spaces=False,
           is_discrete=False, preprocess_with_tensorflow=False, is_sync=False, sync_step_time=0.125,
-          rush_level=RushLevel.NORMAL):
+          urgency=Urgency.NORMAL):
     env = gym.make(env)
     env.seed(c.RNG_SEED)
 
@@ -34,7 +34,7 @@ def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=T
     dd_env.fps = fps
     dd_env.experiment = experiment_name.replace(' ', '_')
     dd_env.period = 1. / fps
-    dd_env.rush_level = rush_level
+    dd_env.urgency = urgency
     dd_env.set_use_sim_start_command(use_sim_start_command)
     dd_env.open_sim()
     if use_sim_start_command:

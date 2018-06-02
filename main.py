@@ -11,11 +11,12 @@ import deepdrive
 import logs
 from agents.dagger import net
 from agents.dagger.agent import ensure_baseline_weights
+from gym_deepdrive.envs.deepdrive_gym_env import Urgency
 
 
 def main():
     parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('-e', '--env-id', nargs='?', default='DeepDrive-v0', help='Select the environment to run')
+    parser.add_argument('-e', '--env-id', nargs='?', default='Deepdrive-v0', help='Select the environment to run')
     parser.add_argument('-r', '--record', action='store_true', default=False,
                         help='Records game driving, including recovering from random actions')
     parser.add_argument('--baseline', action='store_true', default=False,
@@ -44,6 +45,9 @@ def main():
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
     parser.add_argument('--net-type', nargs='?', default=net.ALEXNET_NAME,
                         help='Your model type - i.e. AlexNet or MobileNetV2')
+    parser.add_argument('--urgency', nargs='?', default=Urgency.NORMAL.name.lower(),
+                        help='Speed vs comfort prioritization, i.e. ' +
+                             ', '.join([level.name.lower() for level in Urgency]))
     parser.add_argument('--resume-train', nargs='?', default=None,
                         help='Name of the tensorflow training session you want to resume within %s, '
                              'i.e. 2018-01-01__11-11-11AM_train' % c.TENSORFLOW_OUT_DIR)
@@ -104,7 +108,8 @@ def main():
         episode_count = 1
         gym_env = None
         try:
-            gym_env = deepdrive.start(args.experiment_name, args.env_id, fps=args.fps)
+            gym_env = deepdrive.start(args.experiment_name, args.env_id, fps=args.fps,
+                                      urgency=Urgency[args.urgency.upper()])
             log.info('Path follower drive mode')
             for episode in range(episode_count):
                 if done:
@@ -133,7 +138,8 @@ def main():
                   should_record=args.record, net_path=args.net_path, env_id=args.env_id,
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
                   should_record_recovery_from_random_actions=args.record_recovery_from_random_actions,
-                  path_follower=args.path_follower, fps=args.fps, net_name=args.net_type)
+                  path_follower=args.path_follower, fps=args.fps, net_name=args.net_type,
+                  urgency=Urgency[args.urgency.upper()])
 
 
 def get_latest_model():

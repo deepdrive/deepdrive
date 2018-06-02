@@ -67,17 +67,17 @@ def test_gforce_penalty():
 
 def test_progress_reward():
     progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=100, time_passed=0.1)
-    assert progress_reward == pytest.approx(1.) and rate_reward == pytest.approx(0.5)
+    assert progress_reward == pytest.approx(1.) and rate_reward == pytest.approx(1.5)
     progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=100, time_passed=1)
-    assert progress_reward == pytest.approx(1.) and rate_reward == pytest.approx(0.05)
+    assert progress_reward == pytest.approx(1.) and rate_reward == pytest.approx(0.15)
     progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=3, time_passed=0.1)
-    assert progress_reward == pytest.approx(0.03) and rate_reward == pytest.approx(0.00045)
+    assert progress_reward == pytest.approx(0.03) and rate_reward == pytest.approx(0.00135)
     progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=3, time_passed=1e-8)
     assert progress_reward == pytest.approx(0.03, abs=1e-6) and rate_reward == pytest.approx(100.0)  # Should clip
     progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=0, time_passed=0.1)
     assert progress_reward == pytest.approx(0.) and rate_reward == pytest.approx(0.)
     progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=-10, time_passed=0.1)
-    assert progress_reward == pytest.approx(-0.1) and rate_reward == pytest.approx(-0.005)
+    assert progress_reward == pytest.approx(-0.1) and rate_reward == pytest.approx(-0.015)
     progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=1e8, time_passed=0.1)
     assert progress_reward == pytest.approx(100.) and rate_reward == pytest.approx(100.)  # Should clip
     progress_reward, rate_reward = DeepDriveRewardCalculator.get_progress_reward(progress=-1e8, time_passed=0.1)

@@ -12,7 +12,7 @@ import config as c
 import deepdrive
 from agents.dagger import net
 from agents.dagger.train.train import resize_images
-from gym_deepdrive.envs.deepdrive_gym_env import Action
+from gym_deepdrive.envs.deepdrive_gym_env import Action, Urgency
 from agents.dagger.net import AlexNet, MobileNetV2
 from utils import save_hdf5, download
 import logs
@@ -24,7 +24,7 @@ class Agent(object):
     def __init__(self, action_space, tf_session, env, should_record_recovery_from_random_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
                  non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR, output_last_hidden=False,
-                 net_name=net.ALEXNET_NAME):
+                 net_name=net.ALEXNET_NAME, urgency=Urgency.NORMAL):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space
         self.previous_action = None
@@ -32,6 +32,7 @@ class Agent(object):
         self.step = 0
         self.env = env
         self.net_name = net_name
+        self.urgency = urgency
 
         # State for toggling random actions
         self.should_record_recovery_from_random_actions = should_record_recovery_from_random_actions
@@ -154,7 +155,16 @@ class Agent(object):
 
         else:
             # AlexNet
-            target_speed = 9 * 100
+
+            if self.urgency == Urgency.CRUISING:
+                target_speed = 8 * 100
+            elif self.urgency == Urgency.NORMAL:
+                target_speed = 9 * 100
+            elif self.urgency == Urgency.LATE:
+                target_speed = 10 * 100
+            else:
+                raise NotImplementedError('Urgency level not supported')
+
             # Network overfit on speed, plus it's nice to be able to change it,
             # so we just ignore output speed of net
             desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
@@ -305,10 +315,10 @@ class Agent(object):
             self.semirandom_sequence_step += 1
 
 
-def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, net_path=None, should_benchmark=True,
+def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
         should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS,
-        net_name=net.ALEXNET_NAME):
+        net_name=net.ALEXNET_NAME, urgency=Urgency.NORMAL):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
     reward = 0
@@ -338,14 +348,14 @@ def run(experiment, env_id='DeepDrivePreproTensorflow-v0', should_record=False, 
 
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
     gym_env = deepdrive.start(experiment, env_id, should_benchmark=should_benchmark, cameras=cameras,
-                                  use_sim_start_command=use_sim_start_command_first_lap, render=render,
-                                  fps=fps)
+                              use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
+                              urgency=urgency)
     dd_env = gym_env.env
 
     agent = Agent(gym_env.action_space, sess, env=gym_env.env,
                   should_record_recovery_from_random_actions=should_record_recovery_from_random_actions,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,
-                  path_follower=path_follower, net_name=net_name)
+                  path_follower=path_follower, net_name=net_name, urgency=urgency)
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
 
