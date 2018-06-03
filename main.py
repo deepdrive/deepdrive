@@ -99,7 +99,7 @@ def main():
             if not net_path:
                 log.info('Bootstrapping from baseline agent')
                 net_path = ensure_baseline_weights(args.net_path)
-            train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path)
+            train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent)
         else:
             raise Exception('Agent type not recognized')
     elif args.path_follower:

@@ -23,7 +23,8 @@ log = logs.get_log(__name__)
 class Agent(object):
     def __init__(self, action_space, tf_session, env, should_record_recovery_from_random_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
-                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR, output_last_hidden=False,
+                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR,
+                 output_last_hidden=False,
                  net_name=net.ALEXNET_NAME, urgency=Urgency.NORMAL):
         np.random.seed(c.RNG_SEED)
         self.action_space = action_space

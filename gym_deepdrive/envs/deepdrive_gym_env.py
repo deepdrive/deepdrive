@@ -74,8 +74,11 @@ class Action(object):
 
     @classmethod
     def from_gym(cls, action):
+        has_control = True
+        if len(action) > 4:
+            has_control = action[4][0]
         ret = cls(steering=action[0][0], throttle=action[1][0],
-                  brake=action[2][0], handbrake=action[3][0], has_control=action[4])
+                  brake=action[2][0], handbrake=action[3][0], has_control=has_control)
         return ret
 
 
@@ -124,11 +127,11 @@ class RewardWeighting(object):
 class Urgency(Enum):
     __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'
     # TODO: Possibly assign function rather than just weights
-    CRUISING  = RewardWeighting(progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0, speed=0.5)
-    NORMAL    = RewardWeighting(progress=0.0, gforce=1.00, lane_deviation=1.00, total_time=0.0, speed=1.0)
-    LATE      = RewardWeighting(progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0, speed=2.0)
-    EMERGENCY = RewardWeighting(progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0, speed=2.0)
-    CHASE     = RewardWeighting(progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0, speed=2.0)
+    CRUISING  = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
+    NORMAL    = RewardWeighting(speed=1.0, progress=0.0, gforce=1.00, lane_deviation=1.00, total_time=0.0)
+    LATE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0)
+    EMERGENCY = RewardWeighting(speed=2.0, progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0)
+    CHASE     = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
 
 
 default_cam = Camera(**c.DEFAULT_CAM)  # TODO: Switch camera dicts to this object

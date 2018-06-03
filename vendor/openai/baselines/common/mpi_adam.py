@@ -1,5 +1,5 @@
 from mpi4py import MPI
-import rl.common.tf_util as U
+import vendor.openai.baselines.common.tf_util as U
 import tensorflow as tf
 import numpy as np
 

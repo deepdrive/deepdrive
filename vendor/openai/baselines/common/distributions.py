@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import rl.common.tf_util as U
+import vendor.openai.baselines.common.tf_util as U
 from tensorflow.python.ops import math_ops
 
 class Pd(object):

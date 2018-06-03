@@ -322,6 +322,7 @@ def preprocess_for_eval(image, height, width,
     """
     with tf.name_scope(scope, 'eval_image', [image, height, width]):
         if image.dtype != tf.float32:
+            # Warning this convert normalizes as well!
             image = tf.image.convert_image_dtype(image, dtype=tf.float32)
         # Crop the central region of the image with an area containing 87.5% of
         # the original image.

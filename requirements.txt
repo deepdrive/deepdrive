@@ -17,3 +17,4 @@ tf-slim
 pyzmq
 enum34
 gputil
+joblib

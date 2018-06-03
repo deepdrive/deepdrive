@@ -87,12 +87,12 @@ class MobileNetV2(Net):
             in_tensor = tf.placeholder(tf.uint8, [None] + list(MOBILENET_V2_IMAGE_SHAPE))
             network_fn = nets_factory.get_network_fn(
                 MOBILENET_V2_SLIM_NAME,
-                preprocess=self.preprocess,
                 num_classes=None,
                 num_targets=6,
-                is_training=False,)
+                is_training=False, )
             log.info('Loading mobilenet v2')
-            out, endpoints = network_fn(in_tensor)
+            image = self.preprocess(in_tensor)
+            out, endpoints = network_fn(image)
             last_hidden = endpoints['global_pool']
             eval_out = out
         else:

@@ -18,16 +18,30 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+
+"""
+Usage:
+python eval_image_nn.py 
+--dataset_name=deepdrive
+--dataset_split_name=eval
+--dataset_dir=/media/a/data-ext4/deepdrive-data
+--model_name=mobilenet_v2_deepdrive
+--eval_image_size=224
+--checkpoint_path="/home/a/mnet2_tf/2018-05-18__04-46-32PM_after_batch_16"
+"""
+
 import glob
 import math
 import os
 
 import tensorflow as tf
 
-from datasets import dataset_factory
-from datasets.deepdrive import DEEPDRIVE_TRAIN_PARENT_DIR
-from nets import nets_factory
-from preprocessing import preprocessing_factory
+from vendor.tensorflow.models.research.slim.datasets import dataset_factory
+from vendor.tensorflow.models.research.slim.datasets.deepdrive import DEEPDRIVE_TRAIN_PARENT_DIR
+from vendor.tensorflow.models.research.slim.nets import nets_factory
+from vendor.tensorflow.models.research.slim.preprocessing import preprocessing_factory
+
+from agents.dagger.net import MOBILENET_V2_SLIM_NAME
 
 slim = tf.contrib.slim
 
@@ -109,7 +123,7 @@ def main(_):
         ######################
         # Select the network #
         ######################
-        if FLAGS.model_name == 'mobilenet_v2_deepdrive':
+        if FLAGS.model_name == MOBILENET_V2_SLIM_NAME:
             network_fn = nets_factory.get_network_fn(
                 FLAGS.model_name,
                 num_classes=None,
@@ -140,7 +154,7 @@ def main(_):
             shuffle=False,
             common_queue_capacity=2 * FLAGS.batch_size,
             common_queue_min=FLAGS.batch_size)
-        if FLAGS.model_name == 'mobilenet_v2_deepdrive':
+        if FLAGS.model_name == MOBILENET_V2_SLIM_NAME:
             [image, spin, direction, speed, speed_change, steering, throttle] = provider.get(
                 ['image', 'spin', 'direction', 'speed', 'speed_change', 'steering', 'throttle'])
 
@@ -177,7 +191,7 @@ def main(_):
         else:
             variables_to_restore = slim.get_variables_to_restore()
 
-        if FLAGS.model_name == 'mobilenet_v2_deepdrive':
+        if FLAGS.model_name == MOBILENET_V2_SLIM_NAME:
             # targets = tf.Print(targets, [targets[0][0], logits[0][0]], 'epxpected and actual spin ')
             # targets = tf.Print(targets, [targets[0][1], logits[0][1]], 'epxpected and actual direction ')
             # targets = tf.Print(targets, [targets[0][2], logits[0][2]], 'epxpected and actual speed ')
@@ -234,7 +248,7 @@ def main(_):
             # This ensures that we make a single pass over all of the data.
             num_batches = math.ceil(dataset.num_samples / float(FLAGS.batch_size))
 
-        if FLAGS.model_name == 'mobilenet_v2_deepdrive':
+        if FLAGS.model_name == MOBILENET_V2_SLIM_NAME:
             if not FLAGS.checkpoint_path:
                 FLAGS.checkpoint_path = max(glob.glob(DEEPDRIVE_TRAIN_PARENT_DIR + '/*'), key=os.path.getmtime)
 
