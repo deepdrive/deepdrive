@@ -78,6 +78,12 @@ Grab the [dataset](#dataset)
 python main.py --train --recording-dir <the-directory-with-the-dataset>
 ```
 
+**Change cameras** to one of the rigs in `camera_config.py`. See camera_config.py for more.
+
+```
+python main.py --camera-rigs="three_cam_rig"
+```
+
 ### Key binds 
 
 * <kbd>Esc</kbd> - Pause
