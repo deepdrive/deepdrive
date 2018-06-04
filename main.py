@@ -90,7 +90,7 @@ def main():
         episode_count = 1
         gym_env = None
         try:
-            gym_env = deepdrive.start(args.experiment_name, args.env_id, fps=args.fps)
+            gym_env = deepdrive.start(args.experiment_name, args.env_id, fps=args.fps, cameras=camera_rigs[0])
             log.info('Path follower drive mode')
             for episode in range(episode_count):
                 if done:

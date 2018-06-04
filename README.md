@@ -76,6 +76,11 @@ Grab the [dataset](#dataset)
 python main.py --train --recording-dir <the-directory-with-the-dataset>
 ```
 
+**Train** bootstrapped ppo continuous actions
+```
+python main.py --agent bootstrapped_ppo2  --experiment bootstrap --train
+```
+
 ### Key binds 
 
 * <kbd>Esc</kbd> - Pause (Quit in Unreal Editor)
