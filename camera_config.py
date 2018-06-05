@@ -3,7 +3,9 @@ import config
 
 log = logs.get_log(__name__)
 
-# First dimension is rotated through at the end of the episode. Second dimension is for separate cameras on the car.
+# Rigs are two dimensional arrays where...
+# cameras in the first dimension are rotated through at the end of the episode during recording and...
+# cameras in the second dimension create multiple simultaneously rendering views from the vehicle.
 rigs = {
     'baseline_rigs': [
         [config.DEFAULT_CAM],

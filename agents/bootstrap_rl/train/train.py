@@ -25,7 +25,7 @@ class BootstrapRLGymEnv(gym.Wrapper):
         self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
                                             high=np.finfo(np.float32).max,
                                             # shape=(c.ALEXNET_FC7 + c.NUM_TARGETS,),
-                                            shape=(dagger_agent.net.num_last_hidden,),
+                                            shape=(dagger_agent.net.num_last_hidden + dagger_agent.net.num_targets,),
                                             dtype=np.float32)
 
     def step(self, action):
@@ -34,7 +34,7 @@ class BootstrapRLGymEnv(gym.Wrapper):
         if net_out is None:
             obz = None
         else:
-            obz = np.concatenate((net_out[0][0], net_out[1][0]))
+            obz = np.concatenate((np.squeeze(net_out[0]), np.squeeze(net_out[1])))
         return obz, reward, done, info
 
     def reset(self):

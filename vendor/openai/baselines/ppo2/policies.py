@@ -217,7 +217,7 @@ class MlpPolicy(object):
             return a, v, self.initial_state, neglogp
 
         def value(ob, *_args, **_kwargs):
-            return sess.run(vf, {X:ob})
+            return sess.run(vf, {X: ob})
 
         self.X = X
         self.pi = pi

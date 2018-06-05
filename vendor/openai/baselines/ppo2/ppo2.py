@@ -70,10 +70,12 @@ class Model(object):
         self.loss_names = ['policy_loss', 'value_loss', 'policy_entropy', 'approxkl', 'clipfrac']
 
         def save(save_path):
+            print('saving model to %s' % save_path)
             ps = sess.run(params)
             joblib.dump(ps, save_path)
 
         def load(load_path):
+            print('loading weights from %s' % load_path)
             loaded_params = joblib.load(load_path)
             restores = []
             for p, loaded_p in zip(params, loaded_params):
@@ -117,7 +119,6 @@ class Runner(object):
             mb_values.append(values)
             mb_neglogpacs.append(neglogpacs)
             mb_dones.append(self.dones)
-
 
             self.obs[:], rewards, self.dones, infos = self.env.step(actions)
 
@@ -259,6 +260,7 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
             for (lossval, lossname) in zip(lossvals, model.loss_names):
                 logger.logkv(lossname, lossval)
             logger.dumpkvs()
+            # input('continue?')
         if save_interval and (update % save_interval == 0 or update == 1) and logger.get_dir():
             checkdir = osp.join(logger.get_dir(), 'checkpoints')
             os.makedirs(checkdir, exist_ok=True)

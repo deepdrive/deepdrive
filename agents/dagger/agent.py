@@ -268,7 +268,7 @@ class Agent(object):
         else:
             out_var = self.net.out
         if self.output_last_hidden:
-            out_var = [out_var, self.net.fc7]
+            out_var = [out_var, self.net.last_hidden]
 
         image = image.reshape(1, *self.net.input_image_shape)
         net_out = self.sess.run(out_var, feed_dict={

@@ -24,7 +24,7 @@ def train(env, num_timesteps, seed, sess=None, is_discrete=True):
         tf.Session(config=config).__enter__()
 
     env = DummyVecEnv(envs=[env])
-    env = VecNormalize(env)
+    env = VecNormalize(env, ob=False)
 
     set_global_seeds(seed)
     if 'LSTM_FLAT' in os.environ:
@@ -47,7 +47,7 @@ def train(env, num_timesteps, seed, sess=None, is_discrete=True):
                noptepochs=3,
                log_interval=1,
                ent_coef=0.0,
-               lr=lambda f: f * 2.5e-4,
+               lr=lambda f: f * 2.5e-8,
                cliprange=lambda f: f * 0.1,
                total_timesteps=num_timesteps)
 

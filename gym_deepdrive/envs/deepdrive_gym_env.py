@@ -77,8 +77,13 @@ class Action(object):
         has_control = True
         if len(action) > 4:
             has_control = action[4][0]
+        handbrake = action[3][0]
+        if handbrake < 0:
+            handbrake = 0
+        else:
+            handbrake = 1
         ret = cls(steering=action[0][0], throttle=action[1][0],
-                  brake=action[2][0], handbrake=action[3][0], has_control=has_control)
+                  brake=action[2][0], handbrake=handbrake, has_control=has_control)
         return ret
 
 
@@ -352,17 +357,9 @@ class DeepDriveEnv(gym.Env):
         else:
             dd_action = Action.from_gym(action)
 
-        if self.is_sync:
-            sync_start = time.time()
-            seq_number = deepdrive_client.advance_synchronous_stepping(self.client_id, self.sync_step_time,
-                                                                       dd_action.steering, dd_action.throttle,
-                                                                       dd_action.brake, dd_action.handbrake)
-            log.debug('sync step took %fs',  time.time() - sync_start)
-
-        else:
-            send_control_start = time.time()
-            self.send_control(dd_action)
-            log.debug('send_control took %fs', time.time() - send_control_start)
+        send_control_start = time.time()
+        self.send_control(dd_action)
+        log.debug('send_control took %fs', time.time() - send_control_start)
 
         obz = self.get_observation()
         if obz and 'is_game_driving' in obz:
@@ -740,8 +737,16 @@ class DeepDriveEnv(gym.Env):
     def send_control(self, action):
         if self.has_control != action.has_control:
             self.change_has_control(action.has_control)
-        deepdrive_client.set_control_values(self.client_id, steering=action.steering, throttle=action.throttle,
-                                            brake=action.brake, handbrake=action.handbrake)
+
+        if self.is_sync:
+            sync_start = time.time()
+            seq_number = deepdrive_client.advance_synchronous_stepping(self.client_id, self.sync_step_time,
+                                                                       action.steering, action.throttle,
+                                                                       action.brake, action.handbrake)
+            log.debug('sync step took %fs',  time.time() - sync_start)
+        else:
+            deepdrive_client.set_control_values(self.client_id, steering=action.steering, throttle=action.throttle,
+                                                brake=action.brake, handbrake=action.handbrake)
 
     def set_step_mode(self):
         if self.is_sync:
