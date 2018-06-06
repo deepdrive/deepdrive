@@ -76,7 +76,10 @@ class Action(object):
     def from_gym(cls, action):
         has_control = True
         if len(action) > 4:
-            has_control = action[4][0]
+            if isinstance(action[4], list):
+                has_control = action[4][0]
+            else:
+                has_control = action[4]
         handbrake = action[3][0]
         if handbrake < 0:
             handbrake = 0
@@ -184,16 +187,16 @@ class DeepDriveEnv(gym.Env):
         self.cameras = None
         self.use_sim_start_command = None
         self.connection_props = None
-        self.one_frame_render = False
-        self.pyglet_render = False
+        self.should_render = None  # type: bool
+        self.pyglet_render = False  # type: bool
         self.pyglet_image = None
         self.pyglet_process = None
         self.pyglet_queue = None
-        self.ep_time_balance_coeff = 10
-        self.previous_action_time = None
-        self.fps = None
-        self.period = None
-        self.experiment = None
+        self.ep_time_balance_coeff = 10.  # type: float
+        self.previous_action_time = None  # type: time.time
+        self.fps = None  # type: int
+        self.period = None  # type: float
+        self.experiment = None  # type: str
         self.urgency = None  # type: Urgency
 
         if not c.REUSE_OPEN_SIM:
@@ -386,6 +389,9 @@ class DeepDriveEnv(gym.Env):
 
         self.regulate_fps()
 
+        if self.should_render:
+            self.render()
+
         return obz, reward, done, info
 
     def regulate_fps(self):
@@ -394,8 +400,10 @@ class DeepDriveEnv(gym.Env):
             delta = now - self.previous_action_time
             if delta < self.period:
                 time.sleep(delta)
+                self.sync_step_time = self.period
             else:
                 fps = 1. / delta
+                self.sync_step_time = self.period / 2
                 if self.step_num > 5 and fps < self.fps / 2:
                     log.warning('Step %r took %rs - target is %rs', self.step_num, delta, 1 / self.fps)
         self.previous_action_time = now
@@ -664,12 +672,12 @@ class DeepDriveEnv(gym.Env):
     def render(self, mode='human', close=False):
 
         # TODO: Implement proper render - this is really only good for one frame - Could use our OpenGLUT viewer (on raw images) for this or PyGame on preprocessed images
-        if self.prev_observation is not None:
-            if self.one_frame_render:
+        if self.should_render and self.prev_observation is not None:
+            if self.pyglet_render and pyglet is not None and self.pyglet_queue is not None:
+                self.pyglet_queue.put(self.prev_observation['cameras'])
+            else:
                 for camera in self.prev_observation['cameras']:
                     utils.show_camera(camera['image'], camera['depth'])
-            elif self.pyglet_render and pyglet is not None and self.pyglet_queue is not None:
-                self.pyglet_queue.put(self.prev_observation['cameras'])
 
     def seed(self, seed=None):
         self.np_random = seeding.np_random(seed)
@@ -754,7 +762,7 @@ class DeepDriveEnv(gym.Env):
             if ret != 1:
                 raise RuntimeError('Could not activate synchronous mode - errno %r' % ret)
 
-    def connect(self, cameras=None, render=False):
+    def connect(self, cameras=None):
         def _connect():
             try:
                 self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
@@ -809,7 +817,8 @@ class DeepDriveEnv(gym.Env):
             self._init_observation_space()
         else:
             self.raise_connect_fail()
-        if render:
+
+        if self.pyglet_render:
             self.init_pyglet(cameras)
 
         self._perform_first_step()

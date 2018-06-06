@@ -34,6 +34,10 @@ class BootstrapRLGymEnv(gym.Wrapper):
         if net_out is None:
             obz = None
         else:
+            est_min_action = -1.5e-8
+            est_max_action = 1.5e-8
+            actions = np.squeeze(net_out[0]) / (est_max_action - est_min_action) * 2  # scale to -1 - 1
+
             obz = np.concatenate((np.squeeze(net_out[0]), np.squeeze(net_out[1])))
         return obz, reward, done, info
 
@@ -42,8 +46,8 @@ class BootstrapRLGymEnv(gym.Wrapper):
 
 
 def run(env_id, bootstrap_net_path,
-        resume_dir=None, experiment=None, cameras=None, render=False, fps=c.DEFAULT_FPS,
-        should_record=False, is_discrete=False, agent_name=MOBILENET_V2_NAME):
+        resume_dir=None, experiment=None, camera_rigs=None, render=False, fps=c.DEFAULT_FPS,
+        should_record=False, is_discrete=False, agent_name=MOBILENET_V2_NAME, is_sync=True):
     tf_config = tf.ConfigProto(
         allow_soft_placement=True,
         intra_op_parallelism_threads=1,
@@ -58,8 +62,8 @@ def run(env_id, bootstrap_net_path,
 
     sess = tf.Session(config=tf_config)
     with sess.as_default():
-        dagger_gym_env = deepdrive.start(experiment, env_id, cameras=cameras, render=render, fps=fps,
-                                         combine_box_action_spaces=True, is_sync=True, sync_step_time=0.125)
+        dagger_gym_env = deepdrive.start(experiment, env_id, cameras=camera_rigs, render=render, fps=fps,
+                                         combine_box_action_spaces=True, is_sync=is_sync)
 
         dagger_agent = Agent(dagger_gym_env.action_space, sess, env=dagger_gym_env.env,
                              should_record_recovery_from_random_actions=False, should_record=should_record,

@@ -319,7 +319,7 @@ class Agent(object):
 def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
         should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS,
-        net_name=net.ALEXNET_NAME, urgency=Urgency.NORMAL):
+        net_name=net.ALEXNET_NAME, urgency=Urgency.NORMAL, is_sync=False):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
     reward = 0
@@ -350,7 +350,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
     gym_env = deepdrive.start(experiment, env_id, should_benchmark=should_benchmark, cameras=cameras,
                               use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
-                              urgency=urgency)
+                              urgency=urgency, is_sync=is_sync)
     dd_env = gym_env.env
 
     agent = Agent(gym_env.action_space, sess, env=gym_env.env,
@@ -383,8 +383,6 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                 obz, reward, episode_done, _ = gym_env.step(action)
                 log.debug('env step took %fs', time.time() - env_step_start)
 
-                if render:
-                    gym_env.render()
                 if should_record_recovery_from_random_actions:
                     agent.set_random_action_repeat_count()
                 if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:

@@ -31,6 +31,8 @@ def main():
                                                                                     'environment data from')
     parser.add_argument('--render', action='store_true', default=False,
                         help='SLOW: render of camera data in Python - Use Unreal for real time camera rendering')
+    parser.add_argument('--sync', action='store_true', default=False,
+                        help='Use synchronous stepping mode where the simulation advances only when calling step')
     parser.add_argument('--record-recovery-from-random-actions', action='store_true', default=False,
                         help='Whether to occasionally perform random actions and record recovery from them')
     parser.add_argument('--path-follower', action='store_true', default=False,
@@ -99,7 +101,8 @@ def main():
             if not net_path:
                 log.info('Bootstrapping from baseline agent')
                 net_path = ensure_baseline_weights(args.net_path)
-            train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent)
+            train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent,
+                      render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync)
         else:
             raise Exception('Agent type not recognized')
     elif args.path_follower:
@@ -138,7 +141,7 @@ def main():
                   should_record=args.record, net_path=args.net_path, env_id=args.env_id,
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
                   should_record_recovery_from_random_actions=args.record_recovery_from_random_actions,
-                  path_follower=args.path_follower, fps=args.fps, net_name=args.net_type,
+                  path_follower=args.path_follower, fps=args.fps, net_name=args.net_type, is_sync=args.sync,
                   urgency=Urgency[args.urgency.upper()])
 
 
