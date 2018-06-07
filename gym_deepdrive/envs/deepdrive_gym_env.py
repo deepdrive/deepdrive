@@ -81,7 +81,7 @@ class Action(object):
             else:
                 has_control = action[4]
         handbrake = action[3][0]
-        if handbrake < 0:
+        if handbrake <= 0:
             handbrake = 0
         else:
             handbrake = 1

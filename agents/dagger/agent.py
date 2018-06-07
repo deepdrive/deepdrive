@@ -153,7 +153,7 @@ class Agent(object):
             #     desired_throttle = 0.2 * self.previous_action.throttle + 0.7 * desired_throttle
             # else:
             # desired_throttle = desired_throttle * 0.95
-
+            # desired_throttle = 0.4
         else:
             # AlexNet
 
