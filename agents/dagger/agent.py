@@ -325,9 +325,17 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
     reward = 0
     episode_done = False
     max_episodes = 1000
+
+    # The following will work with 4GB vram
+    if net_name == net.ALEXNET_NAME:
+        per_process_gpu_memory_fraction = 0.8
+    else:
+        per_process_gpu_memory_fraction = 0.4
+
+
     tf_config = tf.ConfigProto(
         gpu_options=tf.GPUOptions(
-            per_process_gpu_memory_fraction=0.8,
+            per_process_gpu_memory_fraction=per_process_gpu_memory_fraction,
             # leave room for the game,
             # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
             allow_growth=True

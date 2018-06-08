@@ -1,6 +1,8 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import math
+
 from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
                              int, map, next, oct, open, pow, range, round,
                              str, super, zip)
@@ -81,7 +83,7 @@ class Action(object):
             else:
                 has_control = action[4]
         handbrake = action[3][0]
-        if handbrake <= 0:
+        if handbrake <= 0 or math.isnan(handbrake):
             handbrake = 0
         else:
             handbrake = 1

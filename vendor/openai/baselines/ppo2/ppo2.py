@@ -11,6 +11,8 @@ from vendor.openai.baselines import logger
 
 from vendor.openai.baselines.common.math_util import explained_variance
 
+TF_VAR_SCOPE = 'ppo2model'
+
 
 class Model(object):
     def __init__(self, *, policy, ob_space, ac_space, nbatch_act, nbatch_train,
@@ -43,7 +45,7 @@ class Model(object):
         approxkl = .5 * tf.reduce_mean(tf.square(neglogpac - OLDNEGLOGPAC))
         clipfrac = tf.reduce_mean(tf.to_float(tf.greater(tf.abs(ratio - 1.0), CLIPRANGE)))
         loss = pg_loss - entropy * ent_coef + vf_loss * vf_coef
-        with tf.variable_scope('model'):
+        with tf.variable_scope(TF_VAR_SCOPE):
             params = tf.trainable_variables()
         grads = tf.gradients(loss, params)
         if max_grad_norm is not None:

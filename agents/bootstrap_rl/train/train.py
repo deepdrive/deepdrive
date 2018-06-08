@@ -53,26 +53,35 @@ def run(env_id, bootstrap_net_path,
         intra_op_parallelism_threads=1,
         inter_op_parallelism_threads=1,
         gpu_options=tf.GPUOptions(
-            per_process_gpu_memory_fraction=0.8,
+            per_process_gpu_memory_fraction=0.4,
             # leave room for the game,
             # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
             allow_growth=True
         ),
     )
 
-    sess = tf.Session(config=tf_config)
-    with sess.as_default():
-        dagger_gym_env = deepdrive.start(experiment, env_id, cameras=camera_rigs, render=render, fps=fps,
-                                         combine_box_action_spaces=True, is_sync=is_sync)
+    g_1 = tf.Graph()
+    with g_1.as_default():
+        sess_1 = tf.Session(config=tf_config)
 
-        dagger_agent = Agent(dagger_gym_env.action_space, sess, env=dagger_gym_env.env,
-                             should_record_recovery_from_random_actions=False, should_record=should_record,
-                             net_path=bootstrap_net_path, output_last_hidden=True, net_name=MOBILENET_V2_NAME)
+        with sess_1.as_default():
+            dagger_gym_env = deepdrive.start(experiment, env_id, cameras=camera_rigs, render=render, fps=fps,
+                                             combine_box_action_spaces=True, is_sync=is_sync)
 
-        # Wrap step so we get the pretrained layer activations rather than pixels for our observation
-        bootstrap_gym_env = BootstrapRLGymEnv(dagger_gym_env, dagger_agent)
+            dagger_agent = Agent(dagger_gym_env.action_space, sess_1, env=dagger_gym_env.env,
+                                 should_record_recovery_from_random_actions=False, should_record=should_record,
+                                 net_path=bootstrap_net_path, output_last_hidden=True, net_name=MOBILENET_V2_NAME)
 
-        train(bootstrap_gym_env, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess, is_discrete=is_discrete)
+    g_2 = tf.Graph()
+    with g_2.as_default():
+        sess_2 = tf.Session(config=tf_config)
+
+        with sess_2.as_default():
+
+            # Wrap step so we get the pretrained layer activations rather than pixels for our observation
+            bootstrap_gym_env = BootstrapRLGymEnv(dagger_gym_env, dagger_agent)
+
+            train(bootstrap_gym_env, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess_2, is_discrete=is_discrete)
     #
     # action = deepdrive.action()
     # while not done:

@@ -4,6 +4,7 @@ from vendor.openai.baselines.common.distributions import make_pdtype
 from gym import spaces
 
 from vendor.openai.baselines.a2c.utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch, lstm, lnlstm
+from vendor.openai.baselines.ppo2.ppo2 import TF_VAR_SCOPE
 
 
 def nature_cnn(unscaled_images):
@@ -27,7 +28,7 @@ class LnLstmPolicy(object):
         X = tf.placeholder(tf.uint8, ob_shape) #obs
         M = tf.placeholder(tf.float32, [nbatch]) #mask (done t-1)
         S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
-        with tf.variable_scope("model", reuse=reuse):
+        with tf.variable_scope(TF_VAR_SCOPE, reuse=reuse):
             h = nature_cnn(X)
             xs = batch_to_seq(h, nenv, nsteps)
             ms = batch_to_seq(M, nenv, nsteps)
@@ -69,7 +70,7 @@ class LstmPolicy(object):
         X = tf.placeholder(tf.uint8, ob_shape) #obs
         M = tf.placeholder(tf.float32, [nbatch]) #mask (done t-1)
         S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
-        with tf.variable_scope("model", reuse=reuse):
+        with tf.variable_scope(TF_VAR_SCOPE, reuse=reuse):
             h = nature_cnn(X)
             xs = batch_to_seq(h, nenv, nsteps)
             ms = batch_to_seq(M, nenv, nsteps)
@@ -113,7 +114,7 @@ class LstmPolicyFlat(object):
         X = tf.placeholder(tf.uint8, ob_shape) #obs
         M = tf.placeholder(tf.float32, [nbatch]) #mask (done t-1)
         S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
-        with tf.variable_scope("model", reuse=reuse):
+        with tf.variable_scope(TF_VAR_SCOPE, reuse=reuse):
             h = tf.cast(X, tf.float32)
             xs = batch_to_seq(h, nenv, nsteps)
             ms = batch_to_seq(M, nenv, nsteps)
@@ -161,7 +162,7 @@ class CnnPolicy(object):
         ob_shape = (nbatch, nh, nw, nc)
         nact = ac_space.n
         X = tf.placeholder(tf.uint8, ob_shape) #obs
-        with tf.variable_scope("model", reuse=reuse):
+        with tf.variable_scope(TF_VAR_SCOPE, reuse=reuse):
             h = nature_cnn(X)
             pi = fc(h, 'pi', nact, init_scale=0.01)
             vf = fc(h, 'v', 1)[:,0]
@@ -192,7 +193,7 @@ class MlpPolicy(object):
         ob_shape = (nbatch,) + ob_space.shape
         actdim = ac_space.shape[0]
         X = tf.placeholder(tf.float32, ob_shape, name='Ob') #obs
-        with tf.variable_scope("model", reuse=reuse):
+        with tf.variable_scope(TF_VAR_SCOPE, reuse=reuse):
             activ = tf.tanh
             h1 = activ(fc(X, 'pi_fc1', nh=64, init_scale=np.sqrt(2)))
             h2 = activ(fc(h1, 'pi_fc2', nh=64, init_scale=np.sqrt(2)))

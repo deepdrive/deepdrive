@@ -43,6 +43,9 @@ def visualize_gradients(grads_and_vars):
 
 def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=False, eval_only=False, tf_debug=False,
         freeze_pretrained=False):
+
+    # TODO: Don't use generic word like 'model' here that other projects often use.
+    # Need to rename/retrain saved models tho...
     with tf.variable_scope("model"):
         global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.zeros_initializer, trainable=False)
     agent_net = get_agent_net(agent_name, global_step, eval_only=eval_only, freeze_pretrained=freeze_pretrained)
