@@ -18,3 +18,4 @@ pyzmq
 enum34
 gputil
 joblib
+cloudpickle

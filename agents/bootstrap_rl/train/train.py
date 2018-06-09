@@ -77,7 +77,7 @@ def run(env_id, bootstrap_net_path,
             # Wrap step so we get the pretrained layer activations rather than pixels for our observation
             bootstrap_gym_env = BootstrapRLGymEnv(dagger_gym_env, dagger_agent)
 
-            train(bootstrap_gym_env, num_timesteps=int(10e6), seed=c.RNG_SEED, sess=sess_2, is_discrete=is_discrete)
+            train(bootstrap_gym_env, num_timesteps=int(18e3), seed=c.RNG_SEED, sess=sess_2, is_discrete=is_discrete)
     #
     # action = deepdrive.action()
     # while not done:

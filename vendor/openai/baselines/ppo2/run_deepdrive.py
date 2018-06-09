@@ -17,6 +17,8 @@ def train(env, num_timesteps, seed, sess=None, is_discrete=True):
     from vendor.openai.baselines.common.vec_env.dummy_vec_env import DummyVecEnv
     ncpu = 1
 
+    logger.configure()
+
     if sess is None:
         config = tf.ConfigProto(allow_soft_placement=True,
                                 intra_op_parallelism_threads=ncpu,
@@ -47,6 +49,7 @@ def train(env, num_timesteps, seed, sess=None, is_discrete=True):
                nminibatches=1,  # Sweet spot is between 16 and 64 for continuous mountain car @55fps
                lam=0.95,
                gamma=0.99,
+               save_interval=1,
                noptepochs=3,
                log_interval=1,
                ent_coef=0.0,
