@@ -1,3 +1,4 @@
+import math
 import os
 import os.path as osp
 import time
@@ -57,6 +58,9 @@ class Model(object):
         def train(lr, cliprange, obs, returns, masks, actions, values, neglogpacs, states=None):
             advs = returns - values
             advs = (advs - advs.mean()) / (advs.std() + 1e-8)
+            for _adv in advs:
+                if math.isnan(_adv):
+                    print('huh oh nan time')
             td_map = {train_model.X:obs, A:actions, ADV:advs, R:returns, LR:lr,
                     CLIPRANGE:cliprange, OLDNEGLOGPAC:neglogpacs, OLDVPRED:values}
             if states is not None:

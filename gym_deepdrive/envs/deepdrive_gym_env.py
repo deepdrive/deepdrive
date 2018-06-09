@@ -754,7 +754,8 @@ class DeepDriveEnv(gym.Env):
             self.change_has_control(action.has_control)
 
         if action.handbrake:
-            log.warn('Not expecting any handbraking right now! What\'s happening?!')
+            log.warn('Not expecting any handbraking right now! What\'s happening?! Disabling - hack :D')
+            action.handbrake = False
 
         if self.is_sync:
             sync_start = time.time()

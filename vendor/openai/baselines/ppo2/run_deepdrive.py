@@ -24,7 +24,8 @@ def train(env, num_timesteps, seed, sess=None, is_discrete=True):
         tf.Session(config=config).__enter__()
 
     env = DummyVecEnv(envs=[env])
-    env = VecNormalize(env, ob=False)
+    # env = VecNormalize(env, ob=False)
+    env = VecNormalize(env)
 
     set_global_seeds(seed)
     if 'LSTM_FLAT' in os.environ:
@@ -38,6 +39,8 @@ def train(env, num_timesteps, seed, sess=None, is_discrete=True):
 
     # TODO: Stack 8 (1 second) input frames as is done for atari environments
 
+    # TODO: Simplify by just outputting right, left, straight discrete actions, no bootstrap, Enduro setup. manual throttle - reward center of lane only
+
     ppo2.learn(policy=policy,
                env=env,
                nsteps=40,
@@ -47,7 +50,7 @@ def train(env, num_timesteps, seed, sess=None, is_discrete=True):
                noptepochs=3,
                log_interval=1,
                ent_coef=0.0,
-               lr=lambda f: f * 2.5e-8,
+               lr=lambda f: f * 2.5e-4,
                cliprange=lambda f: f * 0.1,
                total_timesteps=num_timesteps)
 

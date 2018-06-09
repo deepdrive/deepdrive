@@ -194,7 +194,9 @@ class MlpPolicy(object):
         actdim = ac_space.shape[0]
         X = tf.placeholder(tf.float32, ob_shape, name='Ob') #obs
         with tf.variable_scope(TF_VAR_SCOPE, reuse=reuse):
-            activ = tf.tanh
+            # activ = tf.tanh  # Diverges even at super low learning rates
+            activ = tf.nn.relu
+            # activ = tf.nn.leaky_relu  # Diverges
             h1 = activ(fc(X, 'pi_fc1', nh=64, init_scale=np.sqrt(2)))
             h2 = activ(fc(h1, 'pi_fc2', nh=64, init_scale=np.sqrt(2)))
             pi = fc(h2, 'pi', actdim, init_scale=0.01)
@@ -209,7 +211,9 @@ class MlpPolicy(object):
         self.pdtype = make_pdtype(ac_space)
         self.pd = self.pdtype.pdfromflat(pdparam)
 
-        a0 = self.pd.sample()
+        a0 = tf.tanh(self.pd.sample())  # For deepdrive we expect outputs to be between -1 and 1
+        # a0 = self.pd.sample()
+
         neglogp0 = self.pd.neglogp(a0)
         self.initial_state = None
 

@@ -34,10 +34,6 @@ class BootstrapRLGymEnv(gym.Wrapper):
         if net_out is None:
             obz = None
         else:
-            est_min_action = -1.5e-8
-            est_max_action = 1.5e-8
-            actions = np.squeeze(net_out[0]) / (est_max_action - est_min_action) * 2  # scale to -1 - 1
-
             obz = np.concatenate((np.squeeze(net_out[0]), np.squeeze(net_out[1])))
         return obz, reward, done, info
 

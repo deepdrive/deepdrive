@@ -15,11 +15,7 @@ class CombineBoxSpaceWrapper(gym.Wrapper):
                     raise NotImplementedError('Multi-dimensional box spaces not yet supported - need to flatten / separate')
                 else:
                     total_dims += 1
-
-                def denormalizer(x):
-                    ret = ((x + 1) * (space.high[0] - space.low[0]) / 2 + space.low[0])
-                    return ret
-                self.denormalizers.append(denormalizer)
+                self.denormalizers.append(self.get_denormalizer(space.high[0], space.low[0]))
             self.action_space = gym.spaces.Box(-1, 1, shape=(total_dims,))
 
     def step(self, action):
@@ -32,3 +28,10 @@ class CombineBoxSpaceWrapper(gym.Wrapper):
 
     def reset(self):
         return self.env.reset()
+
+    @staticmethod
+    def get_denormalizer(high, low):
+        def denormalizer(x):
+            ret = (x + 1) * (high - low) / 2 + low
+            return ret
+        return denormalizer
