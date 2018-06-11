@@ -11,7 +11,7 @@ import deepdrive
 import logs
 from agents.dagger import net
 from agents.dagger.agent import ensure_baseline_weights
-from gym_deepdrive.envs.deepdrive_gym_env import Urgency
+from gym_deepdrive.envs.deepdrive_gym_env import DrivingStyle
 
 
 def main():
@@ -47,9 +47,9 @@ def main():
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
     parser.add_argument('--net-type', nargs='?', default=net.ALEXNET_NAME,
                         help='Your model type - i.e. AlexNet or MobileNetV2')
-    parser.add_argument('--urgency', nargs='?', default=Urgency.NORMAL.name.lower(),
+    parser.add_argument('--driving-style', nargs='?', default=DrivingStyle.NORMAL.name.lower(),
                         help='Speed vs comfort prioritization, i.e. ' +
-                             ', '.join([level.name.lower() for level in Urgency]))
+                             ', '.join([level.name.lower() for level in DrivingStyle]))
     parser.add_argument('--resume-train', nargs='?', default=None,
                         help='Name of the tensorflow training session you want to resume within %s, '
                              'i.e. 2018-01-01__11-11-11AM_train' % c.TENSORFLOW_OUT_DIR)
@@ -80,6 +80,8 @@ def main():
         else:
             args.net_path = get_latest_model()
 
+    driving_style = DrivingStyle[args.driving_style.upper()]
+
     if args.train:
         # TODO: Add experiment name here as well, and integrate it into Tensorflow runs, recording names, model checkpoints, etc...
         if args.agent == 'dagger' or args.agent == 'dagger_mobilenet_v2':
@@ -102,7 +104,7 @@ def main():
                 log.info('Bootstrapping from baseline agent')
                 net_path = ensure_baseline_weights(args.net_path)
             train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent,
-                      render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync)
+                      render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync, driving_style=driving_style)
         else:
             raise Exception('Agent type not recognized')
     elif args.path_follower:
@@ -112,7 +114,7 @@ def main():
         gym_env = None
         try:
             gym_env = deepdrive.start(args.experiment_name, args.env_id, fps=args.fps,
-                                      urgency=Urgency[args.urgency.upper()])
+                                      driving_style=driving_style)
             log.info('Path follower drive mode')
             for episode in range(episode_count):
                 if done:
@@ -142,7 +144,7 @@ def main():
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
                   should_record_recovery_from_random_actions=args.record_recovery_from_random_actions,
                   path_follower=args.path_follower, fps=args.fps, net_name=args.net_type, is_sync=args.sync,
-                  urgency=Urgency[args.urgency.upper()])
+                  driving_style=driving_style)
 
 
 def get_latest_model():

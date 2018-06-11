@@ -189,7 +189,9 @@ class CnnPolicy(object):
 
 
 class MlpPolicy(object):
-    def __init__(self, sess, ob_space, ac_space, nbatch, nsteps, reuse=False): #pylint: disable=W0613
+
+    def __init__(self, sess, ob_space, ac_space, nbatch, nsteps, reuse=False, **kwargs): #pylint: disable=W0613
+        self.width = kwargs['mlp_width']
         ob_shape = (nbatch,) + ob_space.shape
         actdim = ac_space.shape[0]
         X = tf.placeholder(tf.float32, ob_shape, name='Ob') #obs
@@ -197,28 +199,37 @@ class MlpPolicy(object):
             # activ = tf.tanh  # Diverges even at super low learning rates
             activ = tf.nn.relu
             # activ = tf.nn.leaky_relu  # Diverges
-            h1 = activ(fc(X, 'pi_fc1', nh=64, init_scale=np.sqrt(2)))
-            h2 = activ(fc(h1, 'pi_fc2', nh=64, init_scale=np.sqrt(2)))
-            pi = fc(h2, 'pi', actdim, init_scale=0.01)
-            h1 = activ(fc(X, 'vf_fc1', nh=64, init_scale=np.sqrt(2)))
-            h2 = activ(fc(h1, 'vf_fc2', nh=64, init_scale=np.sqrt(2)))
-            vf = fc(h2, 'vf', 1)[:,0]
+            p_h1 = activ(fc(X, 'pi_fc1', nh=self.width, init_scale=np.sqrt(2)))
+            p_h2 = activ(fc(p_h1, 'pi_fc2', nh=self.width, init_scale=np.sqrt(2)))
+            pi = fc(p_h2, 'pi', actdim, init_scale=0.01)
+            v_h1 = activ(fc(X, 'vf_fc1', nh=self.width, init_scale=np.sqrt(2)))
+            v_h2 = activ(fc(v_h1, 'vf_fc2', nh=self.width, init_scale=np.sqrt(2)))
+            vf = fc(v_h2, 'vf', 1)[:, 0]
             logstd = tf.get_variable(name="logstd", shape=[1, actdim],
-                initializer=tf.zeros_initializer())
+                                     initializer=tf.zeros_initializer())
 
         pdparam = tf.concat([pi, pi * 0.0 + logstd], axis=1)
 
         self.pdtype = make_pdtype(ac_space)
         self.pd = self.pdtype.pdfromflat(pdparam)
 
-        a0 = tf.tanh(self.pd.sample())  # For deepdrive we expect outputs to be between -1 and 1
-        # a0 = self.pd.sample()
+
+        # One idea to benefit from SL learned actions would be to average the SL action with the one drawn here, where
+        # the weight of the SL action decays over time.
+        # That way you are still optimizing with respect to the parameters, but there is a nudge towards taking the
+        # correct action which helps narrow down the exploration space. As you decay the SL weight, you offer a chance
+        # to learn actions better than SL. This needs to be balanced with decaying other hyperparams like lr, etc... tho.
+        a0 = self.pd.sample()
 
         neglogp0 = self.pd.neglogp(a0)
         self.initial_state = None
 
         def step(ob, *_args, **_kwargs):
             a, v, neglogp = sess.run([a0, vf, neglogp0], {X:ob})
+
+            # For deepdrive we expect outputs to be between -1 and 1 - let's just max out actions for now
+            # a = np.tanh(a)
+
             return a, v, self.initial_state, neglogp
 
         def value(ob, *_args, **_kwargs):

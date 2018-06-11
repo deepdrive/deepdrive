@@ -44,6 +44,7 @@ from dashboard import dashboard_fn, DashboardPub
 
 log = logs.get_log(__name__)
 SPEED_LIMIT_KPH = 64.
+HEAD_START_TIME = 0
 
 
 class Score(object):
@@ -62,12 +63,29 @@ class Score(object):
 
 
 class Action(object):
+    STEERING_INDEX = 0
+    THROTTLE_INDEX = 1
+    BRAKE_INDEX = 2
+    HANDBRAKE_INDEX = 3
+    HAS_CONTROL_INDEX = 4
+
+    STEERING_MIN, STEERING_MAX = -1, 1
+    THROTTLE_MIN, THROTTLE_MAX = -1, 1
+    BRAKE_MIN, BRAKE_MAX = 0, 1
+    HANDBRAKE_MIN, HANDBRAKE_MAX = 0, 1
+
     def __init__(self, steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
         self.steering = steering
         self.throttle = throttle
         self.brake = brake
         self.handbrake = handbrake
         self.has_control = has_control
+
+    def clip(self):
+        self.steering  = min(max(self.steering,  self.STEERING_MIN),  self.STEERING_MAX)
+        self.throttle  = min(max(self.throttle,  self.THROTTLE_MIN),  self.THROTTLE_MAX)
+        self.brake     = min(max(self.brake,     self.BRAKE_MIN),     self.BRAKE_MAX)
+        self.handbrake = min(max(self.handbrake, self.HANDBRAKE_MIN), self.HANDBRAKE_MAX)
 
     def as_gym(self):
         ret = gym_action(steering=self.steering, throttle=self.throttle, brake=self.brake,
@@ -81,14 +99,16 @@ class Action(object):
             if isinstance(action[4], list):
                 has_control = action[4][0]
             else:
-                has_control = action[4]
-        handbrake = action[3][0]
+                has_control = action[cls.HANDBRAKE_INDEX]
+        handbrake = action[cls.HANDBRAKE_INDEX][0]
         if handbrake <= 0 or math.isnan(handbrake):
             handbrake = 0
         else:
             handbrake = 1
-        ret = cls(steering=action[0][0], throttle=action[1][0],
-                  brake=action[2][0], handbrake=handbrake, has_control=has_control)
+        ret = cls(steering=action[cls.STEERING_INDEX][0],
+                  throttle=action[cls.THROTTLE_INDEX][0],
+                  brake=action[cls.BRAKE_INDEX][0],
+                  handbrake=handbrake, has_control=has_control)
         return ret
 
 
@@ -134,14 +154,15 @@ class RewardWeighting(object):
                + speed
 
 
-class Urgency(Enum):
+class DrivingStyle(Enum):
     __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'
     # TODO: Possibly assign function rather than just weights
-    CRUISING  = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
-    NORMAL    = RewardWeighting(speed=1.0, progress=0.0, gforce=1.00, lane_deviation=1.00, total_time=0.0)
-    LATE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0)
-    EMERGENCY = RewardWeighting(speed=2.0, progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0)
-    CHASE     = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
+    CRUISING   = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
+    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=1.00, lane_deviation=1.00, total_time=0.0)
+    LATE       = RewardWeighting(speed=2.0, progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0)
+    EMERGENCY  = RewardWeighting(speed=2.0, progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0)
+    CHASE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
+    STEER_ONLY = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
 
 
 default_cam = Camera(**c.DEFAULT_CAM)  # TODO: Switch camera dicts to this object
@@ -199,7 +220,7 @@ class DeepDriveEnv(gym.Env):
         self.fps = None  # type: int
         self.period = None  # type: float
         self.experiment = None  # type: str
-        self.urgency = None  # type: Urgency
+        self.driving_style = None  # type: DrivingStyle
 
         if not c.REUSE_OPEN_SIM:
             if utils.get_sim_bin_path() is None:
@@ -445,7 +466,7 @@ class DeepDriveEnv(gym.Env):
 
             self.score.episode_time += (step_time or 0)
 
-            if self.score.episode_time < 2.5:
+            if self.score.episode_time < HEAD_START_TIME:
                 # Give time to get on track after spawn
                 reward = 0
             else:
@@ -478,7 +499,7 @@ class DeepDriveEnv(gym.Env):
             lane_deviation_penalty = DeepDriveRewardCalculator.get_lane_deviation_penalty(
                 obz['distance_to_center_of_lane'], time_passed)
 
-        lane_deviation_penalty *= self.urgency.value.lane_deviation_weight
+        lane_deviation_penalty *= self.driving_style.value.lane_deviation_weight
         self.score.lane_deviation_penalty += lane_deviation_penalty
 
         self.display_stats['lane deviation penalty']['value'] = -lane_deviation_penalty
@@ -495,7 +516,7 @@ class DeepDriveEnv(gym.Env):
                 self.display_stats['g-forces']['total'] = gforces
                 gforce_penalty = DeepDriveRewardCalculator.get_gforce_penalty(gforces, time_passed)
 
-        gforce_penalty *= self.urgency.value.gforce_weight
+        gforce_penalty *= self.driving_style.value.gforce_weight
         self.score.gforce_penalty += gforce_penalty
 
         self.display_stats['gforce penalty']['value'] = -self.score.gforce_penalty
@@ -510,8 +531,8 @@ class DeepDriveEnv(gym.Env):
             self.distance_along_route = dist
             progress_reward, speed_reward = DeepDriveRewardCalculator.get_progress_reward(progress, time_passed)
 
-        progress_reward *= self.urgency.value.progress_weight
-        speed_reward *= self.urgency.value.speed_weight
+        progress_reward *= self.driving_style.value.progress_weight
+        speed_reward *= self.driving_style.value.speed_weight
 
         self.score.progress_reward += progress_reward
         self.score.speed_reward += speed_reward
@@ -527,12 +548,12 @@ class DeepDriveEnv(gym.Env):
 
     def get_time_penalty(self, _obz, time_passed):
         time_penalty = time_passed or 0
-        time_penalty *= self.urgency.value.time_weight
+        time_penalty *= self.driving_style.value.time_weight
         self.score.time_penalty += time_penalty
         return time_penalty
 
     def combine_rewards(self, progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty, speed):
-        return self.urgency.value.combine(progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty, speed)
+        return self.driving_style.value.combine(progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty, speed)
 
     def is_stuck(self, obz):
         start_is_stuck = time.time()
@@ -550,7 +571,7 @@ class DeepDriveEnv(gym.Env):
                 self.steps_crawling_with_throttle_on += 1
             time_crawling = time.time() - self.last_forward_progress_time
             portion_crawling = self.steps_crawling_with_throttle_on / max(1, self.steps_crawling)
-            if self.steps_crawling_with_throttle_on > 20 and time_crawling > 10 and portion_crawling > 0.8:
+            if self.steps_crawling_with_throttle_on > 20 and time_crawling > 2 and portion_crawling > 0.8:
                 log.warn('No progress made while throttle on - assuming stuck and ending episode. steps crawling: %r, '
                          'steps crawling with throttle on: %r, time crawling: %r',
                          self.steps_crawling, self.steps_crawling_with_throttle_on, time_crawling)
@@ -757,6 +778,8 @@ class DeepDriveEnv(gym.Env):
             log.warn('Not expecting any handbraking right now! What\'s happening?! Disabling - hack :D')
             action.handbrake = False
 
+        action.clip()
+
         if self.is_sync:
             sync_start = time.time()
             seq_number = deepdrive_client.advance_synchronous_stepping(self.client_id, self.sync_step_time,
@@ -907,10 +930,11 @@ class DeepDriveEnv(gym.Env):
             # I think what we need to do here is normalize the brake and handbrake space to be between -1 and 1 so
             # that all actions have the same dimension - Then create a single box space. The is_game_driving space
             # can be ignored for now within the ppo agent.
-            steering_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
-            throttle_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
-            brake_space = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
-            handbrake_space = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
+            steering_space = spaces.Box(low=Action.STEERING_MIN, high=Action.STEERING_MAX, shape=(1,), dtype=np.float32)
+            throttle_space = spaces.Box(low=Action.THROTTLE_MIN, high=Action.THROTTLE_MAX, shape=(1,), dtype=np.float32)
+            brake_space = spaces.Box(low=Action.BRAKE_MIN, high=Action.BRAKE_MAX, shape=(1,), dtype=np.float32)
+            handbrake_space = spaces.Box(low=Action.HANDBRAKE_MIN, high=Action.HANDBRAKE_MAX, shape=(1,),
+                                         dtype=np.float32)
             is_game_driving_space = spaces.Discrete(2)
             action_space = spaces.Tuple(
                 (steering_space, throttle_space, brake_space, handbrake_space, is_game_driving_space))

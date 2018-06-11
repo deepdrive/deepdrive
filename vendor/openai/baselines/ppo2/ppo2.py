@@ -8,6 +8,9 @@ import joblib
 import numpy as np
 # noinspection PyPackageRequirements
 import tensorflow as tf
+
+from agents.common import get_throttle
+from gym_deepdrive.envs.deepdrive_gym_env import Action
 from vendor.openai.baselines import logger
 
 from vendor.openai.baselines.common.math_util import explained_variance
@@ -17,11 +20,11 @@ TF_VAR_SCOPE = 'ppo2model'
 
 class Model(object):
     def __init__(self, *, policy, ob_space, ac_space, nbatch_act, nbatch_train,
-                nsteps, ent_coef, vf_coef, max_grad_norm):
+                nsteps, ent_coef, vf_coef, max_grad_norm, **kwargs):
         sess = tf.get_default_session()
 
-        act_model = policy(sess, ob_space, ac_space, nbatch_act, 1, reuse=False)
-        train_model = policy(sess, ob_space, ac_space, nbatch_train, nsteps, reuse=True)
+        act_model = policy(sess, ob_space, ac_space, nbatch_act, 1, reuse=False, **kwargs)
+        train_model = policy(sess, ob_space, ac_space, nbatch_train, nsteps, reuse=True, **kwargs)
 
         A = train_model.pdtype.sample_placeholder([None])
         ADV = tf.placeholder(tf.float32, [None])
@@ -158,6 +161,14 @@ class Runner(object):
         # TODO(py27): Python versions < 3.5 do not support starred expressions in tuples, lists, and sets
         return (*map(sf01, (mb_obs, mb_returns, mb_dones, mb_actions, mb_values, mb_neglogpacs)),
             mb_states, epinfos)
+
+    def process_actions(self, actions):
+        action = Action.from_gym(actions)
+        action.throttle = get_throttle(actual_speed=self.obs['speed'], target_speed=(8 * 100))
+        actions = action.as_gym()
+        return actions
+
+
 # obs, returns, masks, actions, values, neglogpacs, states = runner.run()
 
 
@@ -178,7 +189,10 @@ def constfn(val):
 def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
             vf_coef=0.5,  max_grad_norm=0.5, gamma=0.99, lam=0.95,
             log_interval=10, nminibatches=4, noptepochs=4, cliprange=0.2,
-            save_interval=0):
+            save_interval=0, **kwargs):
+
+
+
 
     if isinstance(lr, float): lr = constfn(lr)
     else: assert callable(lr)
@@ -200,7 +214,7 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
 
     make_model = lambda : Model(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=nenvs, nbatch_train=nbatch_train,
                     nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef,
-                    max_grad_norm=max_grad_norm)
+                    max_grad_norm=max_grad_norm, **kwargs)
     if save_interval and logger.get_dir():
         import cloudpickle
         with open(osp.join(logger.get_dir(), 'make_model.pkl'), 'wb') as fh:
