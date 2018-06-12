@@ -16,7 +16,7 @@ log = logs.get_log(__name__)
 def start(experiment_name=None, env='Deepdrive-v0', sess=None, start_dashboard=True, should_benchmark=True,
           cameras=None, use_sim_start_command=False, render=False, fps=c.DEFAULT_FPS, combine_box_action_spaces=False,
           is_discrete=False, preprocess_with_tensorflow=False, is_sync=False,
-          driving_style=DrivingStyle.NORMAL):
+          driving_style=DrivingStyle.NORMAL, reset_returns_zero=True):
     env = gym.make(env)
     env.seed(c.RNG_SEED)
 
@@ -29,6 +29,7 @@ def start(experiment_name=None, env='Deepdrive-v0', sess=None, start_dashboard=T
     raw_env.is_discrete = is_discrete
     raw_env.preprocess_with_tensorflow = preprocess_with_tensorflow
     raw_env.is_sync = is_sync
+    raw_env.reset_returns_zero = reset_returns_zero
     raw_env.init_action_space()
     raw_env.fps = fps
     raw_env.experiment = experiment_name.replace(' ', '_')

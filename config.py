@@ -121,3 +121,7 @@ DEFAULT_CAM = dict(name='forward cam 227x227 60 FOV', field_of_view=60, capture_
                    relative_rotation=[0.0, 0.0, 0.0])
 
 DEFAULT_FPS = 8
+
+
+# Experimental stuff - not worth passing as main.py args yet, but better for reproducing to put here than in os.environ
+SIMPLE_PPO = False

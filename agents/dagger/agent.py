@@ -357,7 +357,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
     gym_env = deepdrive.start(experiment, env_id, should_benchmark=should_benchmark, cameras=cameras,
                               use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
-                              driving_style=driving_style, is_sync=is_sync)
+                              driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False)
     dd_env = gym_env.env
 
     agent = Agent(gym_env.action_space, sess, env=gym_env.env,

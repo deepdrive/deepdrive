@@ -60,7 +60,8 @@ class Model(object):
 
         def train(lr, cliprange, obs, returns, masks, actions, values, neglogpacs, states=None):
             advs = returns - values
-            advs = (advs - advs.mean()) / (advs.std() + 1e-8)
+            if len(advs) > 1:
+                advs = (advs - advs.mean()) / (advs.std() + 1e-8)
             for _adv in advs:
                 if math.isnan(_adv):
                     print('huh oh nan time')
@@ -69,12 +70,11 @@ class Model(object):
             if states is not None:
                 td_map[train_model.S] = states
                 td_map[train_model.M] = masks
-            print('Running graph')
+            print('running backprop')
             ret = sess.run(
                 [pg_loss, vf_loss, entropy, approxkl, clipfrac, _train],
                 td_map
             )[:-1]
-            print('Done running graph')
             return ret
         self.loss_names = ['policy_loss', 'value_loss', 'policy_entropy', 'approxkl', 'clipfrac']
 

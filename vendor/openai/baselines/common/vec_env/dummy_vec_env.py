@@ -26,8 +26,10 @@ class DummyVecEnv(VecEnv):
             obs_tuple, self.buf_rews[i], self.buf_dones[i], self.buf_infos[i] = self.envs[i].step(self.actions[i])
             if self.buf_dones[i]:
                 obs_tuple = self.envs[i].reset()
+            if obs_tuple is None:
+                obs_tuple = 0.
             if isinstance(obs_tuple, (tuple, list)):
-                for t,x in enumerate(obs_tuple):
+                for t, x in enumerate(obs_tuple):
                     self.buf_obs[t][i] = x
             else:
                 self.buf_obs[0][i] = obs_tuple

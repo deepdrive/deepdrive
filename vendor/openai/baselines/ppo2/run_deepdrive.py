@@ -2,12 +2,14 @@
 
 import os
 
+import config as c
+
 from vendor.openai.baselines import bench, logger
 
 from vendor.openai.baselines.common.cmd_util import continuous_mountain_car_arg_parser
 
 
-def train(env, seed, sess=None, is_discrete=True, minibatch_steps=80, mlp_width=64):
+def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_width=None):
     from vendor.openai.baselines.common.misc_util import set_global_seeds
     from vendor.openai.baselines.common.vec_env.vec_normalize import VecNormalize
     from vendor.openai.baselines.ppo2 import ppo2
@@ -26,8 +28,11 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=80, mlp_width=
         tf.Session(config=config).__enter__()
 
     env = DummyVecEnv(envs=[env])
-    # env = VecNormalize(env, ob=False)
-    env = VecNormalize(env)
+
+    if c.SIMPLE_PPO:
+        env = VecNormalize(env, ob=False)
+    else:
+        env = VecNormalize(env)
 
     set_global_seeds(seed)
     if is_discrete:
@@ -51,7 +56,7 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=80, mlp_width=
                noptepochs=3,
                log_interval=1,
                ent_coef=0.0,
-               lr=lambda f: f * 2.5e-2,
+               lr=lambda f: f * 2.5e-4,
                cliprange=lambda f: f * 0.1,
                total_timesteps=int(1e5),
                mlp_width=mlp_width)

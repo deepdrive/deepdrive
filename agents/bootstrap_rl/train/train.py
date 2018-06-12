@@ -18,6 +18,8 @@ class BootstrapRLGymEnv(gym.Wrapper):
         self.dagger_agent = dagger_agent
         self.previous_obz = None
 
+        self.simple_test = c.SIMPLE_PPO
+
         # One thing we need to do here is to make each action a bi-modal guassian to avoid averaging 50/50 decisions
         # i.e. half the time we veer left, half the time veer right - but on average this is go straight and can run us
         # into an obstacle. right now the DiagGaussianPd is just adding up errors which would not be the right
@@ -25,10 +27,15 @@ class BootstrapRLGymEnv(gym.Wrapper):
         # independent which is not the case (steering at higher speeds causes more acceleration a = v**2/r),
         # so that may be a problem as well.
 
+        if self.simple_test:
+            shape = (5,)
+        else:
+            shape = (dagger_agent.net.num_last_hidden + dagger_agent.net.num_targets,)
+
         self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
                                             high=np.finfo(np.float32).max,
                                             # shape=(c.ALEXNET_FC7 + c.NUM_TARGETS,),
-                                            shape=(dagger_agent.net.num_last_hidden + dagger_agent.net.num_targets,),
+                                            shape=shape,
                                             dtype=np.float32)
 
     def step(self, action):
@@ -37,14 +44,16 @@ class BootstrapRLGymEnv(gym.Wrapper):
             # is not disincentivized by gforce penalty.
             action[Action.THROTTLE_INDEX] = get_throttle(actual_speed=self.previous_obz['speed'],
                                                          target_speed=(8 * 100))
-
         obz, reward, done, info = self.env.step(action)
         self.previous_obz = obz
         action, net_out = self.dagger_agent.act(obz, reward, done)
         if net_out is None:
             obz = None
         else:
-            obz = np.concatenate((np.squeeze(net_out[0]), np.squeeze(net_out[1])))
+            if self.simple_test:
+                obz = np.array([np.squeeze(a) for a in action])
+            else:
+                obz = np.concatenate((np.squeeze(net_out[0]), np.squeeze(net_out[1])))
         return obz, reward, done, info
 
     def reset(self):
@@ -88,7 +97,14 @@ def run(env_id, bootstrap_net_path,
             # Wrap step so we get the pretrained layer activations rather than pixels for our observation
             bootstrap_gym_env = BootstrapRLGymEnv(dagger_gym_env, dagger_agent)
 
-            train(bootstrap_gym_env, seed=c.RNG_SEED, sess=sess_2, is_discrete=is_discrete)
+            if c.SIMPLE_PPO:
+                mlp_width = 5
+                minibatch_steps = 16
+            else:
+                minibatch_steps = 80
+                mlp_width = 64
+            train(bootstrap_gym_env, seed=c.RNG_SEED, sess=sess_2, is_discrete=is_discrete,
+                  minibatch_steps=minibatch_steps, mlp_width=mlp_width)
     #
     # action = deepdrive.action()
     # while not done:

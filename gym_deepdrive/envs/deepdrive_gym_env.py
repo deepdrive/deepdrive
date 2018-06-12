@@ -221,6 +221,9 @@ class DeepDriveEnv(gym.Env):
         self.period = None  # type: float
         self.experiment = None  # type: str
         self.driving_style = None  # type: DrivingStyle
+        self.reset_returns_zero = None  # type: bool
+        self.started_driving_wrong_way_time = None  # type: bool
+        self.previous_distance_along_route = None  # type: bool
 
         if not c.REUSE_OPEN_SIM:
             if utils.get_sim_bin_path() is None:
@@ -403,9 +406,9 @@ class DeepDriveEnv(gym.Env):
             self.dashboard_pub.put(OrderedDict({'display_stats': list(self.display_stats.items()), 'should_stop': False}))
             log.debug('dashboard put took %fs', time.time() - start_dashboard_put)
 
-        if self.is_stuck(obz):  # TODO: derive this from collision, time elapsed, and distance as well
+        if self.is_stuck(obz) or self.driving_wrong_way():  # TODO: derive this from collision, time elapsed, and distance as well
             done = True
-            reward -= -10000  # reward is in scale of meters
+            reward -= 70  # reward is in scale of meters
         info = {}
         self.step_num += 1
         log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
@@ -476,6 +479,10 @@ class DeepDriveEnv(gym.Env):
                 time_penalty = self.get_time_penalty(obz, step_time)
                 reward = self.combine_rewards(progress_reward, gforce_penalty, lane_deviation_penalty,
                                               time_penalty, speed)
+                if self.score.episode_time < 2:
+                    # Speed reward is too big at reset due to small offset between origin and spawn, so clip it to
+                    # avoid incenting resets
+                    reward = min(max(reward, -1), 1)
 
             self.score.total += reward
             self.display_stats['time']['value'] = self.score.episode_time
@@ -528,6 +535,8 @@ class DeepDriveEnv(gym.Env):
         if 'distance_along_route' in obz:
             dist = obz['distance_along_route'] - self.start_distance_along_route
             progress = dist - self.distance_along_route
+            if self.distance_along_route:
+                self.previous_distance_along_route = self.distance_along_route
             self.distance_along_route = dist
             progress_reward, speed_reward = DeepDriveRewardCalculator.get_progress_reward(progress, time_passed)
 
@@ -569,7 +578,7 @@ class DeepDriveEnv(gym.Env):
             self.steps_crawling += 1
             if obz['throttle'] > 0 and obz['brake'] == 0 and obz['handbrake'] == 0:
                 self.steps_crawling_with_throttle_on += 1
-            time_crawling = time.time() - self.last_forward_progress_time
+            time_crawling = time.time() - self.last_not_stuck_time
             portion_crawling = self.steps_crawling_with_throttle_on / max(1, self.steps_crawling)
             if self.steps_crawling_with_throttle_on > 20 and time_crawling > 2 and portion_crawling > 0.8:
                 log.warn('No progress made while throttle on - assuming stuck and ending episode. steps crawling: %r, '
@@ -656,7 +665,7 @@ class DeepDriveEnv(gym.Env):
 
     # noinspection PyAttributeOutsideInit
     def set_forward_progress(self):
-        self.last_forward_progress_time = time.time()
+        self.last_not_stuck_time = time.time()
         self.steps_crawling_with_throttle_on = 0
         self.steps_crawling = 0
 
@@ -669,7 +678,11 @@ class DeepDriveEnv(gym.Env):
         self.prev_step_time = None
         self.score = Score()
         self.start_time = time.time()
+        self.started_driving_wrong_way_time = None
         log.info('Reset complete')
+        if self.reset_returns_zero:
+            # TODO: Always return zero after testing that everything works with dagger agents
+            return 0
 
     def change_viewpoint(self, cameras, use_sim_start_command):
         self.use_sim_start_command = use_sim_start_command
@@ -775,7 +788,7 @@ class DeepDriveEnv(gym.Env):
             self.change_has_control(action.has_control)
 
         if action.handbrake:
-            log.warn('Not expecting any handbraking right now! What\'s happening?! Disabling - hack :D')
+            log.debug('Not expecting any handbraking right now! What\'s happening?! Disabling - hack :D')
             action.handbrake = False
 
         action.clip()
@@ -964,6 +977,23 @@ class DeepDriveEnv(gym.Env):
             self.request_agent_control()
         else:
             self.release_agent_control()
+
+    def driving_wrong_way(self):
+        if None in [self.previous_distance_along_route, self.distance_along_route]:
+            return False
+
+        if self.distance_along_route < self.previous_distance_along_route:
+            now = time.time()
+            s = self.started_driving_wrong_way_time
+            if s is not None:
+                if (now - s) > 2:
+                    return True
+            else:
+                self.started_driving_wrong_way_time = now
+
+        else:
+            self.started_driving_wrong_way_time = None
+        return False
 
 
 class DeepDriveRewardCalculator(object):

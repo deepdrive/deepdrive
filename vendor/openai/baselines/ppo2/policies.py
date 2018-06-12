@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from vendor.openai.baselines.common.distributions import make_pdtype
 from gym import spaces
+import config as c
 
 from vendor.openai.baselines.a2c.utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch, lstm, lnlstm
 from vendor.openai.baselines.ppo2.ppo2 import TF_VAR_SCOPE
@@ -196,8 +197,8 @@ class MlpPolicy(object):
         actdim = ac_space.shape[0]
         X = tf.placeholder(tf.float32, ob_shape, name='Ob') #obs
         with tf.variable_scope(TF_VAR_SCOPE, reuse=reuse):
-            # activ = tf.tanh  # Diverges even at super low learning rates
-            activ = tf.nn.relu
+            activ = tf.tanh  # Diverges even at super low learning rates
+            # activ = tf.nn.relu
             # activ = tf.nn.leaky_relu  # Diverges
             p_h1 = activ(fc(X, 'pi_fc1', nh=self.width, init_scale=np.sqrt(2)))
             p_h2 = activ(fc(p_h1, 'pi_fc2', nh=self.width, init_scale=np.sqrt(2)))
@@ -210,6 +211,7 @@ class MlpPolicy(object):
 
         pdparam = tf.concat([pi, pi * 0.0 + logstd], axis=1)
 
+        self.p_h1 = p_h1
         self.pdtype = make_pdtype(ac_space)
         self.pd = self.pdtype.pdfromflat(pdparam)
 
@@ -225,7 +227,11 @@ class MlpPolicy(object):
         self.initial_state = None
 
         def step(ob, *_args, **_kwargs):
-            a, v, neglogp = sess.run([a0, vf, neglogp0], {X:ob})
+            if c.SIMPLE_PPO:
+                a, v, neglogp, p_w0 = sess.run([a0, vf, neglogp0, self.p_h1], {X:ob})
+                print('pw0', p_w0)
+            else:
+                a, v, neglogp = sess.run([a0, vf, neglogp0], {X: ob})
 
             # For deepdrive we expect outputs to be between -1 and 1 - let's just max out actions for now
             # a = np.tanh(a)
