@@ -1,5 +1,6 @@
 import numpy as np
 import gym
+import gym.spaces
 from . import VecEnv
 
 class DummyVecEnv(VecEnv):

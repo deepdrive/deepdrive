@@ -224,25 +224,24 @@ class MlpPolicy(object):
         a0 = self.pd.sample()
 
         neglogp0 = self.pd.neglogp(a0)
+        action_probs0 = tf.exp(-neglogp0)
+
         self.initial_state = None
 
         def step(ob, *_args, **_kwargs):
-            if c.SIMPLE_PPO:
-                a, v, neglogp, p_w0 = sess.run([a0, vf, neglogp0, self.p_h1], {X:ob})
-                print('pw0', p_w0)
-            else:
-                a, v, neglogp = sess.run([a0, vf, neglogp0], {X: ob})
+            a, v, neglogp, action_probs = sess.run([a0, vf, neglogp0, action_probs0], {X: ob})
 
             # For deepdrive we expect outputs to be between -1 and 1 - let's just max out actions for now
             # a = np.tanh(a)
 
-            return a, v, self.initial_state, neglogp
+            return a, v, self.initial_state, neglogp, action_probs
 
         def value(ob, *_args, **_kwargs):
             return sess.run(vf, {X: ob})
 
         self.X = X
         self.pi = pi
+        self.action_probs0 = action_probs0
         self.vf = vf
         self.step = step
         self.value = value

@@ -1,4 +1,5 @@
 import gym
+import gym.spaces
 
 
 class CombineBoxSpaceWrapper(gym.Wrapper):

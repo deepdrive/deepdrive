@@ -125,3 +125,11 @@ DEFAULT_FPS = 8
 
 # Experimental stuff - not worth passing as main.py args yet, but better for reproducing to put here than in os.environ
 SIMPLE_PPO = False
+
+try:
+    import tensorflow
+except ImportError:
+    TENSORFLOW_AVAILABLE = False
+else:
+    TENSORFLOW_AVAILABLE = True
+

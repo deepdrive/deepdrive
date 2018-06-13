@@ -158,7 +158,7 @@ class DrivingStyle(Enum):
     __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'
     # TODO: Possibly assign function rather than just weights
     CRUISING   = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
-    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=1.00, lane_deviation=1.00, total_time=0.0)
+    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
     LATE       = RewardWeighting(speed=2.0, progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0)
     EMERGENCY  = RewardWeighting(speed=2.0, progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0)
     CHASE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
@@ -268,6 +268,13 @@ class DeepDriveEnv(gym.Env):
         except:
             self.git_diff = None
             log.warning('Could not get git diff for associating benchmark results with code state')
+
+        if c.TENSORFLOW_AVAILABLE:
+            import tensorflow as tf
+            self.tensorboard_writer = tf.summary.FileWriter(
+                os.path.join(c.TENSORFLOW_OUT_DIR, 'env', c.DATE_STR))
+        else:
+            self.tensorboard_writer = None
 
     def open_sim(self):
         self._kill_competing_procs()
@@ -380,6 +387,7 @@ class DeepDriveEnv(gym.Env):
         self.sess = session
 
     def step(self, action):
+        info = {}
         if self.is_discrete:
             steer, throttle, brake = self.discrete_actions.get_components(action)
             dd_action = Action(steering=steer, throttle=throttle, brake=brake)
@@ -397,8 +405,8 @@ class DeepDriveEnv(gym.Env):
         done = False
 
         start_reward_stuff = time.time()
-        reward = self.get_reward(obz, now)
-        done = self.compute_lap_statistics(done, obz)
+        reward, done = self.get_reward(obz, now)
+        done = self.compute_lap_statistics(done, obz) or done
         self.prev_step_time = now
 
         if self.dashboard_pub is not None:
@@ -406,12 +414,11 @@ class DeepDriveEnv(gym.Env):
             self.dashboard_pub.put(OrderedDict({'display_stats': list(self.display_stats.items()), 'should_stop': False}))
             log.debug('dashboard put took %fs', time.time() - start_dashboard_put)
 
-        if self.is_stuck(obz) or self.driving_wrong_way():  # TODO: derive this from collision, time elapsed, and distance as well
-            done = True
-            reward -= 70  # reward is in scale of meters
-        info = {}
         self.step_num += 1
         log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
+
+        if done:
+            info = self.report_score(info)
 
         self.regulate_fps()
 
@@ -419,6 +426,32 @@ class DeepDriveEnv(gym.Env):
             self.render()
 
         return obz, reward, done, info
+
+    def report_score(self, info):
+        self.prev_lap_score = self.score.total
+        info['episode'] = episode_info = {}
+        episode_info['reward'] = self.score.total
+        episode_info['length'] = self.step_num
+        if self.should_benchmark:
+            self.log_benchmark_trial()
+        else:
+            log.info('lap %d complete with score of %f', self.total_laps, self.score.total)
+        if self.tensorboard_writer is not None:
+            import tensorflow as tf
+            summary = tf.Summary()
+            summary.value.add(tag="score/total", simple_value=self.score.total)
+            summary.value.add(tag="score/episode_length", simple_value=self.step_num)
+            summary.value.add(tag="score/episode_time", simple_value=self.score.episode_time)
+            summary.value.add(tag="score/speed_reward", simple_value=self.score.speed_reward)
+
+            summary.value.add(tag="score/lane_deviation_penalty", simple_value=self.score.lane_deviation_penalty)
+            summary.value.add(tag="score/gforce_penalty", simple_value=self.score.gforce_penalty)
+            summary.value.add(tag="score/got_stuck", simple_value=self.score.got_stuck)
+            summary.value.add(tag="score/time_penalty", simple_value=self.score.time_penalty)
+
+            self.tensorboard_writer.add_summary(summary)
+            self.tensorboard_writer.flush()
+        return info
 
     def regulate_fps(self):
         now = time.time()
@@ -441,14 +474,6 @@ class DeepDriveEnv(gym.Env):
         lap_number = obz.get('lap_number')
         if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
             self.total_laps += 1
-            self.prev_lap_score = self.score.total
-            if self.should_benchmark:
-                self.log_benchmark_trial()
-                if len(self.trial_scores) >= 50:
-                    self.done_benchmarking = True
-            else:
-                log.info('lap %d complete with score of %f', self.total_laps, self.score.total)
-
             done = True  # One lap per episode
             self.log_up_time()
         self.lap_number = lap_number
@@ -459,6 +484,7 @@ class DeepDriveEnv(gym.Env):
     def get_reward(self, obz, now):
         start_get_reward = time.time()
         reward = 0
+        done = False
         if obz:
             if self.is_sync:
                 step_time = self.sync_step_time
@@ -479,10 +505,10 @@ class DeepDriveEnv(gym.Env):
                 time_penalty = self.get_time_penalty(obz, step_time)
                 reward = self.combine_rewards(progress_reward, gforce_penalty, lane_deviation_penalty,
                                               time_penalty, speed)
-                if self.score.episode_time < 2:
-                    # Speed reward is too big at reset due to small offset between origin and spawn, so clip it to
-                    # avoid incenting resets
-                    reward = min(max(reward, -1), 1)
+
+            if self.is_stuck(obz) or self.driving_wrong_way():  # TODO: derive this from collision, time elapsed, and distance as well
+                done = True
+                reward -= 1
 
             self.score.total += reward
             self.display_stats['time']['value'] = self.score.episode_time
@@ -495,7 +521,7 @@ class DeepDriveEnv(gym.Env):
 
         log.debug('get reward took %fs', time.time() - start_get_reward)
 
-        return reward
+        return reward, done
 
     def log_up_time(self):
         log.info('up for %r' % arrow.get(time.time()).humanize(other=arrow.get(self.start_time), only_distance=True))
@@ -538,10 +564,16 @@ class DeepDriveEnv(gym.Env):
             if self.distance_along_route:
                 self.previous_distance_along_route = self.distance_along_route
             self.distance_along_route = dist
-            progress_reward, speed_reward = DeepDriveRewardCalculator.get_progress_reward(progress, time_passed)
+            progress_reward, speed_reward = DeepDriveRewardCalculator.get_progress_and_speed_reward(progress, time_passed)
 
         progress_reward *= self.driving_style.value.progress_weight
         speed_reward *= self.driving_style.value.speed_weight
+
+        if self.score.episode_time < 2:
+            # Speed reward is too big at reset due to small offset between origin and spawn, so clip it to
+            # avoid incenting resets
+            speed_reward = min(max(speed_reward, -1), 1)
+            progress_reward = min(max(progress_reward, -1), 1)
 
         self.score.progress_reward += progress_reward
         self.score.speed_reward += speed_reward
@@ -587,7 +619,6 @@ class DeepDriveEnv(gym.Env):
                 self.set_forward_progress()
                 if self.should_benchmark:
                     self.score.got_stuck = True
-                    self.log_benchmark_trial()
                 ret = True
         else:
             self.set_forward_progress()
@@ -1033,7 +1064,7 @@ class DeepDriveRewardCalculator(object):
         return gforce_penalty
 
     @staticmethod
-    def get_progress_reward(progress, time_passed):
+    def get_progress_and_speed_reward(progress, time_passed):
         if not time_passed:
             progress = speed_reward = 0
         else:

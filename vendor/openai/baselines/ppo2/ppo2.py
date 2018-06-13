@@ -103,6 +103,31 @@ class Model(object):
         tf.global_variables_initializer().run(session=sess) #pylint: disable=E1101
 
 
+def mis(action_probs, rewards):
+    """ Mistake importance scaling
+    It seems that taking the log probability in Policy Gradient reverses the amount of learning you would want for
+    negative rewards. i.e. We learn much more from unlikely bad actions, than we do likely ones. Whereas this is what
+    we want for positive rewards - to learn more from unlikely good actions, we would want the opposite for negative
+    rewards - learn more from likely bad actions because our goal is for bad actions and states to be unlikely.
+    I've tested these ideas a bit in baselines and the results seem to be good.
+    Although I'm sort of duct-taping on the idea by scaling negative rewards inversely to their odds to reverse
+    the effect of taking the log. I also notice that DQN, which does not scale the gradient by log likelihood,
+    does better than PG methods on Atari games with mostly negative rewards, i.e. DoubleDunk, ice hockey, and surround,
+    with skiing being an exception to this rule - but the score for skiing is weird."""
+    mis_rewards = []
+    for i, reward in enumerate(rewards):
+        if 'SCALE_ALL_REWARDS' in os.environ:
+            mis_rewards.append(reward * 1.8)  # Works (in pong), but not as well as scaling by odds
+        else:
+            if reward < 0:
+                scale = 1 + action_probs[i] / (1 - action_probs[i])
+                scale = min(scale, 3)
+                mis_rewards.append(reward * scale)
+            else:
+                mis_rewards.append(reward)
+    return mis_rewards
+
+
 class Runner(object):
 
     def __init__(self, *, env, model, nsteps, gamma, lam):
@@ -122,7 +147,8 @@ class Runner(object):
         mb_states = self.states
         epinfos = []
         for _ in range(self.nsteps):
-            actions, values, self.states, neglogpacs = self.model.step(self.obs, self.states, self.dones)
+            actions, values, self.states, neglogpacs, action_probs = self.model.step(self.obs, self.states, self.dones)
+
             mb_obs.append(self.obs.copy())
             mb_actions.append(actions)
             mb_values.append(values)
@@ -131,9 +157,12 @@ class Runner(object):
 
             self.obs[:], rewards, self.dones, infos = self.env.step(actions)
 
+            rewards = mis(action_probs, rewards)
+
             for info in infos:
                 maybe_episode_info = info.get('episode') if info else None
                 if maybe_episode_info: epinfos.append(maybe_episode_info)
+
             mb_rewards.append(rewards)
         #batch of steps to batch of rollouts
         mb_obs = np.asarray(mb_obs, dtype=self.obs.dtype)
@@ -274,8 +303,8 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
             logger.logkv("total_timesteps", update * nbatch)
             logger.logkv("fps", fps)
             logger.logkv("explained_variance", float(ev))
-            logger.logkv('eprewmean', safemean([epinfo['r'] for epinfo in epinfobuf]))
-            logger.logkv('eplenmean', safemean([epinfo['l'] for epinfo in epinfobuf]))
+            logger.logkv('eprewmean', safemean([epinfo['reward'] for epinfo in epinfobuf]))
+            logger.logkv('eplenmean', safemean([epinfo['length'] for epinfo in epinfobuf]))
             logger.logkv('time_elapsed', tnow - tfirststart)
             for (lossval, lossname) in zip(lossvals, model.loss_names):
                 logger.logkv(lossname, lossval)

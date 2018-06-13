@@ -101,7 +101,7 @@ def run(env_id, bootstrap_net_path,
                 mlp_width = 5
                 minibatch_steps = 16
             else:
-                minibatch_steps = 80
+                minibatch_steps = 160
                 mlp_width = 64
             train(bootstrap_gym_env, seed=c.RNG_SEED, sess=sess_2, is_discrete=is_discrete,
                   minibatch_steps=minibatch_steps, mlp_width=mlp_width)

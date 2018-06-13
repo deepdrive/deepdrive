@@ -56,7 +56,7 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_widt
                noptepochs=3,
                log_interval=1,
                ent_coef=0.0,
-               lr=lambda f: f * 2.5e-4,
+               lr=lambda f: f * 2.5e-2,
                cliprange=lambda f: f * 0.1,
                total_timesteps=int(1e5),
                mlp_width=mlp_width)
