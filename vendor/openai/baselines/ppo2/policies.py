@@ -231,8 +231,8 @@ class MlpPolicy(object):
         def step(ob, *_args, **_kwargs):
             a, v, neglogp, action_probs = sess.run([a0, vf, neglogp0, action_probs0], {X: ob})
 
-            # For deepdrive we expect outputs to be between -1 and 1 - let's just max out actions for now
-            # a = np.tanh(a)
+            # For deepdrive we expect outputs to be between -1 and 1
+            # a = np.tanh(a)  # Doesn't work very well, clipping and letting the network learn the valid range is prob better
 
             return a, v, self.initial_state, neglogp, action_probs
 

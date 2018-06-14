@@ -13,6 +13,8 @@ from vendor.openai.baselines.ppo2.run_deepdrive import train
 
 
 class BootstrapRLGymEnv(gym.Wrapper):
+    """Bootstrap is probably a bad name here due to its overloaded use in RL where bootstrapping historically refers
+    to learning with value based or TDD methods."""
     def __init__(self, env, dagger_agent):
         super(BootstrapRLGymEnv, self).__init__(env)
         self.dagger_agent = dagger_agent
@@ -101,7 +103,7 @@ def run(env_id, bootstrap_net_path,
                 mlp_width = 5
                 minibatch_steps = 16
             else:
-                minibatch_steps = 160
+                minibatch_steps = 80
                 mlp_width = 64
             train(bootstrap_gym_env, seed=c.RNG_SEED, sess=sess_2, is_discrete=is_discrete,
                   minibatch_steps=minibatch_steps, mlp_width=mlp_width)

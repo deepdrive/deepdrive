@@ -158,7 +158,7 @@ class DrivingStyle(Enum):
     __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'
     # TODO: Possibly assign function rather than just weights
     CRUISING   = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
-    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
+    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.01, lane_deviation=0.01, total_time=0.0)
     LATE       = RewardWeighting(speed=2.0, progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0)
     EMERGENCY  = RewardWeighting(speed=2.0, progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0)
     CHASE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
@@ -402,7 +402,6 @@ class DeepDriveEnv(gym.Env):
         if obz and 'is_game_driving' in obz:
             self.has_control = not obz['is_game_driving']
         now = time.time()
-        done = False
 
         start_reward_stuff = time.time()
         reward, done = self.get_reward(obz, now)
@@ -508,7 +507,7 @@ class DeepDriveEnv(gym.Env):
 
             if self.is_stuck(obz) or self.driving_wrong_way():  # TODO: derive this from collision, time elapsed, and distance as well
                 done = True
-                reward -= 1
+                reward -= 10
 
             self.score.total += reward
             self.display_stats['time']['value'] = self.score.episode_time
