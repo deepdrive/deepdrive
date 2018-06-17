@@ -55,6 +55,7 @@ class Score(object):
     progress_reward = 0
     speed_reward = 0
     got_stuck = False
+    wrong_way = False
 
     def __init__(self):
         self.start_time = time.time()
@@ -476,6 +477,7 @@ class DeepDriveEnv(gym.Env):
             summary.value.add(tag="score/lane_deviation_penalty", simple_value=self.score.lane_deviation_penalty)
             summary.value.add(tag="score/gforce_penalty", simple_value=self.score.gforce_penalty)
             summary.value.add(tag="score/got_stuck", simple_value=self.score.got_stuck)
+            summary.value.add(tag="score/wrong_way", simple_value=self.score.wrong_way)
             summary.value.add(tag="score/time_penalty", simple_value=self.score.time_penalty)
 
             self.tensorboard_writer.add_summary(summary)
@@ -535,7 +537,10 @@ class DeepDriveEnv(gym.Env):
                 reward = self.combine_rewards(progress_reward, gforce_penalty, lane_deviation_penalty,
                                               time_penalty, speed)
 
-            if self.is_stuck(obz) or self.driving_wrong_way():  # TODO: derive this from collision, time elapsed, and distance as well
+            self.score.wrong_way = self.driving_wrong_way()
+            if self.score.wrong_way:
+                log.warn('Going the wrong way, end of episode')
+            if self.is_stuck(obz) or self.score.wrong_way:  # TODO: Done if collision, or near collision
                 done = True
                 reward -= 10
 
@@ -680,10 +685,11 @@ class DeepDriveEnv(gym.Env):
             for i, score in enumerate(self.trial_scores):
                 if i == 0:
                     writer.writerow(['episode #', 'score', 'speed reward', 'lane deviation penalty',
-                                     'gforce penalty', 'got stuck', 'start', 'end', 'lap time'])
+                                     'gforce penalty', 'got stuck', 'wrong way', 'start', 'end', 'lap time'])
                 writer.writerow([i + 1, score.total,
                                  score.speed_reward, score.lane_deviation_penalty,
-                                 score.gforce_penalty, score.got_stuck, str(arrow.get(score.start_time).to('local')),
+                                 score.gforce_penalty, score.got_stuck, score.wrong_way,
+                                 str(arrow.get(score.start_time).to('local')),
                                  str(arrow.get(score.end_time).to('local')),
                                  score.episode_time])
             writer.writerow([])

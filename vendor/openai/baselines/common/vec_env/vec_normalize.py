@@ -2,6 +2,7 @@ from vendor.openai.baselines.common.vec_env import VecEnvWrapper
 from vendor.openai.baselines.common.running_mean_std import RunningMeanStd
 import numpy as np
 
+
 class VecNormalize(VecEnvWrapper):
     """
     Vectorized environment base class

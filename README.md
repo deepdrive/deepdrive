@@ -64,7 +64,12 @@ python main.py --path-follower --experiment-name my-path-follower-test
 python main.py --record --record-recovery-from-random-actions --path-follower
 ```
 
-**Train** on recorded data
+**Train** MobileNet2 on recorded data
+```
+vendor/tensorflow/models/research/slim/scripts/finetune_mobilenet_v2_on_deepdrive2.sh
+```
+
+**Train** AlexNet on recorded data
 ```
 python main.py --train
 ```

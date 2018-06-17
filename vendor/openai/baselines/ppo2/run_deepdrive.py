@@ -32,7 +32,7 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_widt
     if c.SIMPLE_PPO:
         env = VecNormalize(env, ob=False)
     else:
-        env = VecNormalize(env)
+        env = VecNormalize(env, ob=False)
 
     set_global_seeds(seed)
     if is_discrete:
@@ -52,12 +52,28 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_widt
                nminibatches=1,  # Sweet spot is between 16 and 64 for continuous mountain car @55fps
                lam=0.95,
                gamma=0.99,
-               save_interval=1,
+               save_interval=5,
                noptepochs=3,
                log_interval=1,
                ent_coef=0.0,
                lr=lambda f: f * 2.5e-3,
                cliprange=lambda f: f * 0.1,
-               total_timesteps=int(1e5),
+               total_timesteps=int(2.5e5),
                mlp_width=mlp_width)
+
+    # Long training with lots of epochs
+    # ppo2.learn(policy=policy,
+    #            env=env,
+    #            nsteps=minibatch_steps,
+    #            nminibatches=1,  # Sweet spot is between 16 and 64 for continuous mountain car @55fps
+    #            lam=0.95,
+    #            gamma=0.99,
+    #            save_interval=5,
+    #            noptepochs=30,
+    #            log_interval=1,
+    #            ent_coef=0.0,
+    #            lr=lambda f: f * 2.5e-3,
+    #            cliprange=lambda f: f * 0.1,
+    #            total_timesteps=int(2.5e5),
+    #            mlp_width=mlp_width)
 
