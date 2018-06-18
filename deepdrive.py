@@ -50,7 +50,7 @@ def start(experiment_name=None, env='Deepdrive-v0', sess=None, start_dashboard=T
     if start_dashboard:
         raw_env.start_dashboard()
     if should_benchmark:
-        log.info('Benchmarking enabled - will save results to %s', c.BENCHMARK_DIR)
+        log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
         raw_env.init_benchmarking()
     env.reset()
     return env

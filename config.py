@@ -73,6 +73,7 @@ def _ensure_python_bin_config():
         _dpbf.write(sys.executable)
 
 
+ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 DEEPDRIVE_DIR = os.environ.get('DEEPDRIVE_DIR')
 DEEPDRIVE_CONFIG_DIR = os.path.expanduser('~') + '/.deepdrive'
 os.makedirs(DEEPDRIVE_CONFIG_DIR, exist_ok=True)
@@ -86,7 +87,7 @@ DATE_STR = datetime.now().strftime(DIR_DATE_FORMAT)
 RECORDING_DIR = os.environ.get('DEEPDRIVE_RECORDING_DIR') or os.path.join(DEEPDRIVE_DIR, 'recordings')
 GYM_DIR = os.path.join(DEEPDRIVE_DIR, 'gym')
 LOG_DIR = os.path.join(DEEPDRIVE_DIR, 'log')
-BENCHMARK_DIR = os.path.join(DEEPDRIVE_DIR, 'benchmark')
+RESULTS_DIR = os.path.join(ROOT_DIR, 'results')
 TENSORFLOW_OUT_DIR = os.path.join(DEEPDRIVE_DIR, 'tensorflow')
 WEIGHTS_DIR = os.path.join(DEEPDRIVE_DIR, 'weights')
 
@@ -122,10 +123,6 @@ DEFAULT_CAM = dict(name='forward cam 227x227 60 FOV', field_of_view=60, capture_
 
 DEFAULT_FPS = 8
 
-
-# Experimental stuff - not worth passing as main.py args yet, but better for reproducing to put here than in os.environ
-SIMPLE_PPO = False
-
 try:
     import tensorflow
 except ImportError:
@@ -133,3 +130,8 @@ except ImportError:
 else:
     TENSORFLOW_AVAILABLE = True
 
+
+# Not passing through main.py args yet, but better for reproducing to put here than in os.environ
+SIMPLE_PPO = False
+PPO_RESUME_PATH = '/home/a/baselines_results/openai-2018-06-17-17-48-24-795338/checkpoints/03125'
+TEST_PPO = True

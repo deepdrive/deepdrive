@@ -15,6 +15,8 @@ from vendor.openai.baselines import logger
 
 from vendor.openai.baselines.common.math_util import explained_variance
 
+import config as c
+
 TF_VAR_SCOPE = 'ppo2model'
 
 
@@ -249,6 +251,9 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
         with open(osp.join(logger.get_dir(), 'make_model.pkl'), 'wb') as fh:
             fh.write(cloudpickle.dumps(make_model))
     model = make_model()
+    if c.PPO_RESUME_PATH is not None:
+        model.load(c.PPO_RESUME_PATH)
+
     runner = Runner(env=env, model=model, nsteps=nsteps, gamma=gamma, lam=lam)
 
     epinfobuf = deque(maxlen=100)
@@ -262,7 +267,12 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
         frac = 1.0 - (update - 1.0) / nupdates
         lrnow = lr(frac)
         cliprangenow = cliprange(frac)
+
         obs, returns, masks, actions, values, neglogpacs, states, epinfos = runner.run() #pylint: disable=E0632
+
+        if c.TEST_PPO:
+            continue
+
         epinfobuf.extend(epinfos)
         mblossvals = []
         if states is None: # nonrecurrent version

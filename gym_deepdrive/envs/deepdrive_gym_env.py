@@ -185,11 +185,18 @@ class DrivingStyle(Enum):
     across all the objectives. Perhaps inputting the different components running averages or real-time values to
     a recurrent part of the model would allow it to balance the objectives through SGD rather than the above
     simple linear tweaking.
+
+    (looks like EPG is a nicer formulation of this https://blog.openai.com/evolved-policy-gradients/)
+
+    - After some experimentation, seems like we may not need this yet. Observation normalization was causing the
+    motivating problem by learning too slow. Optimization does find a way. I think distributional RL may be helpful here
+    especially if we can get dimensions for all the compoenents of the reward. Also a novelty bonus on
+    (observation,action) or (game-state,action) would be helpful most likely to avoid local minima.
     """
     __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'
     # TODO: Possibly assign function rather than just weights
     CRUISING   = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
-    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
+    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.10, total_time=0.0)
     LATE       = RewardWeighting(speed=2.0, progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0)
     EMERGENCY  = RewardWeighting(speed=2.0, progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0)
     CHASE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
@@ -251,7 +258,7 @@ class DeepDriveEnv(gym.Env):
         self.fps = None  # type: int
         self.period = None  # type: float
         self.experiment = None  # type: str
-        self.driving_style = None  # type: DrivingStyle
+        self.driving_style = None  # type: DrivingStyle`
         self.reset_returns_zero = None  # type: bool
         self.started_driving_wrong_way_time = None  # type: bool
         self.previous_distance_along_route = None  # type: bool
@@ -395,7 +402,7 @@ class DeepDriveEnv(gym.Env):
 
     def init_benchmarking(self):
         self.should_benchmark = True
-        os.makedirs(c.BENCHMARK_DIR, exist_ok=True)
+        os.makedirs(c.RESULTS_DIR, exist_ok=True)
 
     def init_pyglet(self, cameras):
         q = Queue(maxsize=1)
@@ -672,9 +679,9 @@ class DeepDriveEnv(gym.Env):
         std = np.std(totals)
         log.info('benchmark lap #%d score: %f - average: %f', len(self.trial_scores), self.score.total, average)
         file_prefix = self.experiment + '_' if self.experiment else ''
-        filename = os.path.join(c.BENCHMARK_DIR, '%s%s.csv' % (file_prefix, c.DATE_STR))
+        filename = os.path.join(c.RESULTS_DIR, '%s%s.csv' % (file_prefix, c.DATE_STR))
         diff_filename = '%s%s.diff' % (file_prefix, c.DATE_STR)
-        diff_filepath = os.path.join(c.BENCHMARK_DIR, diff_filename)
+        diff_filepath = os.path.join(c.RESULTS_DIR, diff_filename)
 
         if self.git_diff is not None:
             with open(diff_filepath, 'w') as diff_file:
@@ -866,6 +873,8 @@ class DeepDriveEnv(gym.Env):
                                                                        action.brake, action.handbrake)
             log.debug('sync step took %fs',  time.time() - sync_start)
         else:
+            if c.PPO_RESUME_PATH:
+                action.throttle = action.throttle * 0.90  # OmegaHack to deal with sync vs async
             deepdrive_client.set_control_values(self.client_id, steering=action.steering, throttle=action.throttle,
                                                 brake=action.brake, handbrake=action.handbrake)
 
