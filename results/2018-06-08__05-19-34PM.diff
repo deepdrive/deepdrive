@@ -1,0 +1,126 @@
+diff --git a/agents/bootstrap_rl/train/train.py b/agents/bootstrap_rl/train/train.py
+index 3f1c468..79d02d5 100644
+--- a/agents/bootstrap_rl/train/train.py
++++ b/agents/bootstrap_rl/train/train.py
+@@ -34,9 +34,9 @@ class BootstrapRLGymEnv(gym.Wrapper):
+         if net_out is None:
+             obz = None
+         else:
+-            est_min_action = -1.5e-8
+-            est_max_action = 1.5e-8
+-            actions = np.squeeze(net_out[0]) / (est_max_action - est_min_action) * 2  # scale to -1 - 1
++            # est_min_action = -1.5e-8
++            # est_max_action = 1.5e-8
++            # actions = np.squeeze(net_out[0]) / (est_max_action - est_min_action) * 2  # scale to -1 - 1
+ 
+             obz = np.concatenate((np.squeeze(net_out[0]), np.squeeze(net_out[1])))
+         return obz, reward, done, info
+diff --git a/gym_deepdrive/envs/deepdrive_gym_env.py b/gym_deepdrive/envs/deepdrive_gym_env.py
+index 2ac6f2a..27f2b58 100644
+--- a/gym_deepdrive/envs/deepdrive_gym_env.py
++++ b/gym_deepdrive/envs/deepdrive_gym_env.py
+@@ -754,7 +754,8 @@ class DeepDriveEnv(gym.Env):
+             self.change_has_control(action.has_control)
+ 
+         if action.handbrake:
+-            log.warn('Not expecting any handbraking right now! What\'s happening?!')
++            log.warn('Not expecting any handbraking right now! What\'s happening?! Disabling - hack :D')
++            action.handbrake = False
+ 
+         if self.is_sync:
+             sync_start = time.time()
+diff --git a/vendor/openai/baselines/common/continuous_action_wrapper.py b/vendor/openai/baselines/common/continuous_action_wrapper.py
+index a8a439a..0f2c479 100644
+--- a/vendor/openai/baselines/common/continuous_action_wrapper.py
++++ b/vendor/openai/baselines/common/continuous_action_wrapper.py
+@@ -15,11 +15,7 @@ class CombineBoxSpaceWrapper(gym.Wrapper):
+                     raise NotImplementedError('Multi-dimensional box spaces not yet supported - need to flatten / separate')
+                 else:
+                     total_dims += 1
+-
+-                def denormalizer(x):
+-                    ret = ((x + 1) * (space.high[0] - space.low[0]) / 2 + space.low[0])
+-                    return ret
+-                self.denormalizers.append(denormalizer)
++                self.denormalizers.append(self.get_denormalizer(space.high[0], space.low[0]))
+             self.action_space = gym.spaces.Box(-1, 1, shape=(total_dims,))
+ 
+     def step(self, action):
+@@ -32,3 +28,10 @@ class CombineBoxSpaceWrapper(gym.Wrapper):
+ 
+     def reset(self):
+         return self.env.reset()
++
++    @staticmethod
++    def get_denormalizer(high, low):
++        def denormalizer(x):
++            ret = (x + 1) * (high - low) / 2 + low
++            return ret
++        return denormalizer
+diff --git a/vendor/openai/baselines/ppo2/policies.py b/vendor/openai/baselines/ppo2/policies.py
+index fa8d61c..6f96c86 100644
+--- a/vendor/openai/baselines/ppo2/policies.py
++++ b/vendor/openai/baselines/ppo2/policies.py
+@@ -194,7 +194,9 @@ class MlpPolicy(object):
+         actdim = ac_space.shape[0]
+         X = tf.placeholder(tf.float32, ob_shape, name='Ob') #obs
+         with tf.variable_scope(TF_VAR_SCOPE, reuse=reuse):
+-            activ = tf.tanh
++            # activ = tf.tanh  # Diverges even at super low learning rates
++            activ = tf.nn.relu
++            # activ = tf.nn.leaky_relu  # Diverges
+             h1 = activ(fc(X, 'pi_fc1', nh=64, init_scale=np.sqrt(2)))
+             h2 = activ(fc(h1, 'pi_fc2', nh=64, init_scale=np.sqrt(2)))
+             pi = fc(h2, 'pi', actdim, init_scale=0.01)
+@@ -209,7 +211,9 @@ class MlpPolicy(object):
+         self.pdtype = make_pdtype(ac_space)
+         self.pd = self.pdtype.pdfromflat(pdparam)
+ 
+-        a0 = self.pd.sample()
++        a0 = tf.tanh(self.pd.sample())  # For deepdrive we expect all net outs to be between -1 and 1
++        # a0 = self.pd.sample()
++
+         neglogp0 = self.pd.neglogp(a0)
+         self.initial_state = None
+ 
+diff --git a/vendor/openai/baselines/ppo2/ppo2.py b/vendor/openai/baselines/ppo2/ppo2.py
+index b04b64f..d0d8122 100644
+--- a/vendor/openai/baselines/ppo2/ppo2.py
++++ b/vendor/openai/baselines/ppo2/ppo2.py
+@@ -1,3 +1,4 @@
++import math
+ import os
+ import os.path as osp
+ import time
+@@ -57,6 +58,9 @@ class Model(object):
+         def train(lr, cliprange, obs, returns, masks, actions, values, neglogpacs, states=None):
+             advs = returns - values
+             advs = (advs - advs.mean()) / (advs.std() + 1e-8)
++            for _adv in advs:
++                if math.isnan(_adv):
++                    print('huh oh nan time')
+             td_map = {train_model.X:obs, A:actions, ADV:advs, R:returns, LR:lr,
+                     CLIPRANGE:cliprange, OLDNEGLOGPAC:neglogpacs, OLDVPRED:values}
+             if states is not None:
+diff --git a/vendor/openai/baselines/ppo2/run_deepdrive.py b/vendor/openai/baselines/ppo2/run_deepdrive.py
+index 9022767..aa7728d 100644
+--- a/vendor/openai/baselines/ppo2/run_deepdrive.py
++++ b/vendor/openai/baselines/ppo2/run_deepdrive.py
+@@ -24,7 +24,8 @@ def train(env, num_timesteps, seed, sess=None, is_discrete=True):
+         tf.Session(config=config).__enter__()
+ 
+     env = DummyVecEnv(envs=[env])
+-    env = VecNormalize(env, ob=False)
++    # env = VecNormalize(env, ob=False)
++    env = VecNormalize(env)
+ 
+     set_global_seeds(seed)
+     if 'LSTM_FLAT' in os.environ:
+@@ -47,7 +48,7 @@ def train(env, num_timesteps, seed, sess=None, is_discrete=True):
+                noptepochs=3,
+                log_interval=1,
+                ent_coef=0.0,
+-               lr=lambda f: f * 2.5e-8,
++               lr=lambda f: f * 2.5e-4,
+                cliprange=lambda f: f * 0.1,
+                total_timesteps=num_timesteps)

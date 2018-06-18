@@ -1,0 +1,36 @@
+diff --git a/gym_deepdrive/envs/deepdrive_gym_env.py b/gym_deepdrive/envs/deepdrive_gym_env.py
+index 34fa0a0..a8fa6f5 100644
+--- a/gym_deepdrive/envs/deepdrive_gym_env.py
++++ b/gym_deepdrive/envs/deepdrive_gym_env.py
+@@ -573,10 +573,11 @@ class DeepDriveEnv(gym.Env):
+         log.info('benchmark lap #%d score: %f - average: %f', len(self.trial_scores), self.score.total, average)
+         file_prefix = self.experiment + '_' if self.experiment else ''
+         filename = os.path.join(c.BENCHMARK_DIR, '%s%s.csv' % (file_prefix, c.DATE_STR))
+-        diff_filename = os.path.join(c.BENCHMARK_DIR, '%s%s.diff' % (file_prefix, c.DATE_STR))
++        diff_filename = '%s%s.diff' % (file_prefix, c.DATE_STR)
++        diff_filepath = os.path.join(c.BENCHMARK_DIR, diff_filename)
+ 
+         if self.git_diff is not None:
+-            with open(diff_filename, 'w') as diff_file:
++            with open(diff_filepath, 'w') as diff_file:
+                 diff_file.write(self.git_diff)
+ 
+         with open(filename, 'w', newline='') as csv_file:
+@@ -599,6 +600,7 @@ class DeepDriveEnv(gym.Env):
+             writer.writerow(['env', self.spec.id])
+             writer.writerow(['args', ', '.join(sys.argv[1:])])
+             writer.writerow(['git commit', '@' + self.git_commit])
++            writer.writerow(['git diff', diff_filename])
+             writer.writerow(['experiment name', self.experiment or 'n/a'])
+             writer.writerow(['os', sys.platform])
+             try:
+@@ -746,6 +748,9 @@ class DeepDriveEnv(gym.Env):
+         if self.has_control != action.has_control:
+             self.change_has_control(action.has_control)
+ 
++        if action.handbrake:
++            log.warn('Not expecting any handbraking right now! What\'s happening?!')
++
+         if self.is_sync:
+             sync_start = time.time()
+             seq_number = deepdrive_client.advance_synchronous_stepping(self.client_id, self.sync_step_time,

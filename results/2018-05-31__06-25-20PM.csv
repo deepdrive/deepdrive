@@ -1,0 +1,14 @@
+episode #,score,progress,rate of progress reward,lane deviation penalty,gforce penalty,got stuck,start,end,lap time
+1,802.3224508132495,0.0,1559.7947613733738,624.0532116894303,133.4190988706999,False,2018-05-31T18:25:31.124284-07:00,2018-05-31T18:29:55.105165-07:00,263.98088026046753
+
+median score,802.3224508132495
+avg score,802.3224508132495
+std,0.0
+high score,802.3224508132495
+low score,802.3224508132495
+env,DeepDrive-v0
+args,"['--net-path=/home/a/mnet2_tf/fast/2018-05-22__03-04-53PM/model.ckpt-45466', '--net-type=MobileNetV2']"
+git commit,@1927e94
+experiment name,n/a
+os,linux
+gpus,GeForce GTX 980

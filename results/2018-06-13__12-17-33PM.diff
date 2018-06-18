@@ -1,0 +1,62 @@
+diff --git a/agents/bootstrap_rl/train/train.py b/agents/bootstrap_rl/train/train.py
+index a70a9be..4d4d7b5 100644
+--- a/agents/bootstrap_rl/train/train.py
++++ b/agents/bootstrap_rl/train/train.py
+@@ -101,7 +101,7 @@ def run(env_id, bootstrap_net_path,
+                 mlp_width = 5
+                 minibatch_steps = 16
+             else:
+-                minibatch_steps = 160
++                minibatch_steps = 80
+                 mlp_width = 64
+             train(bootstrap_gym_env, seed=c.RNG_SEED, sess=sess_2, is_discrete=is_discrete,
+                   minibatch_steps=minibatch_steps, mlp_width=mlp_width)
+diff --git a/gym_deepdrive/envs/deepdrive_gym_env.py b/gym_deepdrive/envs/deepdrive_gym_env.py
+index 2ad6e9c..cd28287 100644
+--- a/gym_deepdrive/envs/deepdrive_gym_env.py
++++ b/gym_deepdrive/envs/deepdrive_gym_env.py
+@@ -402,7 +402,6 @@ class DeepDriveEnv(gym.Env):
+         if obz and 'is_game_driving' in obz:
+             self.has_control = not obz['is_game_driving']
+         now = time.time()
+-        done = False
+ 
+         start_reward_stuff = time.time()
+         reward, done = self.get_reward(obz, now)
+@@ -508,7 +507,7 @@ class DeepDriveEnv(gym.Env):
+ 
+             if self.is_stuck(obz) or self.driving_wrong_way():  # TODO: derive this from collision, time elapsed, and distance as well
+                 done = True
+-                reward -= 1
++                reward -= 10
+ 
+             self.score.total += reward
+             self.display_stats['time']['value'] = self.score.episode_time
+diff --git a/vendor/openai/baselines/ppo2/policies.py b/vendor/openai/baselines/ppo2/policies.py
+index 7cb4b69..6150ef9 100644
+--- a/vendor/openai/baselines/ppo2/policies.py
++++ b/vendor/openai/baselines/ppo2/policies.py
+@@ -231,8 +231,8 @@ class MlpPolicy(object):
+         def step(ob, *_args, **_kwargs):
+             a, v, neglogp, action_probs = sess.run([a0, vf, neglogp0, action_probs0], {X: ob})
+ 
+-            # For deepdrive we expect outputs to be between -1 and 1 - let's just max out actions for now
+-            # a = np.tanh(a)
++            # For deepdrive we expect outputs to be between -1 and 1
++            # a = np.tanh(a)  # Doesn't work very well, clipping and letting the network learn the valid range is prob better
+ 
+             return a, v, self.initial_state, neglogp, action_probs
+ 
+diff --git a/vendor/openai/baselines/ppo2/run_deepdrive.py b/vendor/openai/baselines/ppo2/run_deepdrive.py
+index 7173542..2b7e00a 100644
+--- a/vendor/openai/baselines/ppo2/run_deepdrive.py
++++ b/vendor/openai/baselines/ppo2/run_deepdrive.py
+@@ -56,7 +56,7 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_widt
+                noptepochs=3,
+                log_interval=1,
+                ent_coef=0.0,
+-               lr=lambda f: f * 2.5e-2,
++               lr=lambda f: f * 2.5e-3,
+                cliprange=lambda f: f * 0.1,
+                total_timesteps=int(1e5),
+                mlp_width=mlp_width)

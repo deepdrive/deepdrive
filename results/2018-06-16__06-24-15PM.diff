@@ -1,0 +1,99 @@
+diff --git a/README.md b/README.md
+index 897cf1f..0bafc33 100644
+--- a/README.md
++++ b/README.md
+@@ -64,7 +64,12 @@ python main.py --path-follower --experiment-name my-path-follower-test
+ python main.py --record --record-recovery-from-random-actions --path-follower
+ ```
+ 
+-**Train** on recorded data
++**Train** MobileNet2 on recorded data
++```
++vendor/tensorflow/models/research/slim/scripts/finetune_mobilenet_v2_on_deepdrive2.sh
++```
++
++**Train** AlexNet on recorded data
+ ```
+ python main.py --train
+ ```
+diff --git a/gym_deepdrive/envs/deepdrive_gym_env.py b/gym_deepdrive/envs/deepdrive_gym_env.py
+index c972c4c..e875f29 100644
+--- a/gym_deepdrive/envs/deepdrive_gym_env.py
++++ b/gym_deepdrive/envs/deepdrive_gym_env.py
+@@ -55,6 +55,7 @@ class Score(object):
+     progress_reward = 0
+     speed_reward = 0
+     got_stuck = False
++    wrong_way = False
+ 
+     def __init__(self):
+         self.start_time = time.time()
+@@ -476,6 +477,7 @@ class DeepDriveEnv(gym.Env):
+             summary.value.add(tag="score/lane_deviation_penalty", simple_value=self.score.lane_deviation_penalty)
+             summary.value.add(tag="score/gforce_penalty", simple_value=self.score.gforce_penalty)
+             summary.value.add(tag="score/got_stuck", simple_value=self.score.got_stuck)
++            summary.value.add(tag="score/wrong_way", simple_value=self.score.wrong_way)
+             summary.value.add(tag="score/time_penalty", simple_value=self.score.time_penalty)
+ 
+             self.tensorboard_writer.add_summary(summary)
+@@ -535,7 +537,10 @@ class DeepDriveEnv(gym.Env):
+                 reward = self.combine_rewards(progress_reward, gforce_penalty, lane_deviation_penalty,
+                                               time_penalty, speed)
+ 
+-            if self.is_stuck(obz) or self.driving_wrong_way():  # TODO: derive this from collision, time elapsed, and distance as well
++            self.score.wrong_way = self.driving_wrong_way()
++            if self.score.wrong_way:
++                log.warn('Going the wrong way, end of episode')
++            if self.is_stuck(obz) or self.score.wrong_way:  # TODO: Done if collision, or near collision
+                 done = True
+                 reward -= 10
+ 
+@@ -680,10 +685,11 @@ class DeepDriveEnv(gym.Env):
+             for i, score in enumerate(self.trial_scores):
+                 if i == 0:
+                     writer.writerow(['episode #', 'score', 'speed reward', 'lane deviation penalty',
+-                                     'gforce penalty', 'got stuck', 'start', 'end', 'lap time'])
++                                     'gforce penalty', 'got stuck', 'wrong way', 'start', 'end', 'lap time'])
+                 writer.writerow([i + 1, score.total,
+                                  score.speed_reward, score.lane_deviation_penalty,
+-                                 score.gforce_penalty, score.got_stuck, str(arrow.get(score.start_time).to('local')),
++                                 score.gforce_penalty, score.got_stuck, score.wrong_way,
++                                 str(arrow.get(score.start_time).to('local')),
+                                  str(arrow.get(score.end_time).to('local')),
+                                  score.episode_time])
+             writer.writerow([])
+diff --git a/vendor/openai/baselines/ppo2/run_deepdrive.py b/vendor/openai/baselines/ppo2/run_deepdrive.py
+index 2b7e00a..7d77562 100644
+--- a/vendor/openai/baselines/ppo2/run_deepdrive.py
++++ b/vendor/openai/baselines/ppo2/run_deepdrive.py
+@@ -52,8 +52,8 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_widt
+                nminibatches=1,  # Sweet spot is between 16 and 64 for continuous mountain car @55fps
+                lam=0.95,
+                gamma=0.99,
+-               save_interval=1,
+-               noptepochs=3,
++               save_interval=5,
++               noptepochs=30,
+                log_interval=1,
+                ent_coef=0.0,
+                lr=lambda f: f * 2.5e-3,
+@@ -61,3 +61,19 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_widt
+                total_timesteps=int(1e5),
+                mlp_width=mlp_width)
+ 
++    # Long training with lots of epochs
++    # ppo2.learn(policy=policy,
++    #            env=env,
++    #            nsteps=minibatch_steps,
++    #            nminibatches=1,  # Sweet spot is between 16 and 64 for continuous mountain car @55fps
++    #            lam=0.95,
++    #            gamma=0.99,
++    #            save_interval=5,
++    #            noptepochs=30,
++    #            log_interval=1,
++    #            ent_coef=0.0,
++    #            lr=lambda f: f * 2.5e-3,
++    #            cliprange=lambda f: f * 0.1,
++    #            total_timesteps=int(2.5e5),
++    #            mlp_width=mlp_width)
++

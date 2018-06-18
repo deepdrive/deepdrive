@@ -1,0 +1,14 @@
+episode #,score,rate of progress reward,lane deviation penalty,gforce penalty,got stuck,start,end,lap time
+1,209.14089372126156,1763.8866219849986,886.8226793621408,667.9230489015978,False,2018-05-31T18:34:12.311993-07:00,2018-05-31T18:38:07.689957-07:00,235.37796425819397
+
+median score,209.14089372126156
+avg score,209.14089372126156
+std,0.0
+high score,209.14089372126156
+low score,209.14089372126156
+env,DeepDrive-v0
+args,['--baseline']
+git commit,@1927e94
+experiment name,n/a
+os,linux
+gpus,GeForce GTX 980

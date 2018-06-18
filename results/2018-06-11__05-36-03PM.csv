@@ -1,0 +1,15 @@
+episode #,score,speed reward,lane deviation penalty,gforce penalty,got stuck,start,end,lap time
+1,20.220000000000024,20.220000000000024,0.0,0.0,True,2018-06-11T17:36:21.689400-07:00,2018-06-11T17:36:34.105317-07:00,4.875
+
+median score,20.220000000000024
+avg score,20.220000000000024
+std,0.0
+high score,20.220000000000024
+low score,20.220000000000024
+env,Deepdrive-v0
+args,"--agent, bootstrapped_ppo2, --experiment, bootstrap, --train, --net-path=/home/a/mnet2_tf/fast/2018-05-22__03-04-53PM/model.ckpt-45466, --sync, --driving-style, steer_only"
+git commit,@0eefefa
+git diff,2018-06-11__05-36-03PM.diff
+experiment name,n/a
+os,linux
+gpus,GeForce GTX 980

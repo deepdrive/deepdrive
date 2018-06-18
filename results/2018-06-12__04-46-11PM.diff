@@ -1,0 +1,282 @@
+diff --git a/agents/bootstrap_rl/train/train.py b/agents/bootstrap_rl/train/train.py
+index 4d4d7b5..f789584 100644
+--- a/agents/bootstrap_rl/train/train.py
++++ b/agents/bootstrap_rl/train/train.py
+@@ -101,7 +101,7 @@ def run(env_id, bootstrap_net_path,
+                 mlp_width = 5
+                 minibatch_steps = 16
+             else:
+-                minibatch_steps = 80
++                minibatch_steps = 16
+                 mlp_width = 64
+             train(bootstrap_gym_env, seed=c.RNG_SEED, sess=sess_2, is_discrete=is_discrete,
+                   minibatch_steps=minibatch_steps, mlp_width=mlp_width)
+diff --git a/gym_deepdrive/envs/deepdrive_gym_env.py b/gym_deepdrive/envs/deepdrive_gym_env.py
+index 54ca5bd..e356a3e 100644
+--- a/gym_deepdrive/envs/deepdrive_gym_env.py
++++ b/gym_deepdrive/envs/deepdrive_gym_env.py
+@@ -158,7 +158,7 @@ class DrivingStyle(Enum):
+     __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'
+     # TODO: Possibly assign function rather than just weights
+     CRUISING   = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
+-    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=1.00, lane_deviation=1.00, total_time=0.0)
++    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.02, lane_deviation=0.002, total_time=0.0)
+     LATE       = RewardWeighting(speed=2.0, progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0)
+     EMERGENCY  = RewardWeighting(speed=2.0, progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0)
+     CHASE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
+@@ -380,6 +380,7 @@ class DeepDriveEnv(gym.Env):
+         self.sess = session
+ 
+     def step(self, action):
++        info = {}
+         if self.is_discrete:
+             steer, throttle, brake = self.discrete_actions.get_components(action)
+             dd_action = Action(steering=steer, throttle=throttle, brake=brake)
+@@ -397,8 +398,8 @@ class DeepDriveEnv(gym.Env):
+         done = False
+ 
+         start_reward_stuff = time.time()
+-        reward = self.get_reward(obz, now)
+-        done = self.compute_lap_statistics(done, obz)
++        reward, done = self.get_reward(obz, now)
++        done = self.compute_lap_statistics(done, obz) or done
+         self.prev_step_time = now
+ 
+         if self.dashboard_pub is not None:
+@@ -406,13 +407,16 @@ class DeepDriveEnv(gym.Env):
+             self.dashboard_pub.put(OrderedDict({'display_stats': list(self.display_stats.items()), 'should_stop': False}))
+             log.debug('dashboard put took %fs', time.time() - start_dashboard_put)
+ 
+-        if self.is_stuck(obz) or self.driving_wrong_way():  # TODO: derive this from collision, time elapsed, and distance as well
+-            done = True
+-            reward -= 70  # reward is in scale of meters
+-        info = {}
+         self.step_num += 1
+         log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
+ 
++        if done:
++            self.prev_lap_score = self.score.total
++            info['episode'] = episode_info = {}
++            episode_info['reward'] = self.score.total
++            episode_info['episode_length'] = self.step_num
++            self.report_score()
++
+         self.regulate_fps()
+ 
+         if self.should_render:
+@@ -420,6 +424,12 @@ class DeepDriveEnv(gym.Env):
+ 
+         return obz, reward, done, info
+ 
++    def report_score(self):
++        if self.should_benchmark:
++            self.log_benchmark_trial()
++        else:
++            log.info('lap %d complete with score of %f', self.total_laps, self.score.total)
++
+     def regulate_fps(self):
+         now = time.time()
+         if self.previous_action_time:
+@@ -441,14 +451,6 @@ class DeepDriveEnv(gym.Env):
+         lap_number = obz.get('lap_number')
+         if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
+             self.total_laps += 1
+-            self.prev_lap_score = self.score.total
+-            if self.should_benchmark:
+-                self.log_benchmark_trial()
+-                if len(self.trial_scores) >= 50:
+-                    self.done_benchmarking = True
+-            else:
+-                log.info('lap %d complete with score of %f', self.total_laps, self.score.total)
+-
+             done = True  # One lap per episode
+             self.log_up_time()
+         self.lap_number = lap_number
+@@ -459,6 +461,7 @@ class DeepDriveEnv(gym.Env):
+     def get_reward(self, obz, now):
+         start_get_reward = time.time()
+         reward = 0
++        done = False
+         if obz:
+             if self.is_sync:
+                 step_time = self.sync_step_time
+@@ -479,10 +482,10 @@ class DeepDriveEnv(gym.Env):
+                 time_penalty = self.get_time_penalty(obz, step_time)
+                 reward = self.combine_rewards(progress_reward, gforce_penalty, lane_deviation_penalty,
+                                               time_penalty, speed)
+-                if self.score.episode_time < 2:
+-                    # Speed reward is too big at reset due to small offset between origin and spawn, so clip it to
+-                    # avoid incenting resets
+-                    reward = min(max(reward, -1), 1)
++
++            if self.is_stuck(obz) or self.driving_wrong_way():  # TODO: derive this from collision, time elapsed, and distance as well
++                done = True
++                reward -= 70  # reward is in scale of meters
+ 
+             self.score.total += reward
+             self.display_stats['time']['value'] = self.score.episode_time
+@@ -495,7 +498,7 @@ class DeepDriveEnv(gym.Env):
+ 
+         log.debug('get reward took %fs', time.time() - start_get_reward)
+ 
+-        return reward
++        return reward, done
+ 
+     def log_up_time(self):
+         log.info('up for %r' % arrow.get(time.time()).humanize(other=arrow.get(self.start_time), only_distance=True))
+@@ -543,6 +546,12 @@ class DeepDriveEnv(gym.Env):
+         progress_reward *= self.driving_style.value.progress_weight
+         speed_reward *= self.driving_style.value.speed_weight
+ 
++        if self.score.episode_time < 2:
++            # Speed reward is too big at reset due to small offset between origin and spawn, so clip it to
++            # avoid incenting resets
++            speed_reward = min(max(speed_reward, -1), 1)
++            progress_reward = min(max(progress_reward, -1), 1)
++
+         self.score.progress_reward += progress_reward
+         self.score.speed_reward += speed_reward
+ 
+diff --git a/vendor/openai/baselines/a2c/utils.py b/vendor/openai/baselines/a2c/utils.py
+index 146c49a..107d15c 100644
+--- a/vendor/openai/baselines/a2c/utils.py
++++ b/vendor/openai/baselines/a2c/utils.py
+@@ -62,9 +62,9 @@ def fc(x, scope, nh, *, init_scale=1.0, init_bias=0.0):
+     with tf.variable_scope(scope):
+         nin = x.get_shape()[1].value
+         w = tf.get_variable("w", [nin, nh], initializer=ortho_init(init_scale))
+-        w = tf.Print(w, ['w ', scope, w], summarize=100)
++        # w = tf.Print(w, ['w ', scope, w], summarize=100)
+         b = tf.get_variable("b", [nh], initializer=tf.constant_initializer(init_bias))
+-        b = tf.Print(b, ['b ', scope, w], summarize=100)
++        # b = tf.Print(b, ['b ', scope, w], summarize=100)
+ 
+         return tf.matmul(x, w)+b
+ 
+diff --git a/vendor/openai/baselines/common/continuous_action_wrapper.py b/vendor/openai/baselines/common/continuous_action_wrapper.py
+index 0f2c479..de13e6e 100644
+--- a/vendor/openai/baselines/common/continuous_action_wrapper.py
++++ b/vendor/openai/baselines/common/continuous_action_wrapper.py
+@@ -1,4 +1,5 @@
+ import gym
++import gym.spaces
+ 
+ 
+ class CombineBoxSpaceWrapper(gym.Wrapper):
+diff --git a/vendor/openai/baselines/common/vec_env/dummy_vec_env.py b/vendor/openai/baselines/common/vec_env/dummy_vec_env.py
+index 0c5a6c7..8ad512d 100644
+--- a/vendor/openai/baselines/common/vec_env/dummy_vec_env.py
++++ b/vendor/openai/baselines/common/vec_env/dummy_vec_env.py
+@@ -1,5 +1,6 @@
+ import numpy as np
+ import gym
++import gym.spaces
+ from . import VecEnv
+ 
+ class DummyVecEnv(VecEnv):
+diff --git a/vendor/openai/baselines/ppo2/policies.py b/vendor/openai/baselines/ppo2/policies.py
+index 7d96251..7cb4b69 100644
+--- a/vendor/openai/baselines/ppo2/policies.py
++++ b/vendor/openai/baselines/ppo2/policies.py
+@@ -224,25 +224,24 @@ class MlpPolicy(object):
+         a0 = self.pd.sample()
+ 
+         neglogp0 = self.pd.neglogp(a0)
++        action_probs0 = tf.exp(-neglogp0)
++
+         self.initial_state = None
+ 
+         def step(ob, *_args, **_kwargs):
+-            if c.SIMPLE_PPO:
+-                a, v, neglogp, p_w0 = sess.run([a0, vf, neglogp0, self.p_h1], {X:ob})
+-                print('pw0', p_w0)
+-            else:
+-                a, v, neglogp = sess.run([a0, vf, neglogp0], {X: ob})
++            a, v, neglogp, action_probs = sess.run([a0, vf, neglogp0, action_probs0], {X: ob})
+ 
+             # For deepdrive we expect outputs to be between -1 and 1 - let's just max out actions for now
+             # a = np.tanh(a)
+ 
+-            return a, v, self.initial_state, neglogp
++            return a, v, self.initial_state, neglogp, action_probs
+ 
+         def value(ob, *_args, **_kwargs):
+             return sess.run(vf, {X: ob})
+ 
+         self.X = X
+         self.pi = pi
++        self.action_probs0 = action_probs0
+         self.vf = vf
+         self.step = step
+         self.value = value
+diff --git a/vendor/openai/baselines/ppo2/ppo2.py b/vendor/openai/baselines/ppo2/ppo2.py
+index 59beb8c..b9e23f9 100644
+--- a/vendor/openai/baselines/ppo2/ppo2.py
++++ b/vendor/openai/baselines/ppo2/ppo2.py
+@@ -103,6 +103,30 @@ class Model(object):
+         tf.global_variables_initializer().run(session=sess) #pylint: disable=E1101
+ 
+ 
++def mis(action_probs, rewards):
++    """ Mistake importance scaling
++    It seems that taking the log probability in Policy Gradient reverses the amount of learning you would want for
++    negative rewards. i.e. We learn much more from unlikely bad actions, than we do likely ones. Whereas this is what
++    we want for positive rewards - to learn more from unlikely good actions, we would want the opposite for negative
++    rewards - learn more from likely bad actions because our goal is for bad actions and states to be unlikely.
++    I've tested these ideas a bit in baselines and the results seem to be good.
++    Although I'm sort of duct-taping on the idea by scaling negative rewards inversely to their likelihood to reverse
++    the effect of taking the log. I also notice that DQN, which does not do the log likelihood, does better than PG
++    methods on Atari games with mostly negative rewards, i.e. DoubleDunk, ice hockey, and surround,
++    with skiing being an exception to this rule - but the score for skiing is weird."""
++    mis_rewards = []
++    for i, reward in enumerate(rewards):
++        if 'SCALE_ALL_REWARDS' in os.environ:
++            mis_rewards.append(reward * 1.8)  # Works (in pong), but not as well as scaling by odds
++        else:
++            if reward < 0:
++                mis_rewards.append(
++                    reward * (1 + action_probs[i] / (1 - action_probs[i])))
++            else:
++                mis_rewards.append(reward)
++    return mis_rewards
++
++
+ class Runner(object):
+ 
+     def __init__(self, *, env, model, nsteps, gamma, lam):
+@@ -122,7 +146,8 @@ class Runner(object):
+         mb_states = self.states
+         epinfos = []
+         for _ in range(self.nsteps):
+-            actions, values, self.states, neglogpacs = self.model.step(self.obs, self.states, self.dones)
++            actions, values, self.states, neglogpacs, action_probs = self.model.step(self.obs, self.states, self.dones)
++
+             mb_obs.append(self.obs.copy())
+             mb_actions.append(actions)
+             mb_values.append(values)
+@@ -131,10 +156,13 @@ class Runner(object):
+ 
+             self.obs[:], rewards, self.dones, infos = self.env.step(actions)
+ 
++            mis_rewards = mis(action_probs, rewards)
++
+             for info in infos:
+                 maybe_episode_info = info.get('episode') if info else None
+                 if maybe_episode_info: epinfos.append(maybe_episode_info)
+-            mb_rewards.append(rewards)
++
++            mb_rewards.append(mis_rewards)
+         #batch of steps to batch of rollouts
+         mb_obs = np.asarray(mb_obs, dtype=self.obs.dtype)
+         mb_rewards = np.asarray(mb_rewards, dtype=np.float32)
+@@ -274,8 +302,8 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
+             logger.logkv("total_timesteps", update * nbatch)
+             logger.logkv("fps", fps)
+             logger.logkv("explained_variance", float(ev))
+-            logger.logkv('eprewmean', safemean([epinfo['r'] for epinfo in epinfobuf]))
+-            logger.logkv('eplenmean', safemean([epinfo['l'] for epinfo in epinfobuf]))
++            logger.logkv('eprewmean', safemean([epinfo['episode_reward'] for epinfo in epinfobuf]))
++            logger.logkv('eplenmean', safemean([epinfo['episode_length'] for epinfo in epinfobuf]))
+             logger.logkv('time_elapsed', tnow - tfirststart)
+             for (lossval, lossname) in zip(lossvals, model.loss_names):
+                 logger.logkv(lossname, lossval)

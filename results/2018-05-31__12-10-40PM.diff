@@ -1,0 +1,183 @@
+diff --git a/deepdrive.py b/deepdrive.py
+index c9ba161..8000efe 100644
+--- a/deepdrive.py
++++ b/deepdrive.py
+@@ -7,7 +7,7 @@ import config as c
+ import random_name
+ 
+ # noinspection PyUnresolvedReferences
+-from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action
++from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action, RushLevel
+ from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxSpaceWrapper
+ 
+ log = logs.get_log(__name__)
+@@ -15,7 +15,8 @@ log = logs.get_log(__name__)
+ 
+ def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=True, should_benchmark=True,
+           cameras=None, use_sim_start_command=False, render=False, fps=c.DEFAULT_FPS, combine_box_action_spaces=False,
+-          is_discrete=False, preprocess_with_tensorflow=False, is_sync=False, sync_step_time=0.125):
++          is_discrete=False, preprocess_with_tensorflow=False, is_sync=False, sync_step_time=0.125,
++          rush_level=RushLevel.NORMAL):
+     env = gym.make(env)
+     env.seed(c.RNG_SEED)
+ 
+@@ -23,6 +24,8 @@ def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=T
+         experiment_name = ''
+ 
+     dd_env = env.unwrapped
++
++    # This becomes our constructor - to facilitate using Gym API without registering combinations of params
+     dd_env.is_discrete = is_discrete
+     dd_env.preprocess_with_tensorflow = preprocess_with_tensorflow
+     dd_env.is_sync = is_sync
+@@ -31,6 +34,7 @@ def start(experiment_name=None, env='DeepDrive-v0', sess=None, start_dashboard=T
+     dd_env.fps = fps
+     dd_env.experiment = experiment_name.replace(' ', '_')
+     dd_env.period = 1. / fps
++    dd_env.rush_level = rush_level
+     dd_env.set_use_sim_start_command(use_sim_start_command)
+     dd_env.open_sim()
+     if use_sim_start_command:
+diff --git a/gym_deepdrive/envs/deepdrive_gym_env.py b/gym_deepdrive/envs/deepdrive_gym_env.py
+index 7b275c9..430ebb4 100644
+--- a/gym_deepdrive/envs/deepdrive_gym_env.py
++++ b/gym_deepdrive/envs/deepdrive_gym_env.py
+@@ -96,7 +96,28 @@ class DiscreteActions(object):
+         return steer, throttle, brake
+ 
+ 
+-RushLevel = Enum('RushLevel', 'CRUISING NORMAL LATE HOSPITAL CHASE')
++class RewardCombiner(object):
++    def __init__(self, progress, gforce, lane_deviation, time):
++        self.progress_weight = progress
++        self.gforce_weight = gforce
++        self.lane_deviation_weight = lane_deviation
++        self.time_weight = time
++
++    def combine(self, progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty):
++        return progress_reward * self.progress_weight \
++               - gforce_penalty * self.gforce_weight \
++               - lane_deviation_penalty * self.lane_deviation_weight \
++               - time_penalty * self.time_weight
++
++
++class RushLevel(Enum):
++    __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'
++    # TODO: Possibly assign function rather than just weights
++    CRUISING  = RewardCombiner(progress=1.0, gforce=2.00, lane_deviation=1.50, time=0.5)
++    NORMAL    = RewardCombiner(progress=1.0, gforce=1.00, lane_deviation=1.00, time=1.0)
++    LATE      = RewardCombiner(progress=1.0, gforce=0.50, lane_deviation=0.50, time=2.0)
++    EMERGENCY = RewardCombiner(progress=1.0, gforce=0.75, lane_deviation=0.75, time=2.0)
++    CHASE     = RewardCombiner(progress=0.0, gforce=0.00, lane_deviation=0.00, time=2.0)
+ 
+ 
+ default_cam = Camera(**c.DEFAULT_CAM)  # TODO: Switch camera dicts to this object
+@@ -153,6 +174,7 @@ class DeepDriveEnv(gym.Env):
+         self.fps = None
+         self.period = None
+         self.experiment = None
++        self.rush_level = None  # type: RushLevel
+ 
+         if not c.REUSE_OPEN_SIM:
+             if utils.get_sim_bin_path() is None:
+@@ -186,6 +208,19 @@ class DeepDriveEnv(gym.Env):
+         self.done_benchmarking = False
+         self.trial_scores = []
+ 
++        try:
++            self.git_commit = utils.run_command('git rev-parse --short HEAD')[0]
++        except:
++            self.git_commit = 'n/a'
++            log.warning('Could not get git commit for associating benchmark results with code state')
++
++        try:
++            self.git_diff = utils.run_command('git diff')[0]
++        except:
++            self.git_diff = None
++            log.warning('Could not get git diff for associating benchmark results with code state')
++
++
+     def open_sim(self):
+         self._kill_competing_procs()
+         if c.REUSE_OPEN_SIM:
+@@ -384,11 +419,7 @@ class DeepDriveEnv(gym.Env):
+                 step_time = now - self.prev_step_time
+             else:
+                 step_time = None
+-            now = time.time()
+-            new_episode_time = now - self.score.start_time
+-            time_penalty = new_episode_time - self.score.episode_time  # Time elapsed since last get reward
+-            self.score.time_penalty += time_penalty
+-            self.score.episode_time = new_episode_time
++            self.score.episode_time = now - self.score.start_time
+             if self.score.episode_time < 2.5:
+                 # Give time to get on track after spawn
+                 reward = 0
+@@ -396,7 +427,10 @@ class DeepDriveEnv(gym.Env):
+                 progress_reward = self.get_progress_reward(obz, step_time)
+                 gforce_penalty = self.get_gforce_penalty(obz, step_time)
+                 lane_deviation_penalty = self.get_lane_deviation_penalty(obz, step_time)
+-                reward += (progress_reward - gforce_penalty - lane_deviation_penalty - time_penalty)
++                time_penalty = self.get_time_penalty(obz, step_time)
++                reward_delta = self.combine_rewards(progress_reward, gforce_penalty, lane_deviation_penalty,
++                                                    time_penalty)
++                reward += reward_delta
+ 
+             self.score.total += reward
+             self.display_stats['time']['value'] = self.score.episode_time
+@@ -445,13 +479,21 @@ class DeepDriveEnv(gym.Env):
+             progress = dist - self.distance_along_route
+             self.distance_along_route = dist
+             progress_reward = DeepDriveRewardCalculator.get_progress_reward(progress, time_passed)
+-        self.display_stats['lap progress']['total'] = self.distance_along_route / 2736.7
++        self.display_stats['lap progress']['total'] = self.distance_along_route / 2736.7  # TODO Get length of route dynamically
+         self.display_stats['lap progress']['value'] = self.display_stats['lap progress']['total']
+         self.display_stats['episode #']['total'] = self.total_laps
+         self.display_stats['episode #']['value'] = self.total_laps
+         self.score.progress_reward += progress_reward
+         return progress_reward
+ 
++    def get_time_penalty(self, _obz, time_passed):
++        time_penalty = time_passed
++        self.score.time_penalty += time_penalty
++        return time_penalty
++
++    def combine_rewards(self, progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty):
++        return self.rush_level.value.combine(progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty)
++
+     def is_stuck(self, obz):
+         start_is_stuck = time.time()
+         # TODO: Get this from the game instead
+@@ -498,6 +540,11 @@ class DeepDriveEnv(gym.Env):
+         file_prefix = self.experiment + '_' if self.experiment else ''
+         filename = os.path.join(c.BENCHMARK_DIR, '%s%s.csv' % (file_prefix, c.DATE_STR))
+         diff_filename = os.path.join(c.BENCHMARK_DIR, '%s%s.diff' % (file_prefix, c.DATE_STR))
++
++        if self.git_diff is not None:
++            with open(diff_filename, 'w') as diff_file:
++                diff_file.write(self.git_diff)
++
+         with open(filename, 'w', newline='') as csv_file:
+             writer = csv.writer(csv_file)
+             for i, score in enumerate(self.trial_scores):
+@@ -516,8 +563,8 @@ class DeepDriveEnv(gym.Env):
+             writer.writerow(['high score', high])
+             writer.writerow(['low score', low])
+             writer.writerow(['env', self.spec.id])
+-            writer.writerow(['command', sys.argv])
+-            writer.writerow(['commit', utils.run_command('git rev-parse --short HEAD')[0]])
++            writer.writerow(['args', sys.argv[1:]])
++            writer.writerow(['git commit', self.git_commit])
+             writer.writerow(['experiment name', self.experiment or 'n/a'])
+             writer.writerow(['os', sys.platform])
+             try:
+@@ -526,9 +573,6 @@ class DeepDriveEnv(gym.Env):
+                 gpus = 'n/a'
+             writer.writerow(['gpus', gpus])
+ 
+-        with open(diff_filename, 'w') as diff_file:
+-            diff_file.write(utils.run_command('git diff')[0])
+-
+         log.info('median score %r', median)
+         log.info('avg score %r', average)
+         log.info('std %r', std)
