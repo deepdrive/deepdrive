@@ -1,3 +1,12 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
+                             int, map, next, oct, open, pow, range, round,
+                             str, super, zip)
+
+from collections import deque
+
 import gym
 import tensorflow as tf
 import numpy as np
@@ -9,6 +18,7 @@ from agents.common import get_throttle
 from agents.dagger.agent import Agent
 from agents.dagger.net import MOBILENET_V2_NAME
 from gym_deepdrive.envs.deepdrive_gym_env import Action, DrivingStyle
+from gym_deepdrive.experience_buffer import ExperienceBuffer
 from vendor.openai.baselines.ppo2.run_deepdrive import train
 
 
@@ -19,6 +29,7 @@ class BootstrapRLGymEnv(gym.Wrapper):
         super(BootstrapRLGymEnv, self).__init__(env)
         self.dagger_agent = dagger_agent
         self.previous_obz = None
+        self.experience_buffer = ExperienceBuffer()
 
         self.simple_test = c.SIMPLE_PPO
 
@@ -32,6 +43,15 @@ class BootstrapRLGymEnv(gym.Wrapper):
         if self.simple_test:
             shape = (5,)
         else:
+            # TODO: Add prior 200ms, 500ms, 1s and 2s mobilenet activations, along with speed, acceleration, and other stats we get from obz
+            speed_length = 1
+            acceleration_length = 3  # x,y,z
+            previous_output_length = 3  # steer,throttle,handbrake
+
+            # obz_length = dagger_agent.net.num_last_hidden + dagger_agent.net.num_targets
+            #
+            # shape = (obz_length * self.experience_buffer.fade_length,)
+
             shape = (dagger_agent.net.num_last_hidden + dagger_agent.net.num_targets,)
 
         self.observation_space = spaces.Box(low=np.finfo(np.float32).min,
@@ -47,6 +67,9 @@ class BootstrapRLGymEnv(gym.Wrapper):
             action[Action.THROTTLE_INDEX] = get_throttle(actual_speed=self.previous_obz['speed'],
                                                          target_speed=(8 * 100))
         obz, reward, done, info = self.env.step(action)
+        print(obz)
+        input('continue?')
+        self.experience_buffer.maybe_add(obz, self.env.unwrapped.score.episode_time)
         self.previous_obz = obz
         action, net_out = self.dagger_agent.act(obz, reward, done)
         if net_out is None:
@@ -100,8 +123,8 @@ def run(env_id, bootstrap_net_path,
             bootstrap_gym_env = BootstrapRLGymEnv(dagger_gym_env, dagger_agent)
 
             if c.SIMPLE_PPO:
-                mlp_width = 5
                 minibatch_steps = 16
+                mlp_width = 5
             else:
                 minibatch_steps = 80
                 mlp_width = 64

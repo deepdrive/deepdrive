@@ -54,6 +54,7 @@ class Score(object):
     time_penalty = 0
     progress_reward = 0
     speed_reward = 0
+    progess = 0
     got_stuck = False
     wrong_way = False
 
@@ -196,7 +197,7 @@ class DrivingStyle(Enum):
     __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'
     # TODO: Possibly assign function rather than just weights
     CRUISING   = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
-    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.10, total_time=0.0)
+    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.10, lane_deviation=0.10, total_time=0.0)
     LATE       = RewardWeighting(speed=2.0, progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0)
     EMERGENCY  = RewardWeighting(speed=2.0, progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0)
     CHASE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
@@ -443,7 +444,6 @@ class DeepDriveEnv(gym.Env):
 
         start_reward_stuff = time.time()
         reward, done = self.get_reward(obz, now)
-        done = self.compute_lap_statistics(done, obz) or done
         self.prev_step_time = now
 
         if self.dashboard_pub is not None:
@@ -505,24 +505,26 @@ class DeepDriveEnv(gym.Env):
                     log.warning('Step %r took %rs - target is %rs', self.step_num, delta, 1 / self.fps)
         self.previous_action_time = now
 
-    def compute_lap_statistics(self, done, obz):
+    def compute_lap_statistics(self, obz):
         start_compute_lap_stats = time.time()
-        if not obz:
-            return done
-        lap_number = obz.get('lap_number')
-        if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
-            self.total_laps += 1
-            done = True  # One lap per episode
-            self.log_up_time()
-        self.lap_number = lap_number
-        log.debug('compute lap stats took %fs', time.time() - start_compute_lap_stats)
+        lap_bonus = 0
+        done = False
+        if obz:
+            lap_number = obz.get('lap_number')
+            if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
+                self.total_laps += 1
+                done = True  # One lap per episode
+                lap_bonus = 10
+                self.log_up_time()
+            self.lap_number = lap_number
+            log.debug('compute lap stats took %fs', time.time() - start_compute_lap_stats)
 
-        return done
+        return done, lap_bonus
 
     def get_reward(self, obz, now):
         start_get_reward = time.time()
+        done, lap_bonus = self.compute_lap_statistics(obz)
         reward = 0
-        done = False
         if obz:
             if self.is_sync:
                 step_time = self.sync_step_time
@@ -537,10 +539,11 @@ class DeepDriveEnv(gym.Env):
                 # Give time to get on track after spawn
                 reward = 0
             else:
-                progress_reward, speed = self.get_progress_and_speed_reward(obz, step_time)
                 gforce_penalty = self.get_gforce_penalty(obz, step_time)
                 lane_deviation_penalty = self.get_lane_deviation_penalty(obz, step_time)
                 time_penalty = self.get_time_penalty(obz, step_time)
+                progress_reward, speed = self.get_progress_and_speed_reward(obz, step_time,
+                                                                            gforce_penalty, lane_deviation_penalty)
                 reward = self.combine_rewards(progress_reward, gforce_penalty, lane_deviation_penalty,
                                               time_penalty, speed)
 
@@ -551,7 +554,7 @@ class DeepDriveEnv(gym.Env):
                 done = True
                 reward -= 10
 
-            self.score.total += reward
+            self.score.total += reward + lap_bonus
             self.display_stats['time']['value'] = self.score.episode_time
             self.display_stats['time']['total'] = self.score.episode_time
             self.display_stats['episode score']['value'] = self.score.total
@@ -597,7 +600,7 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['gforce penalty']['total'] = -self.score.gforce_penalty
         return gforce_penalty
 
-    def get_progress_and_speed_reward(self, obz, time_passed):
+    def get_progress_and_speed_reward(self, obz, time_passed, gforce_penalty, lane_deviation_penalty):
         progress_reward = speed_reward = 0
         if 'distance_along_route' in obz:
             dist = obz['distance_along_route'] - self.start_distance_along_route
@@ -616,10 +619,17 @@ class DeepDriveEnv(gym.Env):
             speed_reward = min(max(speed_reward, -1), 1)
             progress_reward = min(max(progress_reward, -1), 1)
 
+        if gforce_penalty > 0 or lane_deviation_penalty > 0:
+            # Discourage making up for penalties by going faster
+            speed_reward /= 2
+            progress_reward /= 2
+
         self.score.progress_reward += progress_reward
         self.score.speed_reward += speed_reward
 
-        self.display_stats['lap progress']['total'] = self.distance_along_route / 2736.7  # TODO Get length of route dynamically
+        self.score.progress = self.distance_along_route / 2736.7  # TODO Get length of route dynamically
+
+        self.display_stats['lap progress']['total'] = self.score.progress
         self.display_stats['lap progress']['value'] = self.display_stats['lap progress']['total']
         self.display_stats['episode #']['total'] = self.total_laps
         self.display_stats['episode #']['value'] = self.total_laps
@@ -635,7 +645,8 @@ class DeepDriveEnv(gym.Env):
         return time_penalty
 
     def combine_rewards(self, progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty, speed):
-        return self.driving_style.value.combine(progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty, speed)
+        return self.driving_style.value.combine(progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty,
+                                                speed)
 
     def is_stuck(self, obz):
         start_is_stuck = time.time()
@@ -1095,8 +1106,9 @@ class DeepDriveRewardCalculator(object):
         gforce_penalty = 0
         if gforces < 0:
             raise ValueError('G-Force should be positive')
-        if gforces > 0.5:
-            # https://www.quora.com/Hyperloop-What-is-a-physically-comfortable-rate-of-acceleration-for-human-beings
+        if gforces > 0.3:
+            # Based on regression model on page 47 - can achieve 92/100 comfort with ~0.3 combined x and y acceleration
+            # http://www.diva-portal.org/smash/get/diva2:950643/FULLTEXT01.pdf
             time_weighted_gs = time_passed * gforces
             time_weighted_gs = min(time_weighted_gs,
                                    5)  # Don't allow a large frame skip to ruin the approximation

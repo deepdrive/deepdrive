@@ -28,11 +28,7 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_widt
         tf.Session(config=config).__enter__()
 
     env = DummyVecEnv(envs=[env])
-
-    if c.SIMPLE_PPO:
-        env = VecNormalize(env, ob=False)
-    else:
-        env = VecNormalize(env, ob=False)
+    env = VecNormalize(env, ob=False)
 
     set_global_seeds(seed)
     if is_discrete:
@@ -58,7 +54,7 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_widt
                ent_coef=0.0,
                lr=lambda f: f * 2.5e-3,
                cliprange=lambda f: f * 0.1,
-               total_timesteps=int(2.5e5),
+               total_timesteps=int(5e5),
                mlp_width=mlp_width)
 
     # Long training with lots of epochs

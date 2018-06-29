@@ -60,6 +60,7 @@ class LnLstmPolicy(object):
         self.step = step
         self.value = value
 
+
 class LstmPolicy(object):
 
     def __init__(self, sess, ob_space, ac_space, nbatch, nsteps, nlstm=256, reuse=False):

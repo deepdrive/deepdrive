@@ -431,7 +431,6 @@ def randomize_cameras(cameras):
         cam['field_of_view'] += (np.random.random() - 0.5)
         cam['capture_height'] += round(np.random.random() * 0.01 * cam['capture_height'])
         cam['capture_width'] += round(np.random.random() * 0.01 * cam['capture_width'])
-        pass
 
 
 def random_use_sim_start_command(should_rotate_sim_types):

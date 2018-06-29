@@ -54,7 +54,7 @@ def main():
     py = check_py_version()
     tf_valid = get_tf_valid()
 
-    if 'ubuntu' in platform.platform().lower():
+    if 'ubuntu' in platform.platform().lower() and not is_docker():
         # Install tk for dashboard
         run_command('sudo apt-get install -y python3-tk', throw=False, verbose=True)
 
@@ -110,6 +110,14 @@ def get_available_gpus():
     from tensorflow.python.client import device_lib
     local_device_protos = device_lib.list_local_devices()
     return [x.name for x in local_device_protos if x.device_type == 'GPU']
+
+
+def is_docker():
+    path = '/proc/self/cgroup'
+    return (
+        os.path.exists('/.dockerenv') or
+        os.path.isfile(path) and any('docker' in line for line in open(path))
+    )
 
 
 if __name__ == '__main__':
