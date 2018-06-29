@@ -202,7 +202,8 @@ class DeepDriveEnv(gym.Env):
             pass
         else:
             log.info('Starting simulator at %s (takes a few seconds the first time).', utils.get_sim_bin_path())
-            self.sim_process = Popen([utils.get_sim_bin_path()])
+            self.sim_process = Popen([utils.get_sim_bin_path()], env={'SDL_VIDEODRIVER': 'offscreen',
+                                                                      'SDL_HINT_CUDA_DEVICE': '0'})
 
     def close_sim(self):
         log.info('Closing sim')
