@@ -10,6 +10,7 @@ import numpy as np
 
 import config as c
 import deepdrive
+import utils
 from gym_deepdrive.envs.deepdrive_gym_env import Action
 from tensorflow_agent.net import Net
 from utils import save_hdf5, download
@@ -81,10 +82,13 @@ class Agent(object):
         self.previous_action = action
         self.step += 1
 
+        if 'SHOULD_TEST_RENDER' in os.environ and obz:
+            utils.save_camera(obz['cameras'][0]['image'], obz['cameras'][0]['depth'],
+                              os.path.dirname(os.path.realpath(__file__)), 'deepdrive')
+            input('saved test render, continue?')
+
         if obz and obz['is_game_driving'] == 1 and self.should_record:
             self.obz_recording.append(obz)
-            # utils.save_camera(obz['cameras'][0]['image'], obz['cameras'][0]['depth'],
-            #                   os.path.join(self.sess_dir, str(self.total_obz).zfill(10)))
             self.recorded_obz_count += 1
         else:
             log.debug('Not recording frame')
