@@ -2,6 +2,7 @@ import argparse
 import glob
 import logging
 import os
+import time
 
 import tensorflow as tf
 

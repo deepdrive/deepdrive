@@ -12,6 +12,10 @@ import time
 import pyarrow
 
 import config as c
+import logs
+
+log = logs.get_log(__name__)
+
 
 
 class APIClient(object):
@@ -43,8 +47,9 @@ class APIClient(object):
 
 def main():
     client = APIClient()
-    obz, reward, done, info = client.send('step', args=[1, 1])
-    pass
+    done = False
+    while not done:
+        obz, reward, done, info = client.send('step', args=[1, 1])
 
 if __name__ == '__main__':
     main()
