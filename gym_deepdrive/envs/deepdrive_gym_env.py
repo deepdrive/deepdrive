@@ -1,11 +1,9 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-
-import math
-
 from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
                              int, map, next, oct, open, pow, range, round,
                              str, super, zip)
+import math
 import csv
 import subprocess
 import deepdrive_client
@@ -29,7 +27,6 @@ from GPUtil import GPUtil
 from boto.s3.connection import S3Connection
 from gym import spaces
 from gym.utils import seeding
-import zmq
 try:
     import pyglet
     from pyglet.gl import GLubyte

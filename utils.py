@@ -270,6 +270,10 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
     return result, process.returncode
 
 
+def remotable():
+    pass
+
+
 if __name__ == '__main__':
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
     read_hdf5_manual()

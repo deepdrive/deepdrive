@@ -19,3 +19,4 @@ enum34
 gputil
 joblib
 cloudpickle
+pyarrow

@@ -5,13 +5,13 @@ import logs
 
 import config as c
 import random_name
+from utils import remotable
 
 # noinspection PyUnresolvedReferences
 from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action, DrivingStyle
 from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxSpaceWrapper
 
 log = logs.get_log(__name__)
-
 
 def start(experiment_name=None, env='Deepdrive-v0', sess=None, start_dashboard=True, should_benchmark=True,
           cameras=None, use_sim_start_command=False, render=False, fps=c.DEFAULT_FPS, combine_box_action_spaces=False,
@@ -52,5 +52,6 @@ def start(experiment_name=None, env='Deepdrive-v0', sess=None, start_dashboard=T
     if should_benchmark:
         log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
         raw_env.init_benchmarking()
+
     env.reset()
     return env
