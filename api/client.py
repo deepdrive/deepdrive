@@ -13,6 +13,7 @@ import pyarrow
 
 import config as c
 import logs
+from gym_deepdrive.envs.deepdrive_gym_env import Action
 
 log = logs.get_log(__name__)
 
@@ -47,6 +48,8 @@ class RemoteEnv(object):
         return socket
 
     def step(self, action):
+        if isinstance(action, list):
+            action = Action.from_gym(action)
         resp = self._send('step', kwargs=dict(
             steering=action.steering, throttle=action.throttle, handbrake=action.handbrake, brake=action.brake,
             has_control=action.has_control))

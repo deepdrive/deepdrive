@@ -66,7 +66,7 @@ class Server(object):
                     if c.IS_EVAL:
                         allowed_args.remove('env')
                         allowed_args.remove('is_sync')
-                    for key in kwargs:
+                    for key in list(kwargs):
                         if key not in allowed_args:
                             del kwargs[key]
                     self.env = deepdrive.start(**kwargs)

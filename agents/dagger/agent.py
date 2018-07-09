@@ -22,17 +22,15 @@ log = logs.get_log(__name__)
 
 
 class Agent(object):
-    def __init__(self, action_space, tf_session, env, should_record_recovery_from_random_actions=True,
+    def __init__(self, tf_session, should_record_recovery_from_random_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
                  non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR,
                  output_last_hidden=False,
                  net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL):
         np.random.seed(c.RNG_SEED)
-        self.action_space = action_space
         self.previous_action = None
         self.previous_net_out = None
         self.step = 0
-        self.env = env
         self.net_name = net_name
         self.driving_style = driving_style
 
@@ -318,7 +316,7 @@ class Agent(object):
 def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
         should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS,
-        net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL, is_sync=False):
+        net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL, is_sync=False, is_remote=False):
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
     reward = 0
@@ -354,12 +352,12 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         randomize_cameras(cameras)
 
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
-    gym_env = deepdrive.start(experiment, env_id, should_benchmark=should_benchmark, cameras=cameras,
-                              use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
-                              driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False)
-    dd_env = gym_env.env
+    env = deepdrive.start(experiment=experiment, env_id=env_id, should_benchmark=should_benchmark, cameras=cameras,
+                          use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
+                          driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False,
+                          is_remote_client=is_remote)
 
-    agent = Agent(gym_env.action_space, sess, env=gym_env.env,
+    agent = Agent(sess,
                   should_record_recovery_from_random_actions=should_record_recovery_from_random_actions,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,
                   path_follower=path_follower, net_name=net_name, driving_style=driving_style)
@@ -367,7 +365,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         log.info('Running tensorflow agent checkpoint: %s', net_path)
 
     def close():
-        gym_env.close()
+        env.close()
         agent.close()
 
     session_done = False
@@ -375,7 +373,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
     try:
         while not session_done:
             if episode_done:
-                obz = gym_env.reset()
+                obz = env.reset()
                 episode_done = False
             else:
                 obz = None
@@ -386,7 +384,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                 log.debug('act took %fs',  time.time() - act_start)
 
                 env_step_start = time.time()
-                obz, reward, episode_done, _ = gym_env.step(action)
+                obz, reward, episode_done, _ = env.step(action)
                 log.debug('env step took %fs', time.time() - env_step_start)
 
                 if should_record_recovery_from_random_actions:
@@ -397,13 +395,14 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
             if session_done:
                 log.info('Session done')
             else:
-                log.info('Episode done, rotating camera')
+                log.info('Episode done')
                 episode += 1
                 if should_rotate_camera_rigs:
                     cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
-                    dd_env.change_viewpoint(cameras,
-                                            use_sim_start_command=random_use_sim_start_command(should_rotate_sim_types))
+                    # TODO: Allow changing viewpoint as remote client
+                    env.unwrapped.change_viewpoint(cameras, use_sim_start_command=random_use_sim_start_command(
+                        should_rotate_sim_types))
                 if episode >= max_episodes:
                     session_done = True
     except KeyboardInterrupt:

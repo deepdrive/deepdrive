@@ -1,3 +1,9 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
+                             int, map, next, oct, open, pow, range, round,
+                             str, super, zip)
+
 # noinspection PyUnresolvedReferences
 import gym_deepdrive  # forward registers gym environment
 import gym
@@ -6,6 +12,7 @@ import logs
 import config as c
 import random_name
 from api import client
+from api.client import RemoteEnv
 from utils import remotable
 
 # noinspection PyUnresolvedReferences
@@ -14,48 +21,60 @@ from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxS
 
 log = logs.get_log(__name__)
 
+def start(**kwargs):
+    all_kwargs = dict(experiment_name=None, env_id='Deepdrive-v0', sess=None, start_dashboard=True,
+                      should_benchmark=True, cameras=None, use_sim_start_command=False, render=False,
+                      fps=c.DEFAULT_FPS, combine_box_action_spaces=False, is_discrete=False,
+                      preprocess_with_tensorflow=False, is_sync=False, driving_style=DrivingStyle.NORMAL,
+                      reset_returns_zero=True, is_remote_client=False)
 
-def start(experiment_name=None, env='Deepdrive-v0', sess=None, start_dashboard=True, should_benchmark=True,
-          cameras=None, use_sim_start_command=False, render=False, fps=c.DEFAULT_FPS, combine_box_action_spaces=False,
-          is_discrete=False, preprocess_with_tensorflow=False, is_sync=False,
-          driving_style=DrivingStyle.NORMAL.name, reset_returns_zero=True):
+    all_kwargs.update(kwargs)
+    kwargs = all_kwargs
 
-    env = gym.make(env)
-    env.seed(c.RNG_SEED)
+    if kwargs['is_remote_client']:
+        if not isinstance(kwargs['driving_style'], str):
+            kwargs['driving_style'] = kwargs['driving_style'].name
+        env = RemoteEnv(**kwargs)
+    else:
+        if isinstance(kwargs['driving_style'], str):
+            driving_style = DrivingStyle.__members__[kwargs['driving_style']]
 
-    if experiment_name is None:
-        experiment_name = ''
+        env = gym.make(kwargs['env_id'])
+        env.seed(c.RNG_SEED)
 
-    raw_env = env.unwrapped
+        if kwargs['experiment_name'] is None:
+            kwargs['experiment_name'] = ''
 
-    # This becomes our constructor - to facilitate using Gym API without registering combinations of params
-    raw_env.is_discrete = is_discrete
-    raw_env.preprocess_with_tensorflow = preprocess_with_tensorflow
-    raw_env.is_sync = is_sync
-    raw_env.reset_returns_zero = reset_returns_zero
-    raw_env.init_action_space()
-    raw_env.fps = fps
-    raw_env.experiment = experiment_name.replace(' ', '_')
-    raw_env.period = raw_env.sync_step_time = 1. / fps
-    raw_env.driving_style = DrivingStyle.__members__[driving_style]
-    raw_env.should_render = render
-    raw_env.set_use_sim_start_command(use_sim_start_command)
-    raw_env.open_sim()
-    if use_sim_start_command:
-        input(
-            'Press any key when the game has loaded')  # TODO: Find a better way to do this. Waiting for the hwnd and focusing does not work in windows.
-    raw_env.connect(cameras)
-    raw_env.set_step_mode()
-    if combine_box_action_spaces:
-        env = CombineBoxSpaceWrapper(env)
-    env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
-    if sess:
-        raw_env.set_tf_session(sess)
-    if start_dashboard:
-        raw_env.start_dashboard()
-    if should_benchmark:
-        log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
-        raw_env.init_benchmarking()
+        raw_env = env.unwrapped
 
-    env.reset()
+        # This becomes our constructor - to facilitate using Gym API without registering combinations of params
+        raw_env.is_discrete = kwargs['is_discrete']
+        raw_env.preprocess_with_tensorflow = kwargs['preprocess_with_tensorflow']
+        raw_env.is_sync = kwargs['is_sync']
+        raw_env.reset_returns_zero = kwargs['reset_returns_zero']
+        raw_env.init_action_space()
+        raw_env.fps = kwargs['fps']
+        raw_env.experiment = kwargs['experiment_name'].replace(' ', '_')
+        raw_env.period = raw_env.sync_step_time = 1. / kwargs['fps']
+        raw_env.driving_style = kwargs['driving_style']
+        raw_env.should_render = kwargs['render']
+        raw_env.set_use_sim_start_command(kwargs['use_sim_start_command'])
+        raw_env.open_sim()
+        if kwargs['use_sim_start_command']:
+            # TODO: Find a better way to do this. Waiting for the hwnd and focusing does not work in windows.
+            input('Press any key when the game has loaded')
+        raw_env.connect(kwargs['cameras'])
+        raw_env.set_step_mode()
+        if kwargs['combine_box_action_spaces']:
+            env = CombineBoxSpaceWrapper(env)
+        env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
+        if kwargs['sess']:
+            raw_env.set_tf_session(kwargs['sess'])
+        if kwargs['start_dashboard']:
+            raw_env.start_dashboard()
+        if kwargs['should_benchmark']:
+            log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
+            raw_env.init_benchmarking()
+
+        env.reset()
     return env

@@ -269,7 +269,8 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
             print(err_msg)
     return result, process.returncode
 
-
+"""
+"""
 def remotable(f):
     def extract_args(*args, **kwargs):
         return f((args, kwargs), *args, **kwargs)

@@ -57,6 +57,8 @@ def main():
     parser.add_argument('--tf-debug', action='store_true', default=False, help='Run a tf_debug session')
     parser.add_argument('--freeze-pretrained', action='store_true', default=False, help='Freeze pretrained layers '
                                                                                         'during training')
+    parser.add_argument('--is-remote-client', action='store_true', default=False,
+                        help='Use API to connect to a remote environment')
     parser.add_argument('-v', '--verbose', help='Increase output verbosity',
                         action='store_true')
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
@@ -114,7 +116,7 @@ def main():
         episode_count = 1
         gym_env = None
         try:
-            gym_env = deepdrive.start(args.experiment_name, args.env_id, fps=args.fps,
+            gym_env = deepdrive.start(experiment=args.experiment_name, env_id=args.env_id, fps=args.fps,
                                       driving_style=driving_style)
             log.info('Path follower drive mode')
             for episode in range(episode_count):
@@ -145,7 +147,7 @@ def main():
                   run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
                   should_record_recovery_from_random_actions=args.record_recovery_from_random_actions,
                   path_follower=args.path_follower, fps=args.fps, net_name=args.net_type, is_sync=args.sync,
-                  driving_style=driving_style)
+                  driving_style=driving_style, is_remote=args.is_remote_client)
 
 
 def get_latest_model():

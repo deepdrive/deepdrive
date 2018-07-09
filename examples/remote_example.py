@@ -1,10 +1,10 @@
 
-from api.client import RemoteEnv
+import deepdrive
 from gym_deepdrive.envs.deepdrive_gym_env import Action
 
 
 def main():
-    env = RemoteEnv()
+    env = deepdrive.start()
     forward = Action(throttle=1)
     done = False
     while True:

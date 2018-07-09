@@ -106,10 +106,11 @@ def run(env_id, bootstrap_net_path,
         sess_1 = tf.Session(config=tf_config)
 
         with sess_1.as_default():
-            dagger_gym_env = deepdrive.start(experiment, env_id, cameras=camera_rigs, render=render, fps=fps,
-                                             combine_box_action_spaces=True, is_sync=is_sync, driving_style=driving_style)
+            dagger_gym_env = deepdrive.start(experiment=experiment, env_id=env_id, cameras=camera_rigs, render=render, fps=fps,
+                                             combine_box_action_spaces=True, is_sync=is_sync,
+                                             driving_style=driving_style)
 
-            dagger_agent = Agent(dagger_gym_env.action_space, sess_1, env=dagger_gym_env.env,
+            dagger_agent = Agent(sess_1, env=dagger_gym_env.env,
                                  should_record_recovery_from_random_actions=False, should_record=should_record,
                                  net_path=bootstrap_net_path, output_last_hidden=True, net_name=MOBILENET_V2_NAME)
 
