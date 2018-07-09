@@ -17,20 +17,21 @@ import logs
 log = logs.get_log(__name__)
 
 
-
-class APIClient(object):
-    def __init__(self):
+class RemoteEnv(object):
+    def __init__(self, **kwargs):
         self.socket = None
         self.create_socket()
+        self._send('start', kwargs=kwargs)
 
-    def send(self, method, args=None):
+    def _send(self, method, args=None, kwargs=None):
         args = args or []
+        kwargs = kwargs or {}
         try:
-            msg = pyarrow.serialize([method, args]).to_buffer()
+            msg = pyarrow.serialize([method, args, kwargs]).to_buffer()
             self.socket.send(msg)
             return pyarrow.deserialize(self.socket.recv())
         except zmq.error.Again:
-            print('Waiting for server')
+            log.info('Waiting for server')
             self.create_socket()
             return None
 
@@ -45,11 +46,11 @@ class APIClient(object):
         self.socket = socket
         return socket
 
-def main():
-    client = APIClient()
-    done = False
-    while not done:
-        obz, reward, done, info = client.send('step', args=[1, 1])
+    def step(self, action):
+        resp = self._send('step', kwargs=dict(
+            steering=action.steering, throttle=action.throttle, handbrake=action.handbrake, brake=action.brake,
+            has_control=action.has_control))
+        return resp
 
-if __name__ == '__main__':
-    main()
+    def reset(self):
+        self._send('reset')

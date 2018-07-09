@@ -98,7 +98,7 @@ class Action(object):
             if isinstance(action[4], list):
                 has_control = action[4][0]
             else:
-                has_control = action[cls.HANDBRAKE_INDEX]
+                has_control = action[cls.HAS_CONTROL_INDEX]
         handbrake = action[cls.HANDBRAKE_INDEX][0]
         if handbrake <= 0 or math.isnan(handbrake):
             handbrake = 0
@@ -290,7 +290,6 @@ class DeepDriveEnv(gym.Env):
 
         # benchmarking - carries over across resets
         self.should_benchmark = False
-        self.done_benchmarking = False
         self.trial_scores = []
 
         try:

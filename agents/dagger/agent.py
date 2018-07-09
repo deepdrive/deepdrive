@@ -331,7 +331,6 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
     else:
         per_process_gpu_memory_fraction = 0.4
 
-
     tf_config = tf.ConfigProto(
         gpu_options=tf.GPUOptions(
             per_process_gpu_memory_fraction=per_process_gpu_memory_fraction,
@@ -394,8 +393,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                     agent.set_random_action_repeat_count()
                 if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:
                     session_done = True
-                elif should_benchmark and dd_env.done_benchmarking:
-                    session_done = True
+
             if session_done:
                 log.info('Session done')
             else:
