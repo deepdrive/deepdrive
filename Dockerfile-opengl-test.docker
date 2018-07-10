@@ -1,0 +1,12 @@
+# Make sure drivers are >= 390
+# sudo docker run --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=0 deepdrive:latest python main.py
+
+FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04 as glvnd
+
+RUN apt-get update; apt-get install -y software-properties-common python-software-properties
+
+RUN apt-get install -y mesa-utils
+
+ENV SDL_VIDEODRIVER=dummy
+
+#RUN apt-get clean && rm -rf /var/lib/apt/lists/*

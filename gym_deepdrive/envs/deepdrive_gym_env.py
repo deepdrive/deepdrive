@@ -16,7 +16,6 @@ from distutils.version import LooseVersion as semvar
 import arrow
 import gym
 import numpy as np
-from boto.s3.connection import S3Connection
 from gym import spaces
 from gym.utils import seeding
 try:
@@ -130,14 +129,7 @@ class DeepDriveEnv(gym.Env):
         self.experiment = None
 
         if not c.REUSE_OPEN_SIM:
-            if utils.get_sim_bin_path() is None:
-                print('\n--------- Simulator not found, downloading ----------')
-                if c.IS_LINUX or c.IS_WINDOWS:
-                    url = c.BASE_URL + self.get_latest_sim_file()
-                    download(url, c.SIM_PATH, warn_existing=False, overwrite=False)
-                else:
-                    raise NotImplementedError('Sim download not yet implemented for this OS')
-            utils.ensure_executable(utils.get_sim_bin_path())
+            utils.download_sim()
 
         self.client_version = pkg_resources.get_distribution("deepdrive").version
         # TODO: Check with connection version
@@ -231,26 +223,6 @@ class DeepDriveEnv(gym.Env):
 
     def set_use_sim_start_command(self, use_sim_start_command):
         self.use_sim_start_command = use_sim_start_command
-
-    @staticmethod
-    def get_latest_sim_file():
-        if c.IS_WINDOWS:
-            os_name = 'windows'
-        elif c.IS_LINUX:
-            os_name = 'linux'
-        else:
-            raise RuntimeError('Unexpected OS')
-        sim_prefix = 'sim/deepdrive-sim-'
-        conn = S3Connection(anon=True)
-        bucket = conn.get_bucket('deepdrive')
-        deepdrive_version = pkg_resources.get_distribution('deepdrive').version
-        major_minor = deepdrive_version[:deepdrive_version.rindex('.')]
-        sim_versions = list(bucket.list(sim_prefix + os_name + '-' + major_minor))
-
-        latest_sim_file, path_version = sorted([(x.name, x.name.split('.')[-2])
-                                           for x in sim_versions],
-                                          key=lambda y: y[1])[-1]
-        return '/' + latest_sim_file
 
     def init_benchmarking(self):
         self.should_benchmark = True

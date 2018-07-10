@@ -43,7 +43,6 @@ def main():
     parser.add_argument('-n', '--experiment-name', nargs='?', default=None, help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
 
-
     args = parser.parse_args()
     if args.verbose:
         logs.set_level(logging.DEBUG)

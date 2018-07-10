@@ -50,25 +50,27 @@ def check_py_version():
 
 
 def main():
+    parser = argparse.ArgumentParser(description=None)
+    parser.add_argument('--unattended', action='store_true', default=False,
+                        help='Install sim et al. to default directories')
+    args = parser.parse_args()
+
     print('Checking python version')
     py = check_py_version()
-    tf_valid = get_tf_valid()
+    check_tf_valid()
 
-    if 'ubuntu' in platform.platform().lower():
+    if 'ubuntu' in platform.platform().lower() and not is_docker():
         # Install tk for dashboard
         run_command('sudo apt-get install -y python3-tk', throw=False, verbose=True)
 
     run_command(py + ' -m pip install -r requirements.txt', verbose=True)
 
-    if tf_valid:
-        print('Starting baseline agent')
-        os.system('python main.py --baseline')
-    else:
-        print('Starting sim in path follower mode')
-        os.system('python main.py --path-follower')
+    if args.unattended:
+        import utils
+        utils.download_sim()
 
 
-def get_tf_valid():
+def check_tf_valid():
     error_msg = '\n\n*** Warning: %s, baseline imitation learning agent will not be available. ' \
                 'HINT: Install Tensorflow or use the python / virtualenv you have it already installed to. If you install, check out our Tensorflow install tips on the README ' \
                 '\n\n'
@@ -110,6 +112,14 @@ def get_available_gpus():
     from tensorflow.python.client import device_lib
     local_device_protos = device_lib.list_local_devices()
     return [x.name for x in local_device_protos if x.device_type == 'GPU']
+
+
+def is_docker():
+    path = '/proc/self/cgroup'
+    return (
+        os.path.exists('/.dockerenv') or
+        os.path.isfile(path) and any('docker' in line for line in open(path))
+    )
 
 
 if __name__ == '__main__':

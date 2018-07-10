@@ -10,9 +10,11 @@ import tempfile
 
 import h5py
 import numpy as np
+import pkg_resources
 import requests
 from clint.textui import progress
 from subprocess import Popen, PIPE
+from boto.s3.connection import S3Connection
 
 import config as c
 import logs
@@ -254,6 +256,37 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
         elif print_errors:
             print(err_msg)
     return result, process.returncode
+
+
+def get_latest_sim_file():
+    if c.IS_WINDOWS:
+        os_name = 'windows'
+    elif c.IS_LINUX:
+        os_name = 'linux'
+    else:
+        raise RuntimeError('Unexpected OS')
+    sim_prefix = 'sim/deepdrive-sim-'
+    conn = S3Connection(anon=True)
+    bucket = conn.get_bucket('deepdrive')
+    deepdrive_version = pkg_resources.get_distribution('deepdrive').version
+    major_minor = deepdrive_version[:deepdrive_version.rindex('.')]
+    sim_versions = list(bucket.list(sim_prefix + os_name + '-' + major_minor))
+
+    latest_sim_file, path_version = sorted([(x.name, x.name.split('.')[-2]) for x in sim_versions],
+                                           key=lambda y: y[1])[-1]
+    return '/' + latest_sim_file
+
+
+def download_sim():
+    if get_sim_bin_path() is None:
+        print('\n--------- Simulator not found, downloading ----------')
+        if c.IS_LINUX or c.IS_WINDOWS:
+            url = c.BASE_URL + get_latest_sim_file()
+            download(url, c.SIM_PATH, warn_existing=False, overwrite=False)
+        else:
+            raise NotImplementedError('Sim download not yet implemented for this OS')
+    ensure_executable(get_sim_bin_path())
+
 
 log = logs.get_log(__name__)
 
