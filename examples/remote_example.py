@@ -4,7 +4,7 @@ from gym_deepdrive.envs.deepdrive_gym_env import Action
 
 
 def main():
-    env = deepdrive.start()
+    env = deepdrive.start(is_remote_client=True)
     forward = Action(throttle=1)
     done = False
     while True:

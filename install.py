@@ -60,13 +60,6 @@ def main():
 
     run_command(py + ' -m pip install -r requirements.txt', verbose=True)
 
-    if tf_valid:
-        print('Starting baseline agent')
-        os.system('python main.py --baseline')
-    else:
-        print('Starting sim in path follower mode')
-        os.system('python main.py --let-game-drive')
-
 
 def get_tf_valid():
     error_msg = '\n\n*** Warning: %s, baseline imitation learning agent will not be available. ' \
