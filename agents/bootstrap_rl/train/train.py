@@ -25,9 +25,10 @@ from vendor.openai.baselines.ppo2.run_deepdrive import train
 class BootstrapRLGymEnv(gym.Wrapper):
     """Bootstrap is probably a bad name here due to its overloaded use in RL where bootstrapping historically refers
     to learning with value based or TDD methods."""
-    def __init__(self, env, dagger_agent):
+    def __init__(self, env, dagger_agent, driving_style=DrivingStyle.NORMAL):
         super(BootstrapRLGymEnv, self).__init__(env)
         self.dagger_agent = dagger_agent
+        self.driving_style = driving_style
         self.previous_obz = None
         self.experience_buffer = ExperienceBuffer()
 
@@ -61,15 +62,14 @@ class BootstrapRLGymEnv(gym.Wrapper):
                                             dtype=np.float32)
 
     def step(self, action):
-        if self.env.unwrapped.driving_style == DrivingStyle.STEER_ONLY and self.previous_obz is not None:
+        if self.driving_style == DrivingStyle.STEER_ONLY and self.previous_obz is not None:
             # Simplifying by only controlling steering. Otherwise, we need to shape rewards so that initial acceleration
             # is not disincentivized by gforce penalty.
             action[Action.THROTTLE_INDEX] = get_throttle(actual_speed=self.previous_obz['speed'],
                                                          target_speed=(8 * 100))
         obz, reward, done, info = self.env.step(action)
-        print(obz)
-        input('continue?')
-        self.experience_buffer.maybe_add(obz, self.env.unwrapped.score.episode_time)
+        if 'score' in info and 'episode_time' in info['score']:
+            self.experience_buffer.maybe_add(obz, info['score']['episode_time'])
         self.previous_obz = obz
         action, net_out = self.dagger_agent.act(obz, reward, done)
         if net_out is None:
@@ -88,7 +88,7 @@ class BootstrapRLGymEnv(gym.Wrapper):
 def run(env_id, bootstrap_net_path,
         resume_dir=None, experiment=None, camera_rigs=None, render=False, fps=c.DEFAULT_FPS,
         should_record=False, is_discrete=False, agent_name=MOBILENET_V2_NAME, is_sync=True,
-        driving_style=DrivingStyle.NORMAL):
+        driving_style=DrivingStyle.NORMAL, is_remote_client=False):
     tf_config = tf.ConfigProto(
         allow_soft_placement=True,
         intra_op_parallelism_threads=1,
@@ -108,10 +108,9 @@ def run(env_id, bootstrap_net_path,
         with sess_1.as_default():
             dagger_gym_env = deepdrive.start(experiment=experiment, env_id=env_id, cameras=camera_rigs, render=render, fps=fps,
                                              combine_box_action_spaces=True, is_sync=is_sync,
-                                             driving_style=driving_style)
+                                             driving_style=driving_style, is_remote_client=is_remote_client)
 
-            dagger_agent = Agent(sess_1, env=dagger_gym_env.env,
-                                 should_record_recovery_from_random_actions=False, should_record=should_record,
+            dagger_agent = Agent(sess_1, should_record_recovery_from_random_actions=False, should_record=should_record,
                                  net_path=bootstrap_net_path, output_last_hidden=True, net_name=MOBILENET_V2_NAME)
 
     g_2 = tf.Graph()
@@ -121,7 +120,7 @@ def run(env_id, bootstrap_net_path,
         with sess_2.as_default():
 
             # Wrap step so we get the pretrained layer activations rather than pixels for our observation
-            bootstrap_gym_env = BootstrapRLGymEnv(dagger_gym_env, dagger_agent)
+            bootstrap_gym_env = BootstrapRLGymEnv(dagger_gym_env, dagger_agent, driving_style)
 
             if c.SIMPLE_PPO:
                 minibatch_steps = 16

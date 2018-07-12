@@ -422,7 +422,6 @@ class DeepDriveEnv(gym.Env):
         self.sess = session
 
     def step(self, action):
-        info = {}
         if self.is_discrete:
             steer, throttle, brake = self.discrete_actions.get_components(action)
             dd_action = Action(steering=steer, throttle=throttle, brake=brake)
@@ -450,8 +449,7 @@ class DeepDriveEnv(gym.Env):
         self.step_num += 1
         log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
 
-        if done:
-            info = self.report_score(info)
+        info = self.get_step_info(done)
 
         self.regulate_fps()
 
@@ -460,11 +458,20 @@ class DeepDriveEnv(gym.Env):
 
         return obz, reward, done, info
 
+    def get_step_info(self, done):
+        info = {}
+        info['score'] = info.get('episode', {})
+        info['score']['episode_time'] = self.score.episode_time
+        if done:
+            info = self.report_score(info)
+        return info
+
     def report_score(self, info):
         self.prev_lap_score = self.score.total
         info['episode'] = episode_info = {}
         episode_info['reward'] = self.score.total
         episode_info['length'] = self.step_num
+        episode_info['time'] = self.score.episode_time
         if self.should_benchmark:
             self.log_benchmark_trial()
         else:

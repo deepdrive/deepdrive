@@ -10,7 +10,7 @@ from vendor.openai.baselines.bench import Monitor
 from vendor.openai.baselines.common import set_global_seeds
 from vendor.openai.baselines.common.atari_wrappers import make_atari, wrap_deepmind
 from vendor.openai.baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
-from mpi4py import MPI
+# from mpi4py import MPI
 
 def make_atari_env(env_id, num_env, seed, wrapper_kwargs=None, start_index=0):
     """

@@ -10,6 +10,7 @@ import sys
 import time
 import numpy as np
 import pyarrow
+from gym import spaces
 
 import logs
 import utils
@@ -17,12 +18,10 @@ import utils
 import deepdrive
 from gym_deepdrive.envs.deepdrive_gym_env import DeepDriveEnv, Action
 import config as c
+import api.methods as m
 
 log = logs.get_log(__name__)
 
-STEP = 'step'
-RESET = 'reset'
-START = 'start'
 
 CONN_STRING = "tcp://*:%s" % c.API_PORT
 
@@ -57,10 +56,10 @@ class Server(object):
                 msg = self.socket.recv()
                 method, args, kwargs = pyarrow.deserialize(msg)
                 resp = None
-                if self.env is None and method != START:
+                if self.env is None and method != m.START:
                     resp = 'No environment started, please send start request'
                     log.error('Client sent request with no environment started')
-                elif method == START:
+                elif method == m.START:
                     allowed_args = ['experiment_name', 'env', 'cameras', 'combine_box_action_spaces', 'is_discrete',
                                     'preprocess_with_tensorflow', 'is_sync']
                     if c.IS_EVAL:
@@ -70,10 +69,16 @@ class Server(object):
                         if key not in allowed_args:
                             del kwargs[key]
                     self.env = deepdrive.start(**kwargs)
-                elif method == STEP:
-                    resp = self.env.step(Action(*args, **kwargs).as_gym())
-                elif method == RESET:
+                elif method == m.STEP:
+                    resp = self.env.step(args[0])
+                elif method == m.RESET:
                     resp = self.env.reset()
+                elif method == m.ACTION_SPACE or method == m.OBSERVATION_SPACE:
+                    resp = self.serialize_space(resp)
+                elif method == m.REWARD_RANGE:
+                    resp = self.env.reward_range
+                elif method == m.METADATA:
+                    resp = self.env.metadata
                 else:
                     log.error('Invalid API method')
 
@@ -82,6 +87,19 @@ class Server(object):
             except zmq.error.Again:
                 log.info('Waiting for client')
                 self.create_socket()
+
+    def serialize_space(self, resp):
+        space = self.env.action_space
+        space_type = type(space)
+        if space_type == spaces.Box:
+            resp = {'type': str(space_type),
+                    'low': space.low,
+                    'high': space.high,
+                    'dtype': str(space.dtype)
+                    }
+        else:
+            raise RuntimeError(space_type + ' not supported')
+        return resp
 
 
 def start():

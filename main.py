@@ -107,7 +107,8 @@ def main():
                 log.info('Bootstrapping from baseline agent')
                 net_path = ensure_baseline_weights(args.net_path)
             train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent,
-                      render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync, driving_style=driving_style)
+                      render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync, driving_style=driving_style,
+                      is_remote_client=args.is_remote_client)
         else:
             raise Exception('Agent type not recognized')
     elif args.path_follower:
@@ -117,7 +118,7 @@ def main():
         gym_env = None
         try:
             gym_env = deepdrive.start(experiment=args.experiment_name, env_id=args.env_id, fps=args.fps,
-                                      driving_style=driving_style)
+                                      driving_style=driving_style, is_remote_client=args.is_remote_client)
             log.info('Path follower drive mode')
             for episode in range(episode_count):
                 if done:

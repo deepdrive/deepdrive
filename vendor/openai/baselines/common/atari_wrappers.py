@@ -2,8 +2,11 @@ import numpy as np
 from collections import deque
 import gym
 from gym import spaces
-import cv2
-cv2.ocl.setUseOpenCL(False)
+try:
+    import cv2
+    cv2.ocl.setUseOpenCL(False)
+except ImportError:
+    print('Error importing opencv, atari wrappers will not work')
 
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env, noop_max=30):

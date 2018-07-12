@@ -6,23 +6,32 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
                              str, super, zip)
 
 import zmq
-import random
-import sys
-import time
+
+import numpy as np
 import pyarrow
+from gym import spaces
 
 import config as c
+import api.methods as m
 import logs
 from gym_deepdrive.envs.deepdrive_gym_env import Action
 
 log = logs.get_log(__name__)
 
 
+def deserialize_space(resp):
+    if resp['type'] == "<class 'gym.spaces.box.Box'>":
+        ret = spaces.Box(resp['low'], resp['high'], dtype=resp['dtype'])
+    else:
+        raise RuntimeError('Unsupported action space type')
+    return ret
+
+
 class RemoteEnv(object):
     def __init__(self, **kwargs):
         self.socket = None
         self.create_socket()
-        self._send('start', kwargs=kwargs)
+        self._send(m.START, kwargs=kwargs)
 
     def _send(self, method, args=None, kwargs=None):
         args = args or []
@@ -48,12 +57,28 @@ class RemoteEnv(object):
         return socket
 
     def step(self, action):
-        if isinstance(action, list):
-            action = Action.from_gym(action)
-        resp = self._send('step', kwargs=dict(
-            steering=action.steering, throttle=action.throttle, handbrake=action.handbrake, brake=action.brake,
-            has_control=action.has_control))
+        resp = self._send(m.STEP, args=[action])
         return resp
 
     def reset(self):
-        self._send('reset')
+        return self._send(m.RESET)
+
+    @property
+    def action_space(self):
+        resp = self._send(m.ACTION_SPACE)
+        ret = deserialize_space(resp)
+        return ret
+
+    @property
+    def observation_space(self):
+        resp = self._send(m.OBSERVATION_SPACE)
+        ret = deserialize_space(resp)
+        return ret
+
+    @property
+    def metadata(self):
+        return self._send(m.METADATA)
+
+    @property
+    def reward_range(self):
+        return self._send(m.REWARD_RANGE)
