@@ -1,0 +1,44 @@
+FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04
+
+RUN apt-get update; apt-get install -y libsdl2-2.0
+
+# Python 3
+RUN apt-get update; apt-get install -y software-properties-common python-software-properties
+RUN apt-get install -y python3-pip python3-dev \
+      && cd /usr/local/bin \
+      && ln -s /usr/bin/python3 python \
+      && pip3 install --upgrade pip
+
+# Python deps
+COPY docker/env-requirements.txt .
+RUN pip install -r env-requirements.txt
+
+# Non-root user for Unreal
+RUN useradd -m a
+USER a
+ENV HOME /home/a
+USER root
+RUN chown -R a:a /home/a
+RUN apt-get -y install sudo
+RUN echo "a:a" | chpasswd && adduser a sudo
+USER a
+WORKDIR /home/a/src/deepdrive
+
+# Download sim
+ENV PYTHONPATH=/home/a/src/deepdrive
+ENV DEEPDRIVE_DIR=/home/a/Deepdrive
+COPY config.py logs.py utils.py ./
+RUN python -c "import utils; utils.download_sim()"
+
+# Cleanup
+#RUN apt-get rm -rf /var/lib/apt/lists/*
+
+# LibSDL2 offscreen opengl mode
+ENV SDL_VIDEODRIVER=offscreen
+
+# API
+EXPOSE 5557/tcp
+
+COPY . .
+
+CMD python api/server.py

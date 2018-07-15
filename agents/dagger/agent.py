@@ -10,6 +10,7 @@ import numpy as np
 
 import config as c
 import deepdrive
+import utils
 from agents.common import get_throttle
 from agents.dagger import net
 from agents.dagger.train.train import resize_images
@@ -20,6 +21,8 @@ import logs
 
 log = logs.get_log(__name__)
 
+
+TEST_SAVE_IMAGE = False
 
 class Agent(object):
     def __init__(self, tf_session, should_record_recovery_from_random_actions=True,
@@ -100,8 +103,10 @@ class Agent(object):
 
         if obz and obz['is_game_driving'] == 1 and self.should_record:
             self.obz_recording.append(obz)
-            # utils.save_camera(obz['cameras'][0]['image'], obz['cameras'][0]['depth'],
-            #                   os.path.join(self.sess_dir, str(self.total_obz).zfill(10)))
+            if TEST_SAVE_IMAGE:
+                utils.save_camera(obz['cameras'][0]['image'], obz['cameras'][0]['depth'],
+                                  self.sess_dir, 'screenshot_' + str(self.step).zfill(10))
+                input('continue?')
             self.recorded_obz_count += 1
         else:
             log.debug('Not recording frame')
@@ -181,6 +186,7 @@ class Agent(object):
         return action
 
     def maybe_save(self):
+        # TODO: Move recording to env
         if (
             self.should_record and self.recorded_obz_count % c.FRAMES_PER_HDF5_FILE == 0 and
             self.recorded_obz_count != 0
