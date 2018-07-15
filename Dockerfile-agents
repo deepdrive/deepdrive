@@ -1,7 +1,7 @@
-# Runs agents only.
-
 # Usage:
-#     python api/server.py
+#     Run API server somewhere, i.e. python api/server.py
+#
+#     Then run the client:
 #     docker run --runtime=nvidia --net=host -it deepdrive python main.py --baseline --is-remote-client
 #
 #     ppo:
