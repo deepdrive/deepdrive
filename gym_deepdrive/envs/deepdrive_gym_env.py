@@ -876,43 +876,26 @@ class DeepDriveEnv(gym.Env):
             if ret != 1:
                 raise RuntimeError('Could not activate synchronous mode - errno %r' % ret)
 
+    def check_version(self):
+        self.client_id = self.connection_props['client_id']
+        server_version = self.connection_props['server_protocol_version']
+        if not server_version:
+            log.warn('Server version not reported! Hoping for the best.')
+        else:
+            server_version = semvar(server_version).version
+            # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
+            #   connecting, compute same hash and compare. (Need to figure out what to do on dev packaged version as
+            #   files may change - maybe ignore as it's uncommon).
+            #   Currently, we timestamp the build, and set that as the version in the extension. This is fine unless
+            #   you change shared code and build the extension only, then the versions won't change, and you could
+            #   see incompatibilities.
+            if semvar(self.client_version).version[:2] != server_version[:2]:
+                raise RuntimeError(
+                    'Server and client major/minor version do not match - server is %s and client is %s' %
+                    (server_version, self.client_version))
+
     def connect(self, cameras=None):
-        def _connect():
-            try:
-                self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
-                if isinstance(self.connection_props, int):
-                    raise Exception('You have an old version of the deepdrive client - try uninstalling and reinstalling with pip')
-                if not self.connection_props or not self.connection_props['max_capture_resolution']:
-                    # Try again
-                    return
-                self.client_id = self.connection_props['client_id']
-                server_version = semvar(self.connection_props['server_protocol_version']).version
-                # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
-                #   connecting, compute same hash and compare. (Need to figure out what to do on dev packaged version as
-                #   files may change - maybe ignore as it's uncommon).
-                #   Currently, we timestamp the build, and set that as the version in the extension. This is fine unless
-                #   you change shared code and build the extension only, then the versions won't change, and you could
-                #   see incompatibilities.
-
-                if semvar(self.client_version).version[:2] != server_version[:2]:
-                    raise RuntimeError('Server and client major/minor version do not match - server is %s and client is %s' %
-                                       (server_version, self.client_version))
-
-            except deepdrive_client.time_out:
-                _connect()
-
-        _connect()
-        cxn_attempts = 0
-        max_cxn_attempts = 10
-        while not self.connection_props:
-            cxn_attempts += 1
-            sleep = cxn_attempts + random.random() * 2  # splay to avoid thundering herd
-            log.warning('Connection to environment failed, retry (%d/%d) in %d seconds',
-                        cxn_attempts, max_cxn_attempts, round(sleep, 0))
-            time.sleep(sleep)
-            _connect()
-            if cxn_attempts >= max_cxn_attempts:
-                raise RuntimeError('Could not connect to the environment')
+        self._connect_with_retries()
 
         if cameras is None:
             cameras = [c.DEFAULT_CAM]
@@ -937,6 +920,34 @@ class DeepDriveEnv(gym.Env):
 
         self._perform_first_step()
         self.has_control = False
+
+    def _connect_with_retries(self):
+
+        def connect():
+            try:
+                self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
+                if isinstance(self.connection_props, int):
+                    raise Exception('You have an old version of the deepdrive client - try uninstalling and reinstalling with pip')
+                if not self.connection_props or not self.connection_props['max_capture_resolution']:
+                    # Try again
+                    return
+                self.check_version()
+
+            except deepdrive_client.time_out:
+                connect()
+
+        connect()
+        cxn_attempts = 0
+        max_cxn_attempts = 10
+        while not self.connection_props:
+            cxn_attempts += 1
+            sleep = cxn_attempts + random.random() * 2  # splay to avoid thundering herd
+            log.warning('Connection to environment failed, retry (%d/%d) in %d seconds',
+                        cxn_attempts, max_cxn_attempts, round(sleep, 0))
+            time.sleep(sleep)
+            connect()
+            if cxn_attempts >= max_cxn_attempts:
+                raise RuntimeError('Could not connect to the environment')
 
     def _perform_first_step(self):
         obz = None
