@@ -1,5 +1,7 @@
+# Requires NVIDIA drivers 390+
+#
 # Usage:
-# docker run -v /home/a/src/deepdrive/results:/home/a/src/deepdrive/results -it --net=host --runtime=nvidia deepdriveio/sim
+# docker run -it --net=host --runtime=nvidia deepdriveio/sim
 
 FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04
 
