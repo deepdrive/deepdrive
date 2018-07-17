@@ -20,3 +20,4 @@ gputil
 joblib
 cloudpickle
 pyarrow
+pyglet

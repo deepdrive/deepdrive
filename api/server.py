@@ -98,7 +98,7 @@ class Server(object):
                     'dtype': str(space.dtype)
                     }
         else:
-            raise RuntimeError(space_type + ' not supported')
+            raise RuntimeError(str(space_type) + ' not supported')
         return resp
 
 

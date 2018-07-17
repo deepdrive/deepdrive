@@ -323,6 +323,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
         should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS,
         net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL, is_sync=False, is_remote=False):
+    """Run a trained agent"""
+
     if run_baseline_agent:
         net_path = ensure_baseline_weights(net_path)
     reward = 0

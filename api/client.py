@@ -7,14 +7,13 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
 
 import zmq
 
-import numpy as np
 import pyarrow
 from gym import spaces
 
 import config as c
 import api.methods as m
 import logs
-from gym_deepdrive.envs.deepdrive_gym_env import Action
+from gym_deepdrive.renderer import Renderer
 
 log = logs.get_log(__name__)
 
@@ -30,7 +29,15 @@ def deserialize_space(resp):
 class RemoteEnv(object):
     def __init__(self, **kwargs):
         self.socket = None
+        self.prev_obz = None
         self.create_socket()
+        self.should_render = 'render' in kwargs and kwargs['render'] is True
+        if kwargs['cameras'] is None:
+            kwargs['cameras'] = [c.DEFAULT_CAM]
+        if self.should_render:
+            self.renderer = Renderer(kwargs['cameras'])
+        else:
+            self.renderer = None
         self._send(m.START, kwargs=kwargs)
 
     def _send(self, method, args=None, kwargs=None):
@@ -57,11 +64,18 @@ class RemoteEnv(object):
         return socket
 
     def step(self, action):
-        resp = self._send(m.STEP, args=[action])
-        return resp
+        obz, reward, done, info = self._send(m.STEP, args=[action])
+        if self.should_render:
+            self.render()
+        self.prev_obz = obz
+        return obz, reward, done, info
 
     def reset(self):
         return self._send(m.RESET)
+
+    def render(self):
+        if self.prev_obz is not None:
+            self.renderer.render(self.prev_obz)
 
     @property
     def action_space(self):

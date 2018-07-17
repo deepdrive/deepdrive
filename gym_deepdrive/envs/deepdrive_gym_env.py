@@ -27,15 +27,12 @@ from GPUtil import GPUtil
 from boto.s3.connection import S3Connection
 from gym import spaces
 from gym.utils import seeding
-try:
-    import pyglet
-    from pyglet.gl import GLubyte
-except:
-    pyglet = None
+
 
 import config as c
 import logs
 import utils
+from gym_deepdrive.renderer import Renderer
 from utils import obj2dict, download
 from dashboard import dashboard_fn, DashboardPub
 
@@ -224,7 +221,6 @@ class DeepDriveEnv(gym.Env):
         self.discrete_actions = None
         self.preprocess_with_tensorflow = None
         self.sess = None
-        self.prev_observation = None
         self.start_time = time.time()
         self.step_num = 0
         self.prev_step_time = None
@@ -247,10 +243,7 @@ class DeepDriveEnv(gym.Env):
         self.use_sim_start_command = None
         self.connection_props = None
         self.should_render = None  # type: bool
-        self.pyglet_render = False  # type: bool
-        self.pyglet_image = None
-        self.pyglet_process = None
-        self.pyglet_queue = None
+        self.pyglet_render = True  # type: bool
         self.ep_time_balance_coeff = 10.  # type: float
         self.previous_action_time = None  # type: time.time
         self.fps = None  # type: int
@@ -260,6 +253,8 @@ class DeepDriveEnv(gym.Env):
         self.reset_returns_zero = None  # type: bool
         self.started_driving_wrong_way_time = None  # type: bool
         self.previous_distance_along_route = None  # type: bool
+        self.renderer = None
+        self.np_random = None
 
         if not c.REUSE_OPEN_SIM:
             utils.download_sim()
@@ -373,13 +368,6 @@ class DeepDriveEnv(gym.Env):
     def init_benchmarking(self):
         self.should_benchmark = True
         os.makedirs(c.RESULTS_DIR, exist_ok=True)
-
-    def init_pyglet(self, cameras):
-        q = Queue(maxsize=1)
-        p = Process(target=render_cameras, args=(q, cameras))
-        p.start()
-        self.pyglet_process = p
-        self.pyglet_queue = q
 
     def start_dashboard(self):
         if utils.is_debugging():
@@ -679,6 +667,23 @@ class DeepDriveEnv(gym.Env):
             with open(diff_filepath, 'w') as diff_file:
                 diff_file.write(self.git_diff)
 
+        if not utils.is_docker():
+            self.write_result_csv(average, diff_filename, filename, high, low, median, std)
+
+        log.info('median score %r', median)
+        log.info('avg score %r', average)
+        log.info('std %r', std)
+        log.info('high score %r', high)
+        log.info('low score %r', low)
+        log.info('progress_reward %r', self.score.progress_reward)
+        log.info('speed_reward %r', self.score.speed_reward)
+        log.info('lane_deviation_penalty %r', self.score.lane_deviation_penalty)
+        log.info('time_penalty %r', self.score.time_penalty)
+        log.info('gforce_penalty %r', self.score.gforce_penalty)
+        log.info('episode_time %r', self.score.episode_time)
+        log.info('wrote results to %s', os.path.normpath(filename))
+
+    def write_result_csv(self, average, diff_filename, filename, high, low, median, std):
         with open(filename, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
             for i, score in enumerate(self.trial_scores):
@@ -709,19 +714,6 @@ class DeepDriveEnv(gym.Env):
                 gpus = 'n/a'
             writer.writerow(['gpus', gpus])
 
-        log.info('median score %r', median)
-        log.info('avg score %r', average)
-        log.info('std %r', std)
-        log.info('high score %r', high)
-        log.info('low score %r', low)
-        log.info('progress_reward %r', self.score.progress_reward)
-        log.info('speed_reward %r', self.score.speed_reward)
-        log.info('lane_deviation_penalty %r', self.score.lane_deviation_penalty)
-        log.info('time_penalty %r', self.score.time_penalty)
-        log.info('gforce_penalty %r', self.score.gforce_penalty)
-        log.info('episode_time %r', self.score.episode_time)
-        log.info('wrote results to %s', os.path.normpath(filename))
-
     def release_agent_control(self):
         self.has_control = deepdrive_client.release_agent_control(self.client_id) is not None
 
@@ -735,7 +727,6 @@ class DeepDriveEnv(gym.Env):
         self.steps_crawling = 0
 
     def reset(self):
-        self.prev_observation = None
         self.reset_agent()
         self.step_num = 0
         self.distance_along_route = 0
@@ -776,14 +767,7 @@ class DeepDriveEnv(gym.Env):
         self.close_sim()
 
     def render(self, mode='human', close=False):
-
-        # TODO: Implement proper render - this is really only good for one frame - Could use our OpenGLUT viewer (on raw images) for this or PyGame on preprocessed images
-        if self.should_render and self.prev_observation is not None:
-            if self.pyglet_render and pyglet is not None and self.pyglet_queue is not None:
-                self.pyglet_queue.put(self.prev_observation['cameras'])
-            else:
-                for camera in self.prev_observation['cameras']:
-                    utils.show_camera(camera['image'], camera['depth'])
+        self.renderer.render()
 
     def seed(self, seed=None):
         self.np_random = seeding.np_random(seed)
@@ -842,7 +826,6 @@ class DeepDriveEnv(gym.Env):
         else:
             ret = self.preprocess_observation(obz)
         log.debug('completed capture step')
-        self.prev_observation = ret
         return ret
 
     def reset_agent(self):
@@ -903,11 +886,11 @@ class DeepDriveEnv(gym.Env):
         if self.client_id and self.client_id > 0:
             for cam in self.cameras:
                 cam['cxn_id'] = deepdrive_client.register_camera(self.client_id, cam['field_of_view'],
-                                                              cam['capture_width'],
-                                                              cam['capture_height'],
-                                                              cam['relative_position'],
-                                                              cam['relative_rotation'],
-                                                              cam['name'])
+                                                                 cam['capture_width'],
+                                                                 cam['capture_height'],
+                                                                 cam['relative_position'],
+                                                                 cam['relative_rotation'],
+                                                                 cam['name'])
 
             shared_mem = deepdrive_client.get_shared_memory(self.client_id)
             self.reset_capture(shared_mem[0], shared_mem[1])
@@ -915,8 +898,8 @@ class DeepDriveEnv(gym.Env):
         else:
             self.raise_connect_fail()
 
-        if self.pyglet_render:
-            self.init_pyglet(cameras)
+        if self.should_render and self.pyglet_render:
+            self.renderer = Renderer(cameras)
 
         self._perform_first_step()
         self.has_control = False
@@ -1136,61 +1119,6 @@ class DeepDriveRewardCalculator(object):
         progress_reward = DeepDriveRewardCalculator.clip(progress_reward)
         speed_reward = DeepDriveRewardCalculator.clip(speed_reward)
         return progress_reward, speed_reward
-
-
-def render_cameras(render_queue, cameras):
-    if pyglet is None:
-        return
-    widths = []
-    heights = []
-    for camera in cameras:
-        widths += [camera['capture_width']]
-        heights += [camera['capture_height']]
-
-    width = max(widths) * 2  # image and depths
-    height = sum(heights)
-    window = pyglet.window.Window(width, height)
-    fps_display = pyglet.clock.ClockDisplay()
-
-    @window.event
-    def on_draw():
-        window.clear()
-        cams = render_queue.get(block=True)
-        channels = 3
-        bytes_per_channel = 1
-        for cam_idx, cam in enumerate(cams):
-            img_data = np.copy(cam['image_raw'])
-            depth_data = np.ascontiguousarray(utils.depth_heatmap(np.copy(cam['depth'])))
-            img_data.shape = -1
-            depth_data.shape = -1
-            img_texture = (GLubyte * img_data.size)(*img_data.astype('uint8'))
-            depth_texture = (GLubyte * depth_data.size)(*depth_data.astype('uint8'))
-            image = pyglet.image.ImageData(
-                cam['capture_width'],
-                cam['capture_height'],
-                'RGB',
-                img_texture,
-                pitch= -1 * cam['capture_width'] * channels * bytes_per_channel)
-            depth = pyglet.image.ImageData(
-                cam['capture_width'],
-                cam['capture_height'],
-                'RGB',
-                depth_texture,
-                pitch= -1 * cam['capture_width'] * channels * bytes_per_channel)
-            if image is not None:
-                image.blit(0, cam_idx * cam['capture_height'])
-            if depth is not None:
-                depth.blit(cam['capture_width'], cam_idx * cam['capture_height'])
-        fps_display.draw()
-
-    while True:
-        pyglet.clock.tick()
-
-        for window in pyglet.app.windows:
-            window.switch_to()
-            window.dispatch_events()
-            window.dispatch_event('on_draw')
-            window.flip()
 
 
 if __name__ == '__main__':
