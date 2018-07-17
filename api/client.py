@@ -13,6 +13,7 @@ from gym import spaces
 import config as c
 import api.methods as m
 import logs
+from gym_deepdrive.envs.deepdrive_gym_env import Action
 from gym_deepdrive.renderer import Renderer
 
 log = logs.get_log(__name__)
@@ -64,6 +65,8 @@ class RemoteEnv(object):
         return socket
 
     def step(self, action):
+        if isinstance(action, Action):
+            action = action.as_gym()
         obz, reward, done, info = self._send(m.STEP, args=[action])
         if self.should_render:
             self.render()

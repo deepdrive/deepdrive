@@ -5,10 +5,11 @@
 
 FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04
 
-RUN apt-get update; apt-get install -y libsdl2-2.0
+RUN apt-get update;
 
 # OS deps
-RUN apt-get update; apt-get install -y software-properties-common python-software-properties sudo python3-pip python3-dev \
+RUN apt-get update; apt-get install -y libsdl2-2.0 software-properties-common python-software-properties sudo \
+        python3-pip python3-dev \
       && cd /usr/local/bin \
       && ln -s /usr/bin/python3 python \
       && pip3 install --upgrade pip
@@ -35,7 +36,7 @@ WORKDIR /home/a/src/deepdrive
 ENV PYTHONPATH=/home/a/src/deepdrive
 ENV DEEPDRIVE_DIR=/home/a/Deepdrive
 COPY config.py logs.py utils.py ./
-RUN python -c "import utils; utils.download_sim()"
+RUN python -c "import utils; utils.download_sim();"
 
 # LibSDL2 offscreen opengl mode
 ENV SDL_VIDEODRIVER=offscreen

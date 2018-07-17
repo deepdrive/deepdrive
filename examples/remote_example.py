@@ -9,7 +9,7 @@ def main():
     done = False
     while True:
         while not done:
-            observation, reward, done, info = env.step(forward.as_gym())
+            observation, reward, done, info = env.step(forward)
 
         print('Episode finished')
         done = env.reset()
