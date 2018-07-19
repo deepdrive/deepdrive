@@ -14,15 +14,14 @@
 # limitations under the License.
 # ==============================================================================
 #
-# This script performs the following operations:
-# 2. Fine-tunes Mobilenet v2 on the Deepdrive train set.
-# 3. Evaluates the model on the Deepdrive eval set.
 #
 # Usage:
 # scripts/finetune_mobilenet_v2_on_deepdrive.sh
 #
 # Should see steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, train steering error: ~0.08
 set -ev
+
+# TODO: Move this to Python
 
 # Where the dataset is saved to.
 DATASET_DIR=/media/a/data-ext4/deepdrive-data

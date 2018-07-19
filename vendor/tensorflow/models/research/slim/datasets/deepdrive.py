@@ -27,8 +27,6 @@ import tensorflow as tf
 
 slim = tf.contrib.slim
 
-DEEPDRIVE_TRAIN_PARENT_DIR = os.path.join(os.path.expanduser('~'), 'mnet2_tf', 'fast')
-
 _FILE_PATTERN = 'deepdrive_%s*.tfrecord'
 
 SPLITS_TO_SIZES = {'train': 1000 * 164, 'eval': 1000}

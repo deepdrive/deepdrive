@@ -64,7 +64,7 @@ def main():
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
     parser.add_argument('-n', '--experiment-name', nargs='?', default=None, help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
-    parser.add_argument('--agent', nargs='?', default='dagger', help='Agent type (%s, %s, %s)' % (c.DAGGER,
+    parser.add_argument('--agent', nargs='?', default=c.DAGGER_MNET2, help='Agent type (%s, %s, %s)' % (c.DAGGER,
                                                                                                   c.DAGGER_MNET2,
                                                                                                   c.BOOTSTRAPPED_PPO2))
 
@@ -86,69 +86,81 @@ def main():
     driving_style = DrivingStyle[args.driving_style.upper()]
 
     if args.train:
-        # TODO: Add experiment name here as well, and integrate it into Tensorflow runs, recording names, model checkpoints, etc...
-        if args.agent == 'dagger' or args.agent == 'dagger_mobilenet_v2':
-            '''
-            Really it's just the first iteration of DAgger where our policy is random.
-            This seems to be sufficient for exploring the types of mistakes our AI makes and labeling
-            corrections to those mistakes. This does a better job at handling edge cases that
-            the agent would not encounter acting under its own policy during training.
-            In this way, we come a little closer to reinforcement learning, as we explore randomly and cover
-            a larger number of possibilities.
-            '''
-            from agents.dagger.train import train
-            train.run(resume_dir=args.resume_train, data_dir=args.recording_dir, agent_name=args.agent,
-                      overfit=args.overfit, eval_only=args.eval_only, tf_debug=args.tf_debug,
-                      freeze_pretrained=args.freeze_pretrained)
-        elif args.agent == 'bootstrapped_ppo2':
-            from agents.bootstrap_rl.train import train
-            net_path = args.net_path
-            if not net_path:
-                log.info('Bootstrapping from baseline agent')
-                net_path = ensure_baseline_weights(args.net_path)
-            train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent,
-                      render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync, driving_style=driving_style,
-                      is_remote_client=args.is_remote_client)
-        else:
-            raise Exception('Agent type not recognized')
+        train_agent(args, driving_style)
     elif args.path_follower:
-        done = False
-        render = False
-        episode_count = 1
-        gym_env = None
-        try:
-            gym_env = deepdrive.start(experiment=args.experiment_name, env_id=args.env_id, fps=args.fps,
-                                      driving_style=driving_style, is_remote_client=args.is_remote_client)
-            log.info('Path follower drive mode')
-            for episode in range(episode_count):
+        run_path_follower(args, driving_style)
+    else:
+        # TODO: Run PPO agent here, not with c.TEST_PPO
+        run_trained_agent(args, camera_rigs, driving_style)
+
+
+def run_trained_agent(args, camera_rigs, driving_style):
+    from agents.dagger import agent
+    agent.run(args.experiment_name,
+              should_record=args.record, net_path=args.net_path, env_id=args.env_id,
+              run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
+              should_record_recovery_from_random_actions=args.record_recovery_from_random_actions, fps=args.fps,
+              net_name=args.net_type, is_sync=args.sync, driving_style=driving_style,
+              is_remote=args.is_remote_client)
+
+
+def run_path_follower(args, driving_style):
+    done = False
+    render = False
+    episode_count = 1
+    gym_env = None
+    try:
+        gym_env = deepdrive.start(experiment=args.experiment_name, env_id=args.env_id, fps=args.fps,
+                                  driving_style=driving_style, is_remote_client=args.is_remote_client)
+        log.info('Path follower drive mode')
+        for episode in range(episode_count):
+            if done:
+                gym_env.reset()
+            while True:
+                action = deepdrive.action(has_control=False)
+                obz, reward, done, _ = gym_env.step(action)
+                if render:
+                    gym_env.render()
                 if done:
                     gym_env.reset()
-                while True:
-                    action = deepdrive.action(has_control=False)
-                    obz, reward, done, _ = gym_env.step(action)
-                    if render:
-                        gym_env.render()
-                    if done:
-                        gym_env.reset()
-        except KeyboardInterrupt:
-            log.info('keyboard interrupt detected, closing')
-        except Exception as e:
-            log.error('Error running agent. %s', e)
-            if gym_env:
-                gym_env.close()
-            raise e
+    except KeyboardInterrupt:
+        log.info('keyboard interrupt detected, closing')
+    except Exception as e:
+        log.error('Error running agent. %s', e)
         if gym_env:
             gym_env.close()
-        log.info('Last episode complete, closing')
-    else:
-        from agents.dagger import agent
+        raise e
+    if gym_env:
+        gym_env.close()
+    log.info('Last episode complete, closing')
 
-        agent.run(args.experiment_name,
-                  should_record=args.record, net_path=args.net_path, env_id=args.env_id,
-                  run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
-                  should_record_recovery_from_random_actions=args.record_recovery_from_random_actions,
-                  path_follower=args.path_follower, fps=args.fps, net_name=args.net_type, is_sync=args.sync,
-                  driving_style=driving_style, is_remote=args.is_remote_client)
+
+def train_agent(args, driving_style):
+    # TODO: Add experiment name here as well, and integrate it into Tensorflow runs, recording names, model checkpoints, etc...
+    if args.agent == 'dagger' or args.agent == 'dagger_mobilenet_v2':
+        '''
+        Really it's just the first iteration of DAgger where our policy is random.
+        This seems to be sufficient for exploring the types of mistakes our AI makes and labeling
+        corrections to those mistakes. This does a better job at handling edge cases that
+        the agent would not encounter acting under its own policy during training.
+        In this way, we come a little closer to reinforcement learning, as we explore randomly and cover
+        a larger number of possibilities.
+        '''
+        from agents.dagger.train import train
+        train.run(resume_dir=args.resume_train, data_dir=args.recording_dir, agent_name=args.agent,
+                  overfit=args.overfit, eval_only=args.eval_only, tf_debug=args.tf_debug,
+                  freeze_pretrained=args.freeze_pretrained)
+    elif args.agent == 'bootstrapped_ppo2':
+        from agents.bootstrap_rl.train import train
+        net_path = args.net_path
+        if not net_path:
+            log.info('Bootstrapping from baseline agent')
+            net_path = ensure_baseline_weights(args.net_path)
+        train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent,
+                  render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync, driving_style=driving_style,
+                  is_remote_client=args.is_remote_client)
+    else:
+        raise Exception('Agent type not recognized')
 
 
 def get_latest_model():

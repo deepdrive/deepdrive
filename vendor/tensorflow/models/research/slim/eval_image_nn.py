@@ -18,18 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
-"""
-Usage:
-python eval_image_nn.py 
---dataset_name=deepdrive
---dataset_split_name=eval
---dataset_dir=/media/a/data-ext4/deepdrive-data
---model_name=mobilenet_v2_deepdrive
---eval_image_size=224
---checkpoint_path="/home/a/mnet2_tf/2018-05-18__04-46-32PM_after_batch_16"
-"""
-
+import sys
 import glob
 import math
 import os
@@ -37,74 +26,80 @@ import os
 import tensorflow as tf
 
 from vendor.tensorflow.models.research.slim.datasets import dataset_factory
-from vendor.tensorflow.models.research.slim.datasets.deepdrive import DEEPDRIVE_TRAIN_PARENT_DIR
 from vendor.tensorflow.models.research.slim.nets import nets_factory
 from vendor.tensorflow.models.research.slim.preprocessing import preprocessing_factory
 
+from config import TENSORFLOW_OUT_DIR
 from agents.dagger.net import MOBILENET_V2_SLIM_NAME
+from vendor.tensorflow.models.research.slim.train_image_nn import commandeer_tf_flags
 
 slim = tf.contrib.slim
 
-tf.app.flags.DEFINE_integer(
-    'batch_size', 100, 'The number of samples in each batch.')
+def create_flags():
+    tf.app.flags.DEFINE_integer(
+        'batch_size', 100, 'The number of samples in each batch.')
 
-tf.app.flags.DEFINE_integer(
-    'max_num_batches', None,
-    'Max number of batches to evaluate by default use all.')
+    tf.app.flags.DEFINE_integer(
+        'max_num_batches', None,
+        'Max number of batches to evaluate by default use all.')
 
-tf.app.flags.DEFINE_string(
-    'master', '', 'The address of the TensorFlow master to use.')
+    tf.app.flags.DEFINE_string(
+        'master', '', 'The address of the TensorFlow master to use.')
 
-tf.app.flags.DEFINE_string(
-    'checkpoint_path', None,
-    'The directory where the model was written to or an absolute path to a '
-    'checkpoint file.')
+    tf.app.flags.DEFINE_string(
+        'checkpoint_path', None,
+        'The directory where the model was written to or an absolute path to a '
+        'checkpoint file.')
 
-tf.app.flags.DEFINE_string(
-    'eval_dir', None, 'Directory where the results are saved to.')
+    tf.app.flags.DEFINE_string(
+        'eval_dir', None, 'Directory where the results are saved to.')
 
-tf.app.flags.DEFINE_integer(
-    'num_preprocessing_threads', 4,
-    'The number of threads used to create the batches.')
+    tf.app.flags.DEFINE_integer(
+        'num_preprocessing_threads', 4,
+        'The number of threads used to create the batches.')
 
-tf.app.flags.DEFINE_string(
-    'dataset_name', 'imagenet', 'The name of the dataset to load.')
+    tf.app.flags.DEFINE_string(
+        'dataset_name', 'imagenet', 'The name of the dataset to load.')
 
-tf.app.flags.DEFINE_string(
-    'dataset_split_name', 'test', 'The name of the train/test split.')
+    tf.app.flags.DEFINE_string(
+        'dataset_split_name', 'test', 'The name of the train/test split.')
 
-tf.app.flags.DEFINE_string(
-    'dataset_dir', None, 'The directory where the dataset files are stored.')
+    tf.app.flags.DEFINE_string(
+        'dataset_dir', None, 'The directory where the dataset files are stored.')
 
-tf.app.flags.DEFINE_integer(
-    'labels_offset', 0,
-    'An offset for the labels in the dataset. This flag is primarily used to '
-    'evaluate the VGG and ResNet architectures which do not use a background '
-    'class for the ImageNet dataset.')
+    tf.app.flags.DEFINE_integer(
+        'labels_offset', 0,
+        'An offset for the labels in the dataset. This flag is primarily used to '
+        'evaluate the VGG and ResNet architectures which do not use a background '
+        'class for the ImageNet dataset.')
 
-tf.app.flags.DEFINE_string(
-    'model_name', 'inception_v3', 'The name of the architecture to evaluate.')
+    tf.app.flags.DEFINE_string(
+        'model_name', 'inception_v3', 'The name of the architecture to evaluate.')
 
-tf.app.flags.DEFINE_string(
-    'preprocessing_name', None, 'The name of the preprocessing to use. If left '
-                                'as `None`, then the model_name flag is used.')
+    tf.app.flags.DEFINE_string(
+        'preprocessing_name', None, 'The name of the preprocessing to use. If left '
+                                    'as `None`, then the model_name flag is used.')
 
-tf.app.flags.DEFINE_float(
-    'moving_average_decay', None,
-    'The decay to use for the moving average.'
-    'If left as None, then moving averages are not used.')
+    tf.app.flags.DEFINE_float(
+        'moving_average_decay', None,
+        'The decay to use for the moving average.'
+        'If left as None, then moving averages are not used.')
 
-tf.app.flags.DEFINE_integer(
-    'eval_image_size', None, 'Eval image size')
+    tf.app.flags.DEFINE_integer(
+        'eval_image_size', None, 'Eval image size')
 
-FLAGS = tf.app.flags.FLAGS
+    flags = tf.app.flags.FLAGS
+
+    return flags
 
 
 def main(_):
-    if FLAGS.eval_dir is None:
-        FLAGS.eval_dir = max(glob.glob(DEEPDRIVE_TRAIN_PARENT_DIR + '/*'), key=os.path.getmtime)
+    flags = tf.app.flags.FLAGS
 
-    if not FLAGS.dataset_dir:
+    if flags.eval_dir is None:
+        flags.eval_dir = max(glob.glob(TENSORFLOW_OUT_DIR + '/*'), key=os.path.getmtime)
+
+    if not flags.dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
 
     tf.logging.set_verbosity(tf.logging.INFO)
@@ -115,7 +110,7 @@ def main(_):
         # Select the dataset #
         ######################
         dataset = dataset_factory.get_dataset(
-            FLAGS.dataset_name, FLAGS.dataset_split_name, FLAGS.dataset_dir)
+            flags.dataset_name, flags.dataset_split_name, flags.dataset_dir)
 
         ####################
         # Select the model #
@@ -123,28 +118,28 @@ def main(_):
         ######################
         # Select the network #
         ######################
-        if FLAGS.model_name == MOBILENET_V2_SLIM_NAME:
+        if flags.model_name == MOBILENET_V2_SLIM_NAME:
             network_fn = nets_factory.get_network_fn(
-                FLAGS.model_name,
+                flags.model_name,
                 num_classes=None,
                 num_targets=6,
                 is_training=False, )
 
         else:
             network_fn = nets_factory.get_network_fn(
-                FLAGS.model_name,
-                num_classes=(dataset.num_classes - FLAGS.labels_offset),
+                flags.model_name,
+                num_classes=(dataset.num_classes - flags.labels_offset),
                 is_training=False)
 
         #####################################
         # Select the preprocessing function #
         #####################################
-        preprocessing_name = FLAGS.preprocessing_name or FLAGS.model_name
+        preprocessing_name = flags.preprocessing_name or flags.model_name
         image_preprocessing_fn = preprocessing_factory.get_preprocessing(
             preprocessing_name,
             is_training=False)
 
-        eval_image_size = FLAGS.eval_image_size or network_fn.default_image_size
+        eval_image_size = flags.eval_image_size or network_fn.default_image_size
 
         ##############################################################
         # Create a dataset provider that loads data from the dataset #
@@ -152,9 +147,9 @@ def main(_):
         provider = slim.dataset_data_provider.DatasetDataProvider(
             dataset,
             shuffle=False,
-            common_queue_capacity=2 * FLAGS.batch_size,
-            common_queue_min=FLAGS.batch_size)
-        if FLAGS.model_name == MOBILENET_V2_SLIM_NAME:
+            common_queue_capacity=2 * flags.batch_size,
+            common_queue_min=flags.batch_size)
+        if flags.model_name == MOBILENET_V2_SLIM_NAME:
             [image, spin, direction, speed, speed_change, steering, throttle] = provider.get(
                 ['image', 'spin', 'direction', 'speed', 'speed_change', 'steering', 'throttle'])
 
@@ -162,36 +157,36 @@ def main(_):
 
             images, targets = tf.train.batch(
                 [image, [spin, direction, speed, speed_change, steering, throttle]],
-                batch_size=FLAGS.batch_size,
-                num_threads=FLAGS.num_preprocessing_threads,
-                capacity=5 * FLAGS.batch_size)
+                batch_size=flags.batch_size,
+                num_threads=flags.num_preprocessing_threads,
+                capacity=5 * flags.batch_size)
         else:
             [image, label] = provider.get(['image', 'label'])
-            label -= FLAGS.labels_offset
+            label -= flags.labels_offset
 
             image = image_preprocessing_fn(image, eval_image_size, eval_image_size)
 
             images, labels = tf.train.batch(
                 [image, label],
-                batch_size=FLAGS.batch_size,
-                num_threads=FLAGS.num_preprocessing_threads,
-                capacity=5 * FLAGS.batch_size)
+                batch_size=flags.batch_size,
+                num_threads=flags.num_preprocessing_threads,
+                capacity=5 * flags.batch_size)
 
         ####################
         # Define the model #
         ####################
         logits, _ = network_fn(images)
 
-        if FLAGS.moving_average_decay:
+        if flags.moving_average_decay:
             variable_averages = tf.train.ExponentialMovingAverage(
-                FLAGS.moving_average_decay, tf_global_step)
+                flags.moving_average_decay, tf_global_step)
             variables_to_restore = variable_averages.variables_to_restore(
                 slim.get_model_variables())
             variables_to_restore[tf_global_step.op.name] = tf_global_step
         else:
             variables_to_restore = slim.get_variables_to_restore()
 
-        if FLAGS.model_name == MOBILENET_V2_SLIM_NAME:
+        if flags.model_name == MOBILENET_V2_SLIM_NAME:
             # targets = tf.Print(targets, [targets[0][0], logits[0][0]], 'epxpected and actual spin ')
             # targets = tf.Print(targets, [targets[0][1], logits[0][1]], 'epxpected and actual direction ')
             # targets = tf.Print(targets, [targets[0][2], logits[0][2]], 'epxpected and actual speed ')
@@ -242,30 +237,35 @@ def main(_):
             tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
 
         # TODO(sguada) use num_epochs=1
-        if FLAGS.max_num_batches:
-            num_batches = FLAGS.max_num_batches
+        if flags.max_num_batches:
+            num_batches = flags.max_num_batches
         else:
             # This ensures that we make a single pass over all of the data.
-            num_batches = math.ceil(dataset.num_samples / float(FLAGS.batch_size))
+            num_batches = math.ceil(dataset.num_samples / float(flags.batch_size))
 
-        if FLAGS.model_name == MOBILENET_V2_SLIM_NAME:
-            if not FLAGS.checkpoint_path:
-                FLAGS.checkpoint_path = max(glob.glob(DEEPDRIVE_TRAIN_PARENT_DIR + '/*'), key=os.path.getmtime)
+        if flags.model_name == MOBILENET_V2_SLIM_NAME:
+            if not flags.checkpoint_path:
+                flags.checkpoint_path = max(glob.glob(TENSORFLOW_OUT_DIR + '/*'), key=os.path.getmtime)
 
-        if tf.gfile.IsDirectory(FLAGS.checkpoint_path):
-            checkpoint_path = tf.train.latest_checkpoint(FLAGS.checkpoint_path)
+        if tf.gfile.IsDirectory(flags.checkpoint_path):
+            checkpoint_path = tf.train.latest_checkpoint(flags.checkpoint_path)
         else:
-            checkpoint_path = FLAGS.checkpoint_path
+            checkpoint_path = flags.checkpoint_path
 
         tf.logging.info('Evaluating %s' % checkpoint_path)
 
         slim.evaluation.evaluate_once(
-            master=FLAGS.master,
+            master=flags.master,
             checkpoint_path=checkpoint_path,
-            logdir=FLAGS.eval_dir,
+            logdir=flags.eval_dir,
             num_evals=num_batches,
             eval_op=list(names_to_updates.values()),
             variables_to_restore=variables_to_restore)
+
+
+def slim_eval_image_nn(**kwargs):
+    commandeer_tf_flags(create_flags, kwargs)
+    main(None)
 
 
 if __name__ == '__main__':

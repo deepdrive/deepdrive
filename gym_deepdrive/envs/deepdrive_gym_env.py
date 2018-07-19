@@ -1120,6 +1120,3 @@ class DeepDriveRewardCalculator(object):
         speed_reward = DeepDriveRewardCalculator.clip(speed_reward)
         return progress_reward, speed_reward
 
-
-if __name__ == '__main__':
-    DeepDriveEnv.get_latest_sim_file()

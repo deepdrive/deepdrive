@@ -10,7 +10,6 @@ import gym
 import logs
 
 import config as c
-import random_name
 from api import client
 from api.client import RemoteEnv
 from utils import remotable

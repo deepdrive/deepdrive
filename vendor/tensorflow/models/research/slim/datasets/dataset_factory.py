@@ -18,11 +18,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from datasets import cifar10
-from datasets import flowers
-from datasets import imagenet
-from datasets import mnist
-from datasets import deepdrive
+from vendor.tensorflow.models.research.slim.datasets import cifar10
+from vendor.tensorflow.models.research.slim.datasets import flowers
+from vendor.tensorflow.models.research.slim.datasets import imagenet
+from vendor.tensorflow.models.research.slim.datasets import mnist
+from vendor.tensorflow.models.research.slim.datasets import deepdrive
 
 datasets_map = {
     'cifar10': cifar10,

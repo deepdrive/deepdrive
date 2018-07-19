@@ -1,5 +1,4 @@
 import tensorflow as tf
-import tensorflow_hub as hub
 
 from agents.dagger.layers import conv2d, max_pool_2x2, linear, lrn
 import config as c
@@ -17,8 +16,6 @@ ALEXNET_IMAGE_SHAPE = (227, 227, 3)
 
 MOBILENET_V2_NAME = 'MobileNetV2'
 MOBILENET_V2_SLIM_NAME = 'mobilenet_v2_deepdrive'
-MOBILENET_V2_TFHUB_MODULE = 'https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/feature_vector/1'
-MOBILENET_V2_USE_TENSORHUB = False  # TODO: Delete all the tensorhub stuff once we've verified our slim training drives well
 MOBILENET_V2_IMAGE_SHAPE = (224, 224, 3)
 
 # A module is understood as instrumented for quantization with TF-Lite
@@ -83,78 +80,19 @@ class MobileNetV2(Net):
         return image
 
     def _init_net(self):
-        if not MOBILENET_V2_USE_TENSORHUB:
-            in_tensor = tf.placeholder(tf.uint8, [None] + list(MOBILENET_V2_IMAGE_SHAPE))
-            network_fn = nets_factory.get_network_fn(
-                MOBILENET_V2_SLIM_NAME,
-                num_classes=None,
-                num_targets=6,
-                is_training=False, )
-            log.info('Loading mobilenet v2')
-            image = self.preprocess(in_tensor)
-            out, endpoints = network_fn(image)
-            last_hidden = endpoints['global_pool']
-            eval_out = out
-        else:
-            module_spec = hub.load_module_spec(MOBILENET_V2_TFHUB_MODULE)
-            height, width = hub.get_expected_image_size(module_spec)
-            graph = tf.get_default_graph()
-            in_tensor = tf.placeholder(tf.float32, [None, height, width, 3])
-            hub_module = hub.Module(module_spec, trainable=(self.is_training and not self.freeze_pretrained))
-            pretrained_output_tensor = hub_module(in_tensor)
-            wants_quantization = any(node.op in FAKE_QUANT_OPS
-                                     for node in graph.as_graph_def().node)
-
-            last_hidden, out = self._add_tfhub_retrain_ops(pretrained_output_tensor)
-
-            # TODO: Make this use an eval graph, to avoid quantization
-            # moving averages being updated by the validation set, though in
-            # practice this makes a negligible difference.
-            eval_out = out
+        in_tensor = tf.placeholder(tf.uint8, [None] + list(MOBILENET_V2_IMAGE_SHAPE))
+        network_fn = nets_factory.get_network_fn(
+            MOBILENET_V2_SLIM_NAME,
+            num_classes=None,
+            num_targets=6,
+            is_training=False, )
+        log.info('Loading mobilenet v2')
+        image = self.preprocess(in_tensor)
+        out, endpoints = network_fn(image)
+        last_hidden = endpoints['global_pool']
+        eval_out = out
 
         return in_tensor, last_hidden, out, eval_out
-
-    @staticmethod
-    def _add_tfhub_retrain_ops(last_hidden_layer_activations):
-        batch_size, input_tensor_size = last_hidden_layer_activations.get_shape().as_list()
-        assert batch_size is None, 'We want to work with arbitrary batch size.'
-        with tf.name_scope('input'):
-            fc_input_placeholder = tf.placeholder_with_default(
-                last_hidden_layer_activations,
-                shape=[batch_size, input_tensor_size],
-                name='TfHubInputPlaceHolder')
-
-            variable_summaries(fc_input_placeholder)
-
-            # ground_truth_input = tf.placeholder(
-            #     tf.int64, [batch_size], name='GroundTruthInput')
-        # Organizing the following ops so they are easier to see in TensorBoard.
-        layer_name = 'final_retrain_ops'
-        with tf.name_scope(layer_name):
-            with tf.name_scope('weights'):
-                initial_value1 = tf.truncated_normal(
-                    [input_tensor_size, input_tensor_size], stddev=0.001)
-                initial_value2 = tf.truncated_normal(
-                    [input_tensor_size, c.NUM_TARGETS], stddev=0.001)
-                fc_weights_1 = tf.Variable(initial_value1, name='fc_1')
-                fc_weights_2 = tf.Variable(initial_value2, name='fc_2')
-                variable_summaries(fc_weights_1)
-                variable_summaries(fc_weights_2)
-
-            with tf.name_scope('biases'):
-                fc_biases_1 = tf.Variable(tf.zeros([input_tensor_size]), name='fc_biases_1')
-                fc_biases_2 = tf.Variable(tf.zeros([c.NUM_TARGETS]), name='fc_biases_2')
-                variable_summaries(fc_biases_1)
-                variable_summaries(fc_biases_2)
-
-            with tf.name_scope('Wx_plus_b'):
-                fc_1_activations = tf.nn.relu(tf.matmul(fc_input_placeholder, fc_weights_1) + fc_biases_1)
-                fc_2_activations = tf.matmul(fc_1_activations, fc_weights_2) + fc_biases_2
-                tf.summary.histogram('fc_1_activations', fc_1_activations)
-                tf.summary.histogram('fc_2_activations', fc_2_activations)
-
-            return fc_1_activations, fc_2_activations
-
 
 class AlexNet(Net):
     def __init__(self, *args, **kwargs):

@@ -64,21 +64,16 @@ python main.py --path-follower --experiment-name my-path-follower-test
 python main.py --record --record-recovery-from-random-actions --path-follower
 ```
 
-**Train** MobileNet2 on recorded data
+**Train** on recorded data
 ```
-vendor/tensorflow/models/research/slim/scripts/finetune_mobilenet_v2_on_deepdrive2.sh
-```
-
-**Train** AlexNet on recorded data
-```
-python main.py --train
+python main.py --train [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2]
 ```
 
 **Train** on the same dataset we used 
 
 Grab the [dataset](#dataset)
 ```
-python main.py --train --recording-dir <the-directory-with-the-dataset>
+python main.py --train --recording-dir <the-directory-with-the-dataset> [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2]
 ```
 
 ### Key binds 

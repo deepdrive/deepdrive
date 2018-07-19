@@ -10,7 +10,6 @@ requests
 clint
 pillow
 boto
-tensorflow_hub
 future
 pyzmq
 enum34
@@ -19,3 +18,4 @@ joblib
 cloudpickle
 pyarrow
 pyglet
+six

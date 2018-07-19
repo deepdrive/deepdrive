@@ -1,4 +1,8 @@
-from __future__ import print_function
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
+                             int, map, next, oct, open, pow, range, round,
+                             str, super, zip)
 
 import os
 
@@ -10,9 +14,11 @@ import config as c
 from agents.dagger import net
 from agents.dagger.net import Net, AlexNet, MobileNetV2
 from agents.dagger.train.data_utils import get_dataset
+from agents.dagger.train.mobilenet_v2 import train_mobile_net
+
+from agents.dagger.train.mobilenet_v2 import eval_mobile_net
 from utils import download, has_stuff
 import logs
-
 
 log = logs.get_log(__name__)
 
@@ -43,7 +49,18 @@ def visualize_gradients(grads_and_vars):
 
 def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=False, eval_only=False, tf_debug=False,
         freeze_pretrained=False):
+    show_tfboard_hint()
+    if agent_name == c.DAGGER_MNET2:
+        # Use tf-slim training
+        if not eval_only:
+            train_mobile_net(data_dir)
+        else:
+            eval_mobile_net(data_dir)
+    else:
+        custom_train_loop(agent_name, data_dir, eval_only, freeze_pretrained, overfit, resume_dir, tf_debug)
 
+
+def custom_train_loop(agent_name, data_dir, eval_only, freeze_pretrained, overfit, resume_dir, tf_debug):
     # TODO: Don't use generic word like 'model' here that other projects often use.
     # Need to rename/retrain saved models tho...
     with tf.variable_scope("model"):
@@ -51,15 +68,12 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
     agent_net = get_agent_net(agent_name, global_step, eval_only=eval_only, freeze_pretrained=freeze_pretrained)
     log.info('starter learning rate is %f', agent_net.starter_learning_rate)
     sess_eval_dir, sess_train_dir = get_dirs(resume_dir)
-
     targets_tensor = tf.placeholder(tf.float32, (None, agent_net.num_targets))
     total_loss = setup_loss(agent_net, targets_tensor)
     opt = tf.train.AdamOptimizer(agent_net.learning_rate)
     tf.summary.scalar("model/learning_rate", agent_net.learning_rate)
     summary_op, sv, train_op = get_train_ops(agent_net, global_step, opt, sess_train_dir, targets_tensor, total_loss)
-
     eval_sw = tf.summary.FileWriter(sess_eval_dir)
-
     train_dataset = get_dataset(data_dir, overfit=overfit, mute_spurious_targets=agent_net.mute_spurious_targets)
     eval_dataset = get_dataset(data_dir, train=False, mute_spurious_targets=agent_net.mute_spurious_targets)
     config = tf.ConfigProto(allow_soft_placement=True)
@@ -68,14 +82,6 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
             from tensorflow.python import debug as tf_debug
             sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
         train_data_provider = train_dataset.iterate_forever(agent_net.batch_size)
-        log.info('\n\n*********************************************************************\n'
-                 'Start tensorboard with \n\n\ttensorboard --logdir="' + c.TENSORFLOW_OUT_DIR +
-                 '"\n\n(In Windows tensorboard will be in your python env\'s Scripts folder, '
-                 'i.e. C:\\Users\\<YOU>\\Miniconda3\\envs\\tensorflow\\Scripts) but this should already be in your path \n'
-                 'Then navigate to http://localhost:6006 - You may see errors if Tensorboard was already '
-                 'started / has tabs open. If so, shut down Tenosrboard first and close all Tensorboard tabs. '
-                 'Sometimes you may just need to restart training if you get CUDA device errors.'
-                 '\n*********************************************************************\n\n')
         while True:
             if not eval_only:
                 for i in range(100):  # Change this to eval less or more often
@@ -87,6 +93,17 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
 
             step = global_step.eval()
             perform_eval(step, agent_net, agent_net.batch_size, eval_dataset, eval_sw, sess)
+
+
+def show_tfboard_hint():
+    log.info('\n\n*********************************************************************\n'
+             'Start tensorboard with \n\n\ttensorboard --logdir="' + c.TENSORFLOW_OUT_DIR +
+             '"\n\n(In Windows tensorboard will be in your python env\'s Scripts folder, '
+             'i.e. C:\\Users\\<YOU>\\Miniconda3\\envs\\tensorflow\\Scripts) but this should already be in your path \n'
+             'Then navigate to http://localhost:6006 - You may see errors if Tensorboard was already '
+             'started / has tabs open. If so, shut down Tenosrboard first and close all Tensorboard tabs. '
+             'Sometimes you may just need to restart training if you get CUDA device errors.'
+             '\n*********************************************************************\n\n')
 
 
 def get_dirs(resume_dir):
