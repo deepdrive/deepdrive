@@ -18,22 +18,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import sys
 import glob
 import math
 import os
 
 import tensorflow as tf
 
+from config import TENSORFLOW_OUT_DIR
 from vendor.tensorflow.models.research.slim.datasets import dataset_factory
 from vendor.tensorflow.models.research.slim.nets import nets_factory
 from vendor.tensorflow.models.research.slim.preprocessing import preprocessing_factory
 
-from config import TENSORFLOW_OUT_DIR
 from agents.dagger.net import MOBILENET_V2_SLIM_NAME
-from vendor.tensorflow.models.research.slim.train_image_nn import commandeer_tf_flags
 
 slim = tf.contrib.slim
+
 
 def create_flags():
     tf.app.flags.DEFINE_integer(
@@ -88,18 +87,24 @@ def create_flags():
     tf.app.flags.DEFINE_integer(
         'eval_image_size', None, 'Eval image size')
 
-    flags = tf.app.flags.FLAGS
-
-    return flags
-
 
 def main(_):
-    flags = tf.app.flags.FLAGS
+    create_flags()
+    FLAGS = tf.app.flags.FLAGS
+    slim_eval_image_nn(FLAGS.eval_dir, FLAGS.dataset_dir, FLAGS.dataset_name, FLAGS.dataset_split_name, FLAGS.model_name,
+                       FLAGS.master, FLAGS.checkpoint_path, FLAGS.max_num_batches, FLAGS.labels_offset, FLAGS.moving_average_decay,
+                       FLAGS.num_preprocessing_threads, FLAGS.batch_size, FLAGS.preprocessing_name, FLAGS.eval_image_size)
 
-    if flags.eval_dir is None:
-        flags.eval_dir = max(glob.glob(TENSORFLOW_OUT_DIR + '/*'), key=os.path.getmtime)
 
-    if not flags.dataset_dir:
+def slim_eval_image_nn(eval_dir=None, dataset_dir=None, dataset_name='imagenet', dataset_split_name='test',
+                       model_name='inception_v3', master='', checkpoint_path=None, max_num_batches=None,
+                       labels_offset=0, moving_average_decay=None, num_preprocessing_threads=4, batch_size=100,
+                       preprocessing_name=None, eval_image_size=None):
+
+    if eval_dir is None:
+        eval_dir = max(glob.glob(TENSORFLOW_OUT_DIR + '/*'), key=os.path.getmtime)
+
+    if not dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
 
     tf.logging.set_verbosity(tf.logging.INFO)
@@ -110,7 +115,7 @@ def main(_):
         # Select the dataset #
         ######################
         dataset = dataset_factory.get_dataset(
-            flags.dataset_name, flags.dataset_split_name, flags.dataset_dir)
+            dataset_name, dataset_split_name, dataset_dir)
 
         ####################
         # Select the model #
@@ -118,28 +123,28 @@ def main(_):
         ######################
         # Select the network #
         ######################
-        if flags.model_name == MOBILENET_V2_SLIM_NAME:
+        if model_name == MOBILENET_V2_SLIM_NAME:
             network_fn = nets_factory.get_network_fn(
-                flags.model_name,
+                model_name,
                 num_classes=None,
                 num_targets=6,
                 is_training=False, )
 
         else:
             network_fn = nets_factory.get_network_fn(
-                flags.model_name,
-                num_classes=(dataset.num_classes - flags.labels_offset),
+                model_name,
+                num_classes=(dataset.num_classes - labels_offset),
                 is_training=False)
 
         #####################################
         # Select the preprocessing function #
         #####################################
-        preprocessing_name = flags.preprocessing_name or flags.model_name
+        preprocessing_name = preprocessing_name or model_name
         image_preprocessing_fn = preprocessing_factory.get_preprocessing(
             preprocessing_name,
             is_training=False)
 
-        eval_image_size = flags.eval_image_size or network_fn.default_image_size
+        eval_image_size = eval_image_size or network_fn.default_image_size
 
         ##############################################################
         # Create a dataset provider that loads data from the dataset #
@@ -147,9 +152,9 @@ def main(_):
         provider = slim.dataset_data_provider.DatasetDataProvider(
             dataset,
             shuffle=False,
-            common_queue_capacity=2 * flags.batch_size,
-            common_queue_min=flags.batch_size)
-        if flags.model_name == MOBILENET_V2_SLIM_NAME:
+            common_queue_capacity=2 * batch_size,
+            common_queue_min=batch_size)
+        if model_name == MOBILENET_V2_SLIM_NAME:
             [image, spin, direction, speed, speed_change, steering, throttle] = provider.get(
                 ['image', 'spin', 'direction', 'speed', 'speed_change', 'steering', 'throttle'])
 
@@ -157,36 +162,36 @@ def main(_):
 
             images, targets = tf.train.batch(
                 [image, [spin, direction, speed, speed_change, steering, throttle]],
-                batch_size=flags.batch_size,
-                num_threads=flags.num_preprocessing_threads,
-                capacity=5 * flags.batch_size)
+                batch_size=batch_size,
+                num_threads=num_preprocessing_threads,
+                capacity=5 * batch_size)
         else:
             [image, label] = provider.get(['image', 'label'])
-            label -= flags.labels_offset
+            label -= labels_offset
 
             image = image_preprocessing_fn(image, eval_image_size, eval_image_size)
 
             images, labels = tf.train.batch(
                 [image, label],
-                batch_size=flags.batch_size,
-                num_threads=flags.num_preprocessing_threads,
-                capacity=5 * flags.batch_size)
+                batch_size=batch_size,
+                num_threads=num_preprocessing_threads,
+                capacity=5 * batch_size)
 
         ####################
         # Define the model #
         ####################
         logits, _ = network_fn(images)
 
-        if flags.moving_average_decay:
+        if moving_average_decay:
             variable_averages = tf.train.ExponentialMovingAverage(
-                flags.moving_average_decay, tf_global_step)
+                moving_average_decay, tf_global_step)
             variables_to_restore = variable_averages.variables_to_restore(
                 slim.get_model_variables())
             variables_to_restore[tf_global_step.op.name] = tf_global_step
         else:
             variables_to_restore = slim.get_variables_to_restore()
 
-        if flags.model_name == MOBILENET_V2_SLIM_NAME:
+        if model_name == MOBILENET_V2_SLIM_NAME:
             # targets = tf.Print(targets, [targets[0][0], logits[0][0]], 'epxpected and actual spin ')
             # targets = tf.Print(targets, [targets[0][1], logits[0][1]], 'epxpected and actual direction ')
             # targets = tf.Print(targets, [targets[0][2], logits[0][2]], 'epxpected and actual speed ')
@@ -237,35 +242,30 @@ def main(_):
             tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
 
         # TODO(sguada) use num_epochs=1
-        if flags.max_num_batches:
-            num_batches = flags.max_num_batches
+        if max_num_batches:
+            num_batches = max_num_batches
         else:
             # This ensures that we make a single pass over all of the data.
-            num_batches = math.ceil(dataset.num_samples / float(flags.batch_size))
+            num_batches = math.ceil(dataset.num_samples / float(batch_size))
 
-        if flags.model_name == MOBILENET_V2_SLIM_NAME:
-            if not flags.checkpoint_path:
-                flags.checkpoint_path = max(glob.glob(TENSORFLOW_OUT_DIR + '/*'), key=os.path.getmtime)
+        if model_name == MOBILENET_V2_SLIM_NAME:
+            if not checkpoint_path:
+                checkpoint_path = max(glob.glob(TENSORFLOW_OUT_DIR + '/*'), key=os.path.getmtime)
 
-        if tf.gfile.IsDirectory(flags.checkpoint_path):
-            checkpoint_path = tf.train.latest_checkpoint(flags.checkpoint_path)
+        if tf.gfile.IsDirectory(checkpoint_path):
+            checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
         else:
-            checkpoint_path = flags.checkpoint_path
+            checkpoint_path = checkpoint_path
 
         tf.logging.info('Evaluating %s' % checkpoint_path)
 
         slim.evaluation.evaluate_once(
-            master=flags.master,
+            master=master,
             checkpoint_path=checkpoint_path,
-            logdir=flags.eval_dir,
+            logdir=eval_dir,
             num_evals=num_batches,
             eval_op=list(names_to_updates.values()),
             variables_to_restore=variables_to_restore)
-
-
-def slim_eval_image_nn(**kwargs):
-    commandeer_tf_flags(create_flags, kwargs)
-    main(None)
 
 
 if __name__ == '__main__':

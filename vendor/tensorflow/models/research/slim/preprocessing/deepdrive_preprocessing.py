@@ -189,18 +189,18 @@ def preprocess_for_train(image, height, width, bbox,
                                dtype=tf.float32,
                                shape=[1, 1, 4])
 
-        image = tf.Print(image, ['min ', tf.reduce_min(tf.reshape(image, shape=[-1])), 'max ',
-                                 tf.reduce_max(tf.reshape(image, shape=[-1])), image], 'image in train prepro ')
+        # image = tf.Print(image, ['min ', tf.reduce_min(tf.reshape(image, shape=[-1])), 'max ',
+        #                          tf.reduce_max(tf.reshape(image, shape=[-1])), image], 'image in train prepro ')
 
         image = tf.reshape(image, [height, width, 3])
 
         if image.dtype != tf.float32:
             image = tf.image.convert_image_dtype(image, dtype=tf.float32)
 
-        image = tf.Print(image,
-                         ['min ', tf.reduce_min(tf.reshape(image, shape=[-1])),
-                          'max ', tf.reduce_max(tf.reshape(image, shape=[-1])), image],
-                         'image in train prepro after convert float')
+        # image = tf.Print(image,
+        #                  ['min ', tf.reduce_min(tf.reshape(image, shape=[-1])),
+        #                   'max ', tf.reduce_max(tf.reshape(image, shape=[-1])), image],
+        #                  'image in train prepro after convert float')
 
         augment_image = True
 
@@ -210,20 +210,20 @@ def preprocess_for_train(image, height, width, bbox,
             image_with_box = tf.image.draw_bounding_boxes(tf.expand_dims(image, 0),
                                                           bbox)
 
-            image = tf.Print(image,
-                             ['min ', tf.reduce_min(tf.reshape(image, shape=[-1])),
-                              'max ', tf.reduce_max(tf.reshape(image, shape=[-1])), image],
-                             'image in train prepro draw box')
+            # image = tf.Print(image,
+            #                  ['min ', tf.reduce_min(tf.reshape(image, shape=[-1])),
+            #                   'max ', tf.reduce_max(tf.reshape(image, shape=[-1])), image],
+            #                  'image in train prepro draw box')
 
             if add_image_summaries:
                 tf.summary.image('image_with_bounding_boxes', image_with_box)
 
             distorted_image, distorted_bbox = distorted_bounding_box_crop(image, bbox, area_range=(0.75, 1.0))
 
-            distorted_image = tf.Print(distorted_image,
-                             ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
-                              'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), image_with_box],
-                             'image in train prepro 3')
+            # distorted_image = tf.Print(distorted_image,
+            #                  ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
+            #                   'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), image_with_box],
+            #                  'image in train prepro 3')
 
             # Restore the shape since the dynamic slice based upon the bbox_size loses
             # the third dimension.
@@ -231,10 +231,10 @@ def preprocess_for_train(image, height, width, bbox,
             image_with_distorted_box = tf.image.draw_bounding_boxes(
                 tf.expand_dims(image, 0), distorted_bbox)
 
-            distorted_image = tf.Print(distorted_image,
-                             ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
-                              'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), image_with_box],
-                             'image in train prepro 4')
+            # distorted_image = tf.Print(distorted_image,
+            #                  ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
+            #                   'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), image_with_box],
+            #                  'image in train prepro 4')
 
             if add_image_summaries:
                 tf.summary.image('images_with_distorted_bounding_box',
@@ -252,10 +252,10 @@ def preprocess_for_train(image, height, width, bbox,
                 lambda x, method: tf.image.resize_images(x, [height, width], method),
                 num_cases=num_resize_cases)
 
-            distorted_image = tf.Print(distorted_image,
-                             ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
-                              'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), image_with_box],
-                             'image in train prepro 5')
+            # distorted_image = tf.Print(distorted_image,
+            #                  ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
+            #                   'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), image_with_box],
+            #                  'image in train prepro 5')
 
             if add_image_summaries:
                 tf.summary.image('cropped_resized_image',
@@ -276,10 +276,10 @@ def preprocess_for_train(image, height, width, bbox,
                 lambda x, ordering: distort_color(x, ordering, fast_mode),
                 num_cases=num_distort_cases)
 
-            distorted_image = tf.Print(distorted_image,
-                             ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
-                              'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), image_with_box],
-                             'image in train prepro 6')
+            # distorted_image = tf.Print(distorted_image,
+            #                  ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
+            #                   'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), image_with_box],
+            #                  'image in train prepro 6')
 
             if add_image_summaries:
                 tf.summary.image('final_distorted_image',
@@ -290,10 +290,10 @@ def preprocess_for_train(image, height, width, bbox,
         distorted_image = tf.subtract(distorted_image, 0.5)
         distorted_image = tf.multiply(distorted_image, 2.0)
 
-        distorted_image = tf.Print(distorted_image,
-                         ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
-                          'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), distorted_image],
-                         'image in train prepro 7')
+        # distorted_image = tf.Print(distorted_image,
+        #                  ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
+        #                   'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), distorted_image],
+        #                  'image in train prepro 7')
 
         return distorted_image
 

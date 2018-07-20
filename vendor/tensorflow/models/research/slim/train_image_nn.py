@@ -27,18 +27,16 @@ from __future__ import print_function
 
 import glob
 import os
-import sys
 
 import tensorflow as tf
 
+from agents.dagger.net import MOBILENET_V2_SLIM_NAME
 from config import TENSORFLOW_OUT_DIR
 from vendor.tensorflow.models.research.slim.datasets import dataset_factory
 from vendor.tensorflow.models.research.slim.deployment import model_deploy
 from vendor.tensorflow.models.research.slim.nets import nets_factory
 from vendor.tensorflow.models.research.slim.preprocessing import preprocessing_factory
 from datetime import datetime
-
-from vendor.tensorflow.models.research.slim.utils import commandeer_tf_flags
 
 slim = tf.contrib.slim
 
@@ -50,9 +48,8 @@ def create_flags():
     tf.app.flags.DEFINE_boolean('resume_deepdrive', False,
                                 'Resume the previous training session in deepdrive.')
 
-    default_train_dir = datetime.now().strftime(os.path.join(TENSORFLOW_OUT_DIR, '%Y-%m-%d__%I-%M-%S%p'))
     tf.app.flags.DEFINE_string(
-        'train_dir', default_train_dir,
+        'train_dir', None,
         'Directory where checkpoints and event logs are written to.')
 
     tf.app.flags.DEFINE_integer('num_clones', 1,
@@ -238,11 +235,9 @@ def create_flags():
         'ignore_missing_vars', False,
         'When restoring a checkpoint would ignore missing variables.')
 
-    flags = tf.app.flags.FLAGS
 
-    return flags
-
-def _configure_learning_rate(num_samples_per_epoch, global_step, flags):
+def _configure_learning_rate(num_samples_per_epoch, global_step, replicas_to_aggregate, batch_size, learning_rate_decay_factor, learning_rate,
+                             end_learning_rate, learning_rate_decay_type, num_epochs_per_decay, sync_replicas):
     """Configures the learning rate.
 
     Args:
@@ -255,34 +250,36 @@ def _configure_learning_rate(num_samples_per_epoch, global_step, flags):
     Raises:
       ValueError: if
     """
-    decay_steps = int(num_samples_per_epoch / flags.batch_size *
-                      flags.num_epochs_per_decay)
-    if flags.sync_replicas:
-        decay_steps /= flags.replicas_to_aggregate
+    decay_steps = int(num_samples_per_epoch / batch_size *
+                      num_epochs_per_decay)
+    if sync_replicas:
+        decay_steps /= replicas_to_aggregate
 
-    if flags.learning_rate_decay_type == 'exponential':
-        return tf.train.exponential_decay(flags.learning_rate,
+    if learning_rate_decay_type == 'exponential':
+        return tf.train.exponential_decay(learning_rate,
                                           global_step,
                                           decay_steps,
-                                          flags.learning_rate_decay_factor,
+                                          learning_rate_decay_factor,
                                           staircase=True,
                                           name='exponential_decay_learning_rate')
-    elif flags.learning_rate_decay_type == 'fixed':
-        return tf.constant(flags.learning_rate, name='fixed_learning_rate')
-    elif flags.learning_rate_decay_type == 'polynomial':
-        return tf.train.polynomial_decay(flags.learning_rate,
+    elif learning_rate_decay_type == 'fixed':
+        return tf.constant(learning_rate, name='fixed_learning_rate')
+    elif learning_rate_decay_type == 'polynomial':
+        return tf.train.polynomial_decay(learning_rate,
                                          global_step,
                                          decay_steps,
-                                         flags.end_learning_rate,
+                                         end_learning_rate,
                                          power=1.0,
                                          cycle=False,
                                          name='polynomial_decay_learning_rate')
     else:
         raise ValueError('learning_rate_decay_type [%s] was not recognized',
-                         flags.learning_rate_decay_type)
+                         learning_rate_decay_type)
 
 
-def _configure_optimizer(learning_rate, flags):
+def _configure_optimizer(learning_rate, optimizer, adadelta_rho, adam_beta1, adam_beta2, ftrl_learning_rate_power,
+                         ftrl_initial_accumulator_value, ftrl_l1, ftrl_l2, momentum, rmsprop_decay, rmsprop_momentum,
+                         opt_epsilon, adagrad_initial_accumulator_value):
     """Configures the optimizer used for training.
 
     Args:
@@ -292,49 +289,49 @@ def _configure_optimizer(learning_rate, flags):
       An instance of an optimizer.
 
     Raises:
-      ValueError: if FLAGS.optimizer is not recognized.
+      ValueError: if optimizer is not recognized.
     """
-    if flags.optimizer == 'adadelta':
+    if optimizer == 'adadelta':
         optimizer = tf.train.AdadeltaOptimizer(
             learning_rate,
-            rho=flags.adadelta_rho,
-            epsilon=flags.opt_epsilon)
-    elif flags.optimizer == 'adagrad':
+            rho=adadelta_rho,
+            epsilon=opt_epsilon)
+    elif optimizer == 'adagrad':
         optimizer = tf.train.AdagradOptimizer(
             learning_rate,
-            initial_accumulator_value=flags.adagrad_initial_accumulator_value)
-    elif flags.optimizer == 'adam':
+            initial_accumulator_value=adagrad_initial_accumulator_value)
+    elif optimizer == 'adam':
         optimizer = tf.train.AdamOptimizer(
             learning_rate,
-            beta1=flags.adam_beta1,
-            beta2=flags.adam_beta2,
-            epsilon=flags.opt_epsilon)
-    elif flags.optimizer == 'ftrl':
+            beta1=adam_beta1,
+            beta2=adam_beta2,
+            epsilon=opt_epsilon)
+    elif optimizer == 'ftrl':
         optimizer = tf.train.FtrlOptimizer(
             learning_rate,
-            learning_rate_power=flags.ftrl_learning_rate_power,
-            initial_accumulator_value=flags.ftrl_initial_accumulator_value,
-            l1_regularization_strength=flags.ftrl_l1,
-            l2_regularization_strength=flags.ftrl_l2)
-    elif flags.optimizer == 'momentum':
+            learning_rate_power=ftrl_learning_rate_power,
+            initial_accumulator_value=ftrl_initial_accumulator_value,
+            l1_regularization_strength=ftrl_l1,
+            l2_regularization_strength=ftrl_l2)
+    elif optimizer == 'momentum':
         optimizer = tf.train.MomentumOptimizer(
             learning_rate,
-            momentum=flags.momentum,
+            momentum=momentum,
             name='Momentum')
-    elif flags.optimizer == 'rmsprop':
+    elif optimizer == 'rmsprop':
         optimizer = tf.train.RMSPropOptimizer(
             learning_rate,
-            decay=flags.rmsprop_decay,
-            momentum=flags.rmsprop_momentum,
-            epsilon=flags.opt_epsilon)
-    elif flags.optimizer == 'sgd':
+            decay=rmsprop_decay,
+            momentum=rmsprop_momentum,
+            epsilon=opt_epsilon)
+    elif optimizer == 'sgd':
         optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     else:
-        raise ValueError('Optimizer [%s] was not recognized', flags.optimizer)
+        raise ValueError('Optimizer [%s] was not recognized', optimizer)
     return optimizer
 
 
-def _get_init_fn(flags):
+def _get_init_fn(checkpoint_path, checkpoint_exclude_scopes, ignore_missing_vars, train_dir):
     """Returns a function run by the chief worker to warm-start the training.
 
     Note that the init_fn is only run when initializing the model during the very
@@ -343,21 +340,21 @@ def _get_init_fn(flags):
     Returns:
       An init function run by the supervisor.
     """
-    if flags.checkpoint_path is None:
+    if checkpoint_path is None:
         return None
 
     # Warn the user if a checkpoint exists in the train_dir. Then we'll be
     # ignoring the checkpoint anyway.
-    if tf.train.latest_checkpoint(flags.train_dir):
+    if tf.train.latest_checkpoint(train_dir):
         tf.logging.info(
             'Ignoring --checkpoint_path because a checkpoint already exists in %s'
-            % flags.train_dir)
+            % train_dir)
         return None
 
     exclusions = []
-    if flags.checkpoint_exclude_scopes:
+    if checkpoint_exclude_scopes:
         exclusions = [scope.strip()
-                      for scope in flags.checkpoint_exclude_scopes.split(',')]
+                      for scope in checkpoint_exclude_scopes.split(',')]
 
     # TODO(sguada) variables.filter_variables()
     variables_to_restore = []
@@ -370,29 +367,29 @@ def _get_init_fn(flags):
         if not excluded:
             variables_to_restore.append(var)
 
-    if tf.gfile.IsDirectory(flags.checkpoint_path):
-        checkpoint_path = tf.train.latest_checkpoint(flags.checkpoint_path)
+    if tf.gfile.IsDirectory(checkpoint_path):
+        checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
     else:
-        checkpoint_path = flags.checkpoint_path
+        checkpoint_path = checkpoint_path
 
     tf.logging.info('Fine-tuning from %s' % checkpoint_path)
 
     return slim.assign_from_checkpoint_fn(
         checkpoint_path,
         variables_to_restore,
-        ignore_missing_vars=flags.ignore_missing_vars)
+        ignore_missing_vars=ignore_missing_vars)
 
 
-def _get_variables_to_train(flags):
+def _get_variables_to_train(trainable_scopes):
     """Returns a list of variables to train.
 
     Returns:
       A list of variables to train by the optimizer.
     """
-    if flags.trainable_scopes is None:
+    if trainable_scopes is None:
         return tf.trainable_variables()
     else:
-        scopes = [scope.strip() for scope in flags.trainable_scopes.split(',')]
+        scopes = [scope.strip() for scope in trainable_scopes.split(',')]
 
     variables_to_train = []
     for scope in scopes:
@@ -402,17 +399,48 @@ def _get_variables_to_train(flags):
 
 
 def main(_):
-    flags = tf.app.flags.FLAGS
+    create_flags()
+    FLAGS = tf.app.flags.FLAGS
+    slim_train_image_nn(FLAGS.resume_deepdrive, FLAGS.dataset_name, FLAGS.dataset_split_name, FLAGS.dataset_dir,
+                        FLAGS.model_name, FLAGS.train_image_size, FLAGS.checkpoint_path,
+                        FLAGS.checkpoint_exclude_scopes, FLAGS.trainable_scopes, FLAGS.max_number_of_steps,
+                        FLAGS.batch_size, FLAGS.learning_rate, FLAGS.learning_rate_decay_type, FLAGS.save_interval_secs,
+                        FLAGS.save_summaries_secs, FLAGS.log_every_n_steps, FLAGS.optimizer, FLAGS.weight_decay,
+                        FLAGS.worker_replicas, FLAGS.num_clones, FLAGS.train_dir, FLAGS.clone_on_cpu, FLAGS.task,
+                        FLAGS.num_ps_tasks, FLAGS.sync_replicas, FLAGS.replicas_to_aggregate, FLAGS.label_smoothing,
+                        FLAGS.labels_offset, FLAGS.num_readers, FLAGS.num_preprocessing_threads,
+                        FLAGS.preprocessing_name, FLAGS.master, FLAGS.moving_average_decay, FLAGS.ignore_missing_vars)
 
-    if flags.resume_deepdrive:
-        # Mysteriously can not do this due to RMSProp restore error
-        # FLAGS.train_dir = max(glob.glob(DEEPDRIVE_TRAIN_PARENT_DIR + '/*'), key=os.path.getmtime)
 
-        flags.checkpoint_path = max(glob.glob(TENSORFLOW_OUT_DIR + '/*'), key=os.path.getmtime)
+# TODO: Store these and FLAGS defaults in one place as constants (problem with FLAGS is the convention to mutate them)
+def slim_train_image_nn(resume_deepdrive=False, dataset_name='imagenet', dataset_split_name='train', dataset_dir=None,
+                        model_name='inception_v3', train_image_size=None, checkpoint_path=None,
+                        checkpoint_exclude_scopes=None, trainable_scopes=None, max_number_of_steps=None, batch_size=32,
+                        learning_rate=0.01, learning_rate_decay_type='exponential', save_interval_secs=600,
+                        save_summaries_secs=600, log_every_n_steps=10, optimizer='rmsprop', weight_decay=0.00004,
+                        worker_replicas=1, num_clones=1, train_dir=None, clone_on_cpu=False,
+                        task=0, num_ps_tasks=0, sync_replicas=False, replicas_to_aggregate=1, label_smoothing=0.0,
+                        labels_offset=0, num_readers=4, num_preprocessing_threads=4, preprocessing_name=None, master='',
+                        moving_average_decay=None, ignore_missing_vars=False, adadelta_rho=0.95, adam_beta1=0.9,
+                        adam_beta2=0.999, ftrl_learning_rate_power=-0.5, ftrl_initial_accumulator_value=0.1,
+                        ftrl_l1=0.0, ftrl_l2=0.0, momentum=0.9, rmsprop_decay=0.9, rmsprop_momentum=0.9,
+                        opt_epsilon=1.0, adagrad_initial_accumulator_value=0.1, learning_rate_decay_factor=0.94,
+                        end_learning_rate=0.0001, num_epochs_per_decay=2.0):
+    if resume_deepdrive:
+        # Mysteriously can not do this due to RMSProp restore error - we resume via checkpoint dir instead
+        # train_dir = max(glob.glob(DEEPDRIVE_TRAIN_PARENT_DIR + '/*'), key=os.path.getmtime)
 
-    print('train dir is', flags.train_dir)
+        checkpoint_path = max(glob.glob(TENSORFLOW_OUT_DIR + '/*'), key=os.path.getmtime)
 
-    if not flags.dataset_dir:
+    if train_dir is None:
+        train_dir = datetime.now().strftime(os.path.join(TENSORFLOW_OUT_DIR, '%Y-%m-%d__%I-%M-%S%p'))
+    else:
+        print("WARNING: Setting the train_dir currently results in RMSProp restore error - fix by correctly"
+              "saving graph or restore with `resume_deepdrive` instead")
+
+    print('train dir is', train_dir)
+
+    if not dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
 
     tf.logging.set_verbosity(tf.logging.INFO)
@@ -421,11 +449,11 @@ def main(_):
         # Config model_deploy #
         #######################
         deploy_config = model_deploy.DeploymentConfig(
-            num_clones=flags.num_clones,
-            clone_on_cpu=flags.clone_on_cpu,
-            replica_id=flags.task,
-            num_replicas=flags.worker_replicas,
-            num_ps_tasks=flags.num_ps_tasks)
+            num_clones=num_clones,
+            clone_on_cpu=clone_on_cpu,
+            replica_id=task,
+            num_replicas=worker_replicas,
+            num_ps_tasks=num_ps_tasks)
 
         # Create global_step
         with tf.device(deploy_config.variables_device()):
@@ -435,30 +463,30 @@ def main(_):
         # Select the dataset #
         ######################
         dataset = dataset_factory.get_dataset(
-            flags.dataset_name, flags.dataset_split_name, flags.dataset_dir)
+            dataset_name, dataset_split_name, dataset_dir)
 
         ######################
         # Select the network #
         ######################
-        if flags.model_name == 'mobilenet_v2_deepdrive':
+        if model_name == 'mobilenet_v2_deepdrive':
             network_fn = nets_factory.get_network_fn(
-                flags.model_name,
-                weight_decay=flags.weight_decay,
+                model_name,
+                weight_decay=weight_decay,
                 num_classes=None,
                 num_targets=6,
                 is_training=True, )
 
         else:
             network_fn = nets_factory.get_network_fn(
-                flags.model_name,
-                num_classes=(dataset.num_classes - flags.labels_offset),
-                weight_decay=flags.weight_decay,
+                model_name,
+                num_classes=(dataset.num_classes - labels_offset),
+                weight_decay=weight_decay,
                 is_training=True)
 
         #####################################
         # Select the preprocessing function #
         #####################################
-        preprocessing_name = flags.preprocessing_name or flags.model_name
+        preprocessing_name = preprocessing_name or model_name
         image_preprocessing_fn = preprocessing_factory.get_preprocessing(
             preprocessing_name,
             is_training=True)
@@ -469,41 +497,41 @@ def main(_):
         with tf.device(deploy_config.inputs_device()):
             provider = slim.dataset_data_provider.DatasetDataProvider(
                 dataset,
-                num_readers=flags.num_readers,
-                common_queue_capacity=20 * flags.batch_size,
-                common_queue_min=10 * flags.batch_size)
+                num_readers=num_readers,
+                common_queue_capacity=20 * batch_size,
+                common_queue_min=10 * batch_size)
 
-            if flags.model_name == 'mobilenet_v2_deepdrive':
+            if model_name == 'mobilenet_v2_deepdrive':
                 [image, spin, direction, speed, speed_change, steering, throttle] = provider.get(
                     ['image', 'spin', 'direction', 'speed', 'speed_change', 'steering', 'throttle'])
 
-                train_image_size = flags.train_image_size or network_fn.default_image_size
+                train_image_size = train_image_size or network_fn.default_image_size
 
                 image = image_preprocessing_fn(image, train_image_size, train_image_size)
 
                 images, targets = tf.train.batch(
                     [image, [spin, direction, speed, speed_change, steering, throttle]],
-                    batch_size=flags.batch_size,
-                    num_threads=flags.num_preprocessing_threads,
-                    capacity=5 * flags.batch_size)
+                    batch_size=batch_size,
+                    num_threads=num_preprocessing_threads,
+                    capacity=5 * batch_size)
 
                 batch_queue = slim.prefetch_queue.prefetch_queue(
                     [images, targets], capacity=2 * deploy_config.num_clones)
             else:
                 [image, label] = provider.get(['image', 'label'])
-                label -= flags.labels_offset
+                label -= labels_offset
 
-                train_image_size = flags.train_image_size or network_fn.default_image_size
+                train_image_size = train_image_size or network_fn.default_image_size
 
                 image = image_preprocessing_fn(image, train_image_size, train_image_size)
 
                 images, labels = tf.train.batch(
                     [image, label],
-                    batch_size=flags.batch_size,
-                    num_threads=flags.num_preprocessing_threads,
-                    capacity=5 * flags.batch_size)
+                    batch_size=batch_size,
+                    num_threads=num_preprocessing_threads,
+                    capacity=5 * batch_size)
                 labels = slim.one_hot_encoding(
-                    labels, dataset.num_classes - flags.labels_offset)
+                    labels, dataset.num_classes - labels_offset)
                 batch_queue = slim.prefetch_queue.prefetch_queue(
                     [images, labels], capacity=2 * deploy_config.num_clones)
 
@@ -515,7 +543,7 @@ def main(_):
             #############################
             # Specify the loss function #
             #############################
-            if flags.model_name == 'mobilenet_v2_deepdrive':
+            if model_name == MOBILENET_V2_SLIM_NAME:
                 images, targets = batch_queue.dequeue()
                 logits, end_points = network_fn(images)
                 # targets = tf.Print(targets, [targets[0][0], logits[0][0]], 'epxpected and actual spin ')
@@ -530,7 +558,7 @@ def main(_):
 
                 steering_delta = target_delta[:, 4]
                 mean_steering_delta = tf.reduce_mean(tf.abs(steering_delta))
-                target_delta = tf.Print(target_delta, [mean_steering_delta], 'steering error ')
+                # target_delta = tf.Print(target_delta, [mean_steering_delta], 'steering error ')
 
                 tf.summary.scalar('steering_error/train', mean_steering_delta)
 
@@ -544,10 +572,10 @@ def main(_):
                 if 'AuxLogits' in end_points:
                     slim.losses.softmax_cross_entropy(
                         end_points['AuxLogits'], labels,
-                        label_smoothing=flags.label_smoothing, weights=0.4,
+                        label_smoothing=label_smoothing, weights=0.4,
                         scope='aux_loss')
                 slim.losses.softmax_cross_entropy(
-                    logits, labels, label_smoothing=flags.label_smoothing, weights=1.0)
+                    logits, labels, label_smoothing=label_smoothing, weights=1.0)
             return end_points
 
         # Gather initial summaries.
@@ -578,10 +606,10 @@ def main(_):
         #################################
         # Configure the moving averages #
         #################################
-        if flags.moving_average_decay:
+        if moving_average_decay:
             moving_average_variables = slim.get_model_variables()
             variable_averages = tf.train.ExponentialMovingAverage(
-                flags.moving_average_decay, global_step)
+                moving_average_decay, global_step)
         else:
             moving_average_variables, variable_averages = None, None
 
@@ -589,25 +617,31 @@ def main(_):
         # Configure the optimization procedure. #
         #########################################
         with tf.device(deploy_config.optimizer_device()):
-            learning_rate = _configure_learning_rate(dataset.num_samples, global_step, flags)
-            optimizer = _configure_optimizer(learning_rate, flags)
+            learning_rate = _configure_learning_rate(dataset.num_samples, global_step, replicas_to_aggregate,
+                                                     batch_size, learning_rate_decay_factor, learning_rate,
+                                                     end_learning_rate, learning_rate_decay_type, num_epochs_per_decay,
+                                                     sync_replicas)
+            # noinspection PyPep8
+            optimizer = _configure_optimizer(learning_rate, optimizer, adadelta_rho, adam_beta1, adam_beta2, ftrl_learning_rate_power,
+                         ftrl_initial_accumulator_value, ftrl_l1, ftrl_l2, momentum, rmsprop_decay, rmsprop_momentum,
+                         opt_epsilon, adagrad_initial_accumulator_value)
             summaries.add(tf.summary.scalar('learning_rate', learning_rate))
 
-        if flags.sync_replicas:
+        if sync_replicas:
             # If sync_replicas is enabled, the averaging will be done in the chief
             # queue runner.
             optimizer = tf.train.SyncReplicasOptimizer(
                 opt=optimizer,
-                replicas_to_aggregate=flags.replicas_to_aggregate,
-                total_num_replicas=flags.worker_replicas,
+                replicas_to_aggregate=replicas_to_aggregate,
+                total_num_replicas=worker_replicas,
                 variable_averages=variable_averages,
                 variables_to_average=moving_average_variables)
-        elif flags.moving_average_decay:
+        elif moving_average_decay:
             # Update ops executed locally by trainer.
             update_ops.append(variable_averages.apply(moving_average_variables))
 
         # Variables to train.
-        variables_to_train = _get_variables_to_train(flags)
+        variables_to_train = _get_variables_to_train(trainable_scopes)
 
         #  and returns a train_tensor and summary_op
         total_loss, clones_gradients = model_deploy.optimize_clones(
@@ -642,24 +676,20 @@ def main(_):
         ###########################
         slim.learning.train(
             train_tensor,
-            logdir=flags.train_dir,
-            master=flags.master,
-            is_chief=(flags.task == 0),
-            init_fn=_get_init_fn(flags),
+            logdir=train_dir,
+            master=master,
+            is_chief=(task == 0),
+            init_fn=_get_init_fn(checkpoint_path, checkpoint_exclude_scopes, ignore_missing_vars, train_dir),
             summary_op=summary_op,
-            number_of_steps=flags.max_number_of_steps,
-            log_every_n_steps=flags.log_every_n_steps,
-            save_summaries_secs=flags.save_summaries_secs,
-            save_interval_secs=flags.save_interval_secs,
-            sync_optimizer=optimizer if flags.sync_replicas else None,
+            number_of_steps=max_number_of_steps,
+            log_every_n_steps=log_every_n_steps,
+            save_summaries_secs=save_summaries_secs,
+            save_interval_secs=save_interval_secs,
+            sync_optimizer=optimizer if sync_replicas else None,
             session_config=sess_config)
 
-
-def slim_train_image_nn(**kwargs):
-    commandeer_tf_flags(create_flags, kwargs)
-    main(None)
+        return train_dir
 
 
 if __name__ == '__main__':
-    create_flags()
     tf.app.run()

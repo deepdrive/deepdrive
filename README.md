@@ -121,6 +121,10 @@ it was trained on.
 (generated with `--record`)
 ```
 cd <the-directory-you-want>
+aws s3 sync s3://deepdrive/data/baseline_tfrecords .
+```
+or for the legacy HDF5 files for training AlexNet
+```
 aws s3 sync s3://deepdrive/data/baseline .
 ```
 
