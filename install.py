@@ -44,7 +44,7 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
 def check_py_version():
     version = sys.version_info[:]
     if version[0] == 3 and version[1] >= 5:
-        return find_executable('python')
+        return find_executable('python3')
     else:
         raise RuntimeError('Error: Python 3.5+ is required to run deepdrive-agents')
 
@@ -58,14 +58,14 @@ def main():
         # Install tk for dashboard
         run_command('sudo apt-get install -y python3-tk', throw=False, verbose=True)
 
-    run_command(py + ' -m pip install -r requirements.txt', verbose=True)
+    run_command(py + ' -m pip3 install -r requirements.txt', verbose=True)
 
     if tf_valid:
         print('Starting baseline agent')
-        os.system('python main.py --baseline')
+        os.system(py + ' main.py --baseline')
     else:
         print('Starting sim in path follower mode')
-        os.system('python main.py --path-follower')
+        os.system(py + ' main.py --path-follower')
 
 
 def get_tf_valid():
