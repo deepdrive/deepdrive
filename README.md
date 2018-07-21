@@ -128,13 +128,16 @@ or for the legacy HDF5 files for training AlexNet
 aws s3 sync s3://deepdrive/data/baseline .
 ```
 
-If you'd like to check out our Tensorboard training session, you can download the 13GB
-[tfevents files here](https://d1y4edi1yk5yok.cloudfront.net/tensorflow/baseline_tensorflow_train_and_eval.zip),
+If you'd like to check out our Tensorboard training session, you can download the 1GB
+[tfevents files here](https://d1y4edi1yk5yok.cloudfront.net/tensorflow/mnet2_baseline_training_and_eval.zip),
 unzip, and run
 
 ```
-tensorboard --logdir <your-unzipped-baseline_tensorflow_train_and_eval>
+tensorboard --logdir <your-unzipped-dir>
 ```
+
+and checkout [this view](http://localhost:6006/#scalars&_smoothingWeight=0.935&runSelectionState=eyIyMDE4LTA3LTE5X18wNS01My0yN1BNIjp0cnVlLCIyMDE4LTA3LTE5X18wNS01MC01NFBNIjp0cnVlfQ%3D%3D&_ignoreYOutliers=false&tagFilter=error)
+, which graphs wall time.
 
 ## Frame rate issues on Linux
 
