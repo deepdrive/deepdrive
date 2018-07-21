@@ -44,9 +44,9 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
 def check_py_version():
     version = sys.version_info[:]
     if version[0] == 3 and version[1] >= 5:
-        return find_executable('python')
+        return sys.executable
     else:
-        raise RuntimeError('Error: Python 3.5+ is required to run deepdrive-agents')
+        raise RuntimeError('Error: Python 3.5+ is required to run deepdrive')
 
 
 def main():
