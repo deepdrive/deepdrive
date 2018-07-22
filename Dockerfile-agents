@@ -11,13 +11,20 @@
 
 FROM tensorflow/tensorflow:1.8.0-gpu-py3
 
+RUN apt-get update; python-opencv
+
 # Minimize re-downloading / re-installing TODO: Cleanup / do this in python
 ###########################################################################
 WORKDIR /src/deepdrive
 COPY docker/agent-requirements.txt .
 RUN pip install -r agent-requirements.txt
+
+# Dependencies for streaming agent sensors
+RUN pip install --no-cache-dir opencv-python flask
+
 ENV DEEPDRIVE_DIR=/Deepdrive
 ENV DEEPDRIVE_REMOTE_CLIENT=true
+#TODO: Download baseline weights
 ###########################################################################
 
 ENV PYTHONPATH=/src/deepdrive
