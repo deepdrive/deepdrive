@@ -106,12 +106,12 @@ def run_trained_agent(args, camera_rigs, driving_style):
 
 def run_path_follower(args, driving_style):
     done = False
-    render = False
     episode_count = 1
     gym_env = None
     try:
         gym_env = deepdrive.start(experiment=args.experiment_name, env_id=args.env_id, fps=args.fps,
-                                  driving_style=driving_style, is_remote_client=args.is_remote_client)
+                                  driving_style=driving_style, is_remote_client=args.is_remote_client,
+                                  render=args.render)
         log.info('Path follower drive mode')
         for episode in range(episode_count):
             if done:
@@ -119,8 +119,6 @@ def run_path_follower(args, driving_style):
             while True:
                 action = deepdrive.action(has_control=False)
                 obz, reward, done, _ = gym_env.step(action)
-                if render:
-                    gym_env.render()
                 if done:
                     gym_env.reset()
     except KeyboardInterrupt:

@@ -14,7 +14,7 @@ import config as c
 import api.methods as m
 import logs
 from gym_deepdrive.envs.deepdrive_gym_env import Action
-from gym_deepdrive.renderer import Renderer
+from gym_deepdrive.renderer import renderer_factory
 
 log = logs.get_log(__name__)
 
@@ -36,7 +36,7 @@ class RemoteEnv(object):
         if kwargs['cameras'] is None:
             kwargs['cameras'] = [c.DEFAULT_CAM]
         if self.should_render:
-            self.renderer = Renderer(kwargs['cameras'])
+            self.renderer = renderer_factory(cameras=kwargs['cameras'])
         else:
             self.renderer = None
         self._send(m.START, kwargs=kwargs)
@@ -58,8 +58,11 @@ class RemoteEnv(object):
             self.socket.close()
         context = zmq.Context()
         socket = context.socket(zmq.PAIR)
+
+        # Creating a new socket on timeout is not working when other ZMQ connections are present in the process.
         # socket.RCVTIMEO = c.API_TIMEOUT_MS
         # socket.SNDTIMEO = c.API_TIMEOUT_MS
+
         socket.connect("tcp://localhost:%s" % c.API_PORT)
         self.socket = socket
         return socket

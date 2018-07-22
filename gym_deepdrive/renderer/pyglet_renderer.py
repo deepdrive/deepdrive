@@ -12,12 +12,18 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
 from multiprocessing import Process, Queue
 
 import utils
+import logs
+from gym_deepdrive.renderer.base_renderer import Renderer
 
+log = logs.get_log(__name__)
 
 DRAW_FPS = False
 
-class Renderer(object):
+
+class PygletRenderer(Renderer):
     def __init__(self, cameras):
+        self.prev_render_time = None
+        # TODO: Use ZMQ/pyarrow instead of multiprocessing for faster transfer
         q = Queue(maxsize=1)
         p = Process(target=render_cameras, args=(q, cameras))
         p.start()
@@ -25,8 +31,13 @@ class Renderer(object):
         self.pyglet_queue = q
 
     def render(self, obz):
+        now = time.time()
+        if self.prev_render_time:
+            log.info(now - self.prev_render_time)
+        self.prev_render_time = now
         if obz is not None:
             self.pyglet_queue.put(obz['cameras'])
+
 
 def render_cameras(render_queue, cameras):
     import pyglet

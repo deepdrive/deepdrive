@@ -32,7 +32,7 @@ from gym.utils import seeding
 import config as c
 import logs
 import utils
-from gym_deepdrive.renderer import Renderer
+from gym_deepdrive.renderer import renderer_factory
 from utils import obj2dict, download
 from dashboard import dashboard_fn, DashboardPub
 
@@ -242,8 +242,7 @@ class DeepDriveEnv(gym.Env):
         self.cameras = None
         self.use_sim_start_command = None
         self.connection_props = None
-        self.should_render = None  # type: bool
-        self.pyglet_render = True  # type: bool
+        self.should_render = False  # type: bool
         self.ep_time_balance_coeff = 10.  # type: float
         self.previous_action_time = None  # type: time.time
         self.fps = None  # type: int
@@ -255,6 +254,7 @@ class DeepDriveEnv(gym.Env):
         self.previous_distance_along_route = None  # type: bool
         self.renderer = None
         self.np_random = None
+        self.previous_obz = None
 
         if not c.REUSE_OPEN_SIM:
             utils.download_sim()
@@ -417,10 +417,12 @@ class DeepDriveEnv(gym.Env):
 
         info = self.get_step_info(done)
 
-        self.regulate_fps()
-
         if self.should_render:
             self.render()
+
+        self.regulate_fps()
+
+        self.previous_obz = obz
 
         return obz, reward, done, info
 
@@ -767,7 +769,8 @@ class DeepDriveEnv(gym.Env):
         self.close_sim()
 
     def render(self, mode='human', close=False):
-        self.renderer.render()
+        if self.previous_obz is not None:
+            self.renderer.render(self.previous_obz)
 
     def seed(self, seed=None):
         self.np_random = seeding.np_random(seed)
@@ -807,7 +810,7 @@ class DeepDriveEnv(gym.Env):
             log.debug('preprocess took %rms', (end_preprocess - start_preprocess) * 1000.)
             camera_out = obj2dict(camera, exclude=['image', 'depth'])
             camera_out['image'] = image
-            if self.pyglet_render:
+            if self.should_render:
                 # Keep copy of image without mean subtraction etc that agent does
                 camera_out['image_raw'] = image
             camera_out['depth'] = depth
@@ -898,8 +901,8 @@ class DeepDriveEnv(gym.Env):
         else:
             self.raise_connect_fail()
 
-        if self.should_render and self.pyglet_render:
-            self.renderer = Renderer(cameras)
+        if self.should_render:
+            self.renderer = renderer_factory(cameras=cameras)
 
         self._perform_first_step()
         self.has_control = False
