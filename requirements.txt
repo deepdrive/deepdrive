@@ -21,3 +21,4 @@ cloudpickle
 pyarrow
 pyglet
 six
+flask

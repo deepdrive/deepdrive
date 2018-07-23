@@ -53,7 +53,7 @@ class WebRenderer(Renderer):
         now = time.time()
         if self.prev_render_time:
             delta = now - self.prev_render_time
-            log.info('send %f', delta)
+            log.debug('send image period %f', delta)
         self.prev_render_time = now
         if obz is not None:
             self.socket.send(pyarrow.serialize(obz['cameras']).to_buffer())
@@ -98,8 +98,7 @@ class StreamServer(object):
             now = time.time()
             if prev_time:
                 delta = now - prev_time
-                log.info('recv %f', delta)
-                # if delta <
+                log.debug('recv image period %f', delta)
             prev_time = now
             if msg:
                 cameras = pyarrow.deserialize(msg)
