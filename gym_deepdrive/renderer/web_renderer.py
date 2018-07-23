@@ -92,6 +92,9 @@ class StreamServer(object):
         prev_time = None
         while True:
             msg = self.socket.recv()
+
+            # TODO: Add to deque of 1, then pull from the q at FPS
+
             now = time.time()
             if prev_time:
                 delta = now - prev_time
@@ -106,7 +109,9 @@ class StreamServer(object):
                 else:
                     image = cameras[0]['image_raw']
 
-                    ret, jpeg = cv2.imencode('.jpg', image)  # TODO: Switch to BGR _i think_
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+                    ret, jpeg = cv2.imencode('.jpg', image)
 
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
