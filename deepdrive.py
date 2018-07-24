@@ -27,6 +27,11 @@ def start(**kwargs):
                       preprocess_with_tensorflow=False, is_sync=False, driving_style=DrivingStyle.NORMAL,
                       reset_returns_zero=True, is_remote_client=False)
 
+    unexpected_args = set(kwargs) - set(all_kwargs)
+
+    if unexpected_args:
+        raise RuntimeError('Received unexpected args in run: ' + str(unexpected_args))
+
     all_kwargs.update(kwargs)
     kwargs = all_kwargs
 
