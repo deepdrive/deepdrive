@@ -64,9 +64,10 @@ def main():
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
     parser.add_argument('-n', '--experiment-name', nargs='?', default=None, help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
-    parser.add_argument('--agent', nargs='?', default=c.DAGGER_MNET2, help='Agent type (%s, %s, %s)' % (c.DAGGER,
-                                                                                                  c.DAGGER_MNET2,
-                                                                                                  c.BOOTSTRAPPED_PPO2))
+    parser.add_argument('--agent', nargs='?', default=c.DAGGER_MNET2,
+                        help='Agent type (%s, %s, %s)' % (c.DAGGER,
+                                                          c.DAGGER_MNET2,
+                                                          c.BOOTSTRAPPED_PPO2))
 
     args = parser.parse_args()
     if args.verbose:
@@ -88,7 +89,7 @@ def main():
     if args.train:
         train_agent(args, driving_style)
     elif args.path_follower:
-        run_path_follower(args, driving_style)
+        run_path_follower(args, driving_style, camera_rigs)
     else:
         # TODO: Run PPO agent here, not with c.TEST_PPO
         run_trained_agent(args, camera_rigs, driving_style)
@@ -104,14 +105,17 @@ def run_trained_agent(args, camera_rigs, driving_style):
               is_remote=args.is_remote_client)
 
 
-def run_path_follower(args, driving_style):
+def run_path_follower(args, driving_style, camera_rigs):
     done = False
     episode_count = 1
     gym_env = None
     try:
-        gym_env = deepdrive.start(experiment=args.experiment_name, env_id=args.env_id, fps=args.fps,
+        cams = camera_rigs
+        if isinstance(camera_rigs[0], list):
+            cams = cams[0]
+        gym_env = deepdrive.start(experiment_name=args.experiment_name, env_id=args.env_id, fps=args.fps,
                                   driving_style=driving_style, is_remote_client=args.is_remote_client,
-                                  render=args.render)
+                                  render=args.render, cameras=cams)
         log.info('Path follower drive mode')
         for episode in range(episode_count):
             if done:

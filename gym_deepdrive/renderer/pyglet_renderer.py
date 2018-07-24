@@ -17,7 +17,7 @@ from gym_deepdrive.renderer.base_renderer import Renderer
 
 log = logs.get_log(__name__)
 
-DRAW_FPS = False
+DRAW_FPS = True
 
 
 class PygletRenderer(Renderer):

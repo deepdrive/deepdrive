@@ -16,3 +16,5 @@ enum34
 gputil
 pyarrow
 six
+cherrypy
+paste

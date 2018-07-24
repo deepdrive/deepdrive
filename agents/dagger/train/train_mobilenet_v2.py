@@ -8,8 +8,6 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
                              int, map, next, oct, open, pow, range, round,
                              str, super, zip)
 
-from multiprocessing import Process
-
 import config as c
 import utils
 from agents.dagger.net import MOBILENET_V2_SLIM_NAME
