@@ -467,7 +467,6 @@ class DeepDriveEnv(gym.Env):
         if self.previous_action_time:
             delta = now - self.previous_action_time
             if delta < self.period:
-                time.sleep(delta)
                 self.sync_step_time = self.period
             else:
                 fps = 1. / delta
