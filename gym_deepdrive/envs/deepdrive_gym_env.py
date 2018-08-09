@@ -248,7 +248,7 @@ class DeepDriveEnv(gym.Env):
         self.fps = None  # type: int
         self.period = None  # type: float
         self.experiment = None  # type: str
-        self.driving_style = None  # type: DrivingStyle`
+        self.driving_style = None  # type: DrivingStyle
         self.reset_returns_zero = None  # type: bool
         self.started_driving_wrong_way_time = None  # type: bool
         self.previous_distance_along_route = None  # type: bool
