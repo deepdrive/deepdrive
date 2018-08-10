@@ -11,7 +11,7 @@
 
 FROM tensorflow/tensorflow:1.8.0-gpu-py3
 
-RUN apt-get update; python-opencv
+RUN apt-get update; apt-get install -y python-opencv
 
 # Minimize re-downloading / re-installing TODO: Cleanup / do this in python
 ###########################################################################
@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir opencv-python flask
 
 ENV DEEPDRIVE_DIR=/Deepdrive
 ENV DEEPDRIVE_REMOTE_CLIENT=true
-#TODO: Download baseline weights
+#TODO: Download baseline weights to avoid re-downloading every training run
 ###########################################################################
 
 ENV PYTHONPATH=/src/deepdrive
