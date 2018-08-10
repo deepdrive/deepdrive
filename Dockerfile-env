@@ -39,6 +39,9 @@ WORKDIR /home/a/src/deepdrive
 ENV PYTHONPATH=/home/a/src/deepdrive
 ENV DEEPDRIVE_DIR=/home/a/Deepdrive
 COPY config.py logs.py utils.py ./
+
+#ARG SIM_URL="latest"
+ARG SIM_URL="https://s3-us-west-1.amazonaws.com/deepdrive/sim/dev/sim-stepping.zip"
 RUN python -c "import utils; utils.download_sim();"
 
 

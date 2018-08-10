@@ -298,7 +298,11 @@ def download_sim():
     if get_sim_bin_path() is None:
         print('\n--------- Simulator not found, downloading ----------')
         if c.IS_LINUX or c.IS_WINDOWS:
-            url = c.BASE_URL + get_latest_sim_file()
+            if os.environ.get('SIM_URL', 'latest') == 'latest':
+                log.info('Downloading latest sim')
+                url = c.BASE_URL + get_latest_sim_file()
+            else:
+                url = os.environ['SIM_URL']
             download(url, c.SIM_PATH, warn_existing=False, overwrite=False)
         else:
             raise NotImplementedError('Sim download not yet implemented for this OS')

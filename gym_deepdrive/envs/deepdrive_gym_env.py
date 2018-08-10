@@ -182,6 +182,7 @@ class DrivingStyle(Enum):
     simple linear tweaking.
 
     (looks like EPG is a nicer formulation of this https://blog.openai.com/evolved-policy-gradients/)
+    (Now looks like RUDDER is another principled step in this direction https://arxiv.org/abs/1806.07857)
 
     - After some experimentation, seems like we may not need this yet. Observation normalization was causing the
     motivating problem by learning too slow. Optimization does find a way. I think distributional RL may be helpful here
