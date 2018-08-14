@@ -88,7 +88,7 @@ class BootstrapRLGymEnv(gym.Wrapper):
 def run(env_id, bootstrap_net_path,
         resume_dir=None, experiment=None, camera_rigs=None, render=False, fps=c.DEFAULT_FPS,
         should_record=False, is_discrete=False, agent_name=MOBILENET_V2_NAME, is_sync=True,
-        driving_style=DrivingStyle.NORMAL, is_remote_client=False):
+        driving_style=DrivingStyle.NORMAL, is_remote_client=False, eval_only=False):
     tf_config = tf.ConfigProto(
         allow_soft_placement=True,
         intra_op_parallelism_threads=1,
@@ -129,7 +129,7 @@ def run(env_id, bootstrap_net_path,
                 minibatch_steps = 80
                 mlp_width = 64
             train(bootstrap_gym_env, seed=c.RNG_SEED, sess=sess_2, is_discrete=is_discrete,
-                  minibatch_steps=minibatch_steps, mlp_width=mlp_width)
+                  minibatch_steps=minibatch_steps, mlp_width=mlp_width, eval_only=eval_only)
     #
     # action = deepdrive.action()
     # while not done:

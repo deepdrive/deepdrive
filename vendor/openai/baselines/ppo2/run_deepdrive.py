@@ -9,7 +9,7 @@ from vendor.openai.baselines import bench, logger
 from vendor.openai.baselines.common.cmd_util import continuous_mountain_car_arg_parser
 
 
-def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_width=None):
+def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_width=None, eval_only=False):
     from vendor.openai.baselines.common.misc_util import set_global_seeds
     from vendor.openai.baselines.common.vec_env.vec_normalize import VecNormalize
     from vendor.openai.baselines.ppo2 import ppo2
@@ -55,7 +55,8 @@ def train(env, seed, sess=None, is_discrete=True, minibatch_steps=None, mlp_widt
                lr=lambda f: f * 2.5e-3,
                cliprange=lambda f: f * 0.1,
                total_timesteps=int(5e5),
-               mlp_width=mlp_width)
+               mlp_width=mlp_width,
+               eval_only=eval_only)
 
     # Long training with lots of epochs
     # ppo2.learn(policy=policy,

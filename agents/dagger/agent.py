@@ -320,13 +320,19 @@ class Agent(object):
 
 
 def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, should_benchmark=True,
-        run_baseline_agent=False, camera_rigs=None, should_rotate_sim_types=False,
-        should_record_recovery_from_random_actions=False, render=False, path_follower=False, fps=c.DEFAULT_FPS,
-        net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL, is_sync=False, is_remote=False):
+        run_baseline_agent=False, run_mnet2_baseline_agent=False, run_ppo_baseline_agent=False,
+        camera_rigs=None, should_rotate_sim_types=False, should_record_recovery_from_random_actions=False, render=False,
+        path_follower=False, fps=c.DEFAULT_FPS, net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL,
+        is_sync=False, is_remote=False):
     """Run a trained agent"""
 
     if run_baseline_agent:
-        net_path = ensure_baseline_weights(net_path)
+        net_path = ensure_alexnet_baseline_weights(net_path)
+    elif run_mnet2_baseline_agent:
+        net_path = ensure_mnet2_baseline_weights(net_path)
+    elif run_ppo_baseline_agent:
+        net_path = ensure_ppo_baseline_weights(net_path)
+
     reward = 0
     episode_done = False
     max_episodes = 1000
@@ -360,7 +366,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         randomize_cameras(cameras)
 
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
-    env = deepdrive.start(experiment=experiment, env_id=env_id, should_benchmark=should_benchmark, cameras=cameras,
+    env = deepdrive.start(experiment_name=experiment, env_id=env_id, should_benchmark=should_benchmark, cameras=cameras,
                           use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
                           driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False,
                           is_remote_client=is_remote)
@@ -443,12 +449,30 @@ def random_use_sim_start_command(should_rotate_sim_types):
     return use_sim_start_command
 
 
-def ensure_baseline_weights(net_path):
+def _ensure_baseline_weights(net_path, version, weights_dir, url):
     if net_path is not None:
         raise ValueError('Net path should not be set when running the baseline agent as it has its own weights.')
-    net_path = os.path.join(c.BASELINE_WEIGHTS_DIR, c.BASELINE_WEIGHTS_VERSION)
+    net_path = os.path.join(weights_dir, version)
     if not glob.glob(net_path + '*'):
         print('\n--------- Baseline weights not found, downloading ----------')
-        download(c.BASELINE_WEIGHTS_URL + '?cache_bust=' + c.BASELINE_WEIGHTS_VERSION, c.WEIGHTS_DIR,
+        download(url + '?cache_bust=' + version, c.WEIGHTS_DIR,
                  warn_existing=False, overwrite=True)
     return net_path
+
+
+def ensure_alexnet_baseline_weights(net_path):
+    return _ensure_baseline_weights(net_path, c.ALEXNET_BASELINE_WEIGHTS_VERSION, c.ALEXNET_BASELINE_WEIGHTS_DIR,
+                                    c.ALEXNET_BASELINE_WEIGHTS_URL)
+
+
+def ensure_mnet2_baseline_weights(net_path):
+    return _ensure_baseline_weights(net_path, c.MNET2_BASELINE_WEIGHTS_VERSION, c.MNET2_BASELINE_WEIGHTS_DIR,
+                                    c.MNET2_BASELINE_WEIGHTS_URL)
+
+def ensure_ppo_baseline_weights(net_path):
+    return _ensure_baseline_weights(net_path, c.PPO_BASELINE_WEIGHTS_VERSION, c.PPO_BASELINE_WEIGHTS_DIR,
+                                    c.PPO_BASELINE_WEIGHTS_URL)
+
+
+if __name__ == '__main__':
+    ensure_mnet2_baseline_weights(None)

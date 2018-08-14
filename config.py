@@ -81,7 +81,7 @@ if DEEPDRIVE_DIR is None:
     DEEPDRIVE_DIR = _get_deepdrive_dir()
 _ensure_python_bin_config()
 
-# Data directories
+# Data and log directories
 DIR_DATE_FORMAT = '%Y-%m-%d__%I-%M-%S%p'
 DATE_STR = datetime.now().strftime(DIR_DATE_FORMAT)
 RECORDING_DIR = os.environ.get('DEEPDRIVE_RECORDING_DIR') or os.path.join(DEEPDRIVE_DIR, 'recordings')
@@ -90,21 +90,28 @@ LOG_DIR = os.path.join(DEEPDRIVE_DIR, 'log')
 RESULTS_DIR = os.path.join(ROOT_DIR, 'results')
 TENSORFLOW_OUT_DIR = os.path.join(DEEPDRIVE_DIR, 'tensorflow')
 WEIGHTS_DIR = os.path.join(DEEPDRIVE_DIR, 'weights')
+BASELINES_DIR = os.path.join(DEEPDRIVE_DIR, 'baselines_results')
 
 # Weights
-BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'baseline_agent_weights')
-BASELINE_WEIGHTS_VERSION = 'model.ckpt-143361'
-BVLC_CKPT_NAME = 'bvlc_alexnet.ckpt'
-BVLC_CKPT_PATH = os.path.join(WEIGHTS_DIR, BVLC_CKPT_NAME)
-MNET2_CKPT_NAME = 'mobilenet_v2_1.0_224_checkpoint'
-MNET2_CKPT_PATH = os.path.join(WEIGHTS_DIR, MNET2_CKPT_NAME, 'mobilenet_v2_1.0_224.ckpt')
+ALEXNET_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'baseline_agent_weights')
+ALEXNET_BASELINE_WEIGHTS_VERSION = 'model.ckpt-143361'
+ALEXNET_PRETRAINED_NAME = 'bvlc_alexnet.ckpt'
+ALEXNET_PRETRAINED_PATH = os.path.join(WEIGHTS_DIR, ALEXNET_PRETRAINED_NAME)
+MNET2_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'mnet2_baseline_weights')
+MNET2_BASELINE_WEIGHTS_VERSION = 'model.ckpt-45466'
+MNET2_PRETRAINED_NAME = 'mobilenet_v2_1.0_224_checkpoint'
+MNET2_PRETRAINED_PATH = os.path.join(WEIGHTS_DIR, MNET2_PRETRAINED_NAME, 'mobilenet_v2_1.0_224.ckpt')
+PPO_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'ppo_baseline_agent_weights')
+PPO_BASELINE_WEIGHTS_VERSION = '03125'
 
 # Urls
-BASE_URL = 'https://d1y4edi1yk5yok.cloudfront.net'
+BASE_URL = 'https://s3-us-west-1.amazonaws.com/deepdrive'
 BASE_WEIGHTS_URL = BASE_URL + '/weights'
-BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/baseline_agent_weights.zip'
-BVLC_CKPT_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, BVLC_CKPT_NAME)
-MNET2_CKPT_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, MNET2_CKPT_NAME)
+ALEXNET_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/baseline_agent_weights.zip'
+ALEXNET_PRETRAINED_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, ALEXNET_PRETRAINED_NAME)
+MNET2_PRETRAINED_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, MNET2_PRETRAINED_NAME)
+MNET2_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/mnet2_baseline_weights.zip'
+PPO_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/ppo_baseline_agent_weights.zip'
 
 # Seeded random number generator for reproducibility
 RNG_SEED = 0
@@ -120,7 +127,7 @@ else:
 REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
 SIM_PATH = os.path.join(DEEPDRIVE_DIR, 'sim')
 
-DEFAULT_CAM = dict(name='forward cam 227x227 60 FOV', field_of_view=60, capture_width=227, capture_height=227,
+DEFAULT_CAM = dict(name='forward cam 227x227 60 FOV', field_of_view=60, capture_width=256, capture_height=256,
                    relative_position=[150, 1.0, 200],
                    relative_rotation=[0.0, 0.0, 0.0])
 
@@ -139,7 +146,7 @@ SIMPLE_PPO = False
 # PPO_RESUME_PATH = '/home/a/baselines_results/openai-2018-06-17-17-48-24-795338/checkpoints/03125'
 # PPO_RESUME_PATH = '/home/a/baselines_results/openai-2018-06-22-00-00-21-866205/checkpoints/03125'
 PPO_RESUME_PATH = None
-TEST_PPO = False
+# TEST_PPO = False
 
 
 # API

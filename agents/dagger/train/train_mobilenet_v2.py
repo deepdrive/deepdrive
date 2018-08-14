@@ -22,8 +22,8 @@ IMG_SIZE = 224
 
 def train_mobile_net(data_dir):
     """# Should see steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, train steering error: ~0.08"""
-    if not os.path.exists(c.MNET2_CKPT_PATH + '.meta'):
-        utils.download(c.MNET2_CKPT_URL + '?cache_bust=1', c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
+    if not os.path.exists(c.MNET2_PRETRAINED_PATH + '.meta'):
+        utils.download(c.MNET2_PRETRAINED_URL + '?cache_bust=1', c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
 
     # # Fine-tune only the new layers
     initial_train_dir = slim_train_image_nn(
@@ -32,7 +32,7 @@ def train_mobile_net(data_dir):
         dataset_dir=data_dir,
         model_name=MOBILENET_V2_SLIM_NAME,
         train_image_size=IMG_SIZE,
-        checkpoint_path=c.MNET2_CKPT_PATH,
+        checkpoint_path=c.MNET2_PRETRAINED_PATH,
         checkpoint_exclude_scopes='MobilenetV2/Logits,MobilenetV2/Predictions,MobilenetV2/predics',
         trainable_scopes='MobilenetV2/Logits,MobilenetV2/Predictions,MobilenetV2/predics',
         max_number_of_steps=2000,

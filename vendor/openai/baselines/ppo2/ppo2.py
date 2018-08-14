@@ -220,7 +220,7 @@ def constfn(val):
 def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
             vf_coef=0.5,  max_grad_norm=0.5, gamma=0.99, lam=0.95,
             log_interval=10, nminibatches=4, noptepochs=4, cliprange=0.2,
-            save_interval=0, **kwargs):
+            save_interval=0, eval_only=False, **kwargs):
 
     if isinstance(lr, float): lr = constfn(lr)
     else: assert callable(lr)
@@ -267,7 +267,7 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
 
         obs, returns, masks, actions, values, neglogpacs, states, epinfos = runner.run() #pylint: disable=E0632
 
-        if c.TEST_PPO:
+        if eval_only:
             continue
 
         epinfobuf.extend(epinfos)

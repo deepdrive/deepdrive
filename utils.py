@@ -187,7 +187,6 @@ def download(url, directory, warn_existing=True, overwrite=False):
     log.info('Unzipping temp file %s to %s...', location, directory)
     try:
         zip_ref.extractall(directory)
-        print('done.')
     except Exception:
         print('You may want to close all programs that may have these files open or delete existing '
               'folders this is trying to overwrite')
@@ -195,6 +194,7 @@ def download(url, directory, warn_existing=True, overwrite=False):
     finally:
         zip_ref.close()
         os.remove(location)
+        log.info('Removed temp file %s', location)
 
 
 def dir_has_stuff(path):

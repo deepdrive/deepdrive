@@ -1,7 +1,7 @@
 # Requires NVIDIA drivers 390+
 #
-# Build:
-# docker build -t deepdriveio/sim -f Dockerfile-env .
+# Build (automated on dockerhub, so just use for local testing, don't push):
+# docker build -t deepdriveio/deepdrive:env-2.1 -f Dockerfile-env .
 #
 # Usage:
 # docker run -it --net=host --runtime=nvidia deepdriveio/sim

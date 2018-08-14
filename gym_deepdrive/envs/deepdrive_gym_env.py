@@ -421,7 +421,8 @@ class DeepDriveEnv(gym.Env):
         if self.should_render:
             self.render()
 
-        self.regulate_fps()
+        if obz:
+            self.regulate_fps()
 
         self.previous_obz = obz
 
@@ -467,10 +468,10 @@ class DeepDriveEnv(gym.Env):
         now = time.time()
         if self.previous_action_time:
             delta = now - self.previous_action_time
+            fps = 1. / delta
             if delta < self.period:
                 self.sync_step_time = self.period
             else:
-                fps = 1. / delta
                 self.sync_step_time = self.period / 2
                 if self.step_num > 5 and fps < self.fps / 2:
                     log.warning('Step %r took %rs - target is %rs', self.step_num, delta, 1 / self.fps)

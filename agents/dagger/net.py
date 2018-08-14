@@ -151,11 +151,11 @@ class AlexNet(Net):
 
         def init_fn(ses):
             log.info('Initializing parameters.')
-            if not has_stuff(c.BVLC_CKPT_PATH):
+            if not has_stuff(c.ALEXNET_PRETRAINED_PATH):
                 print('\n--------- ImageNet checkpoint not found, downloading ----------')
-                download(c.BVLC_CKPT_URL, c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
+                download(c.ALEXNET_PRETRAINED_URL, c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
             ses.run(init_op)
-            alexnet_saver.restore(ses, c.BVLC_CKPT_PATH)
+            alexnet_saver.restore(ses, c.ALEXNET_PRETRAINED_PATH)
 
         return init_fn
 

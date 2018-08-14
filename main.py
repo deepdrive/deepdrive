@@ -11,7 +11,7 @@ import config as c
 import deepdrive
 import logs
 from agents.dagger import net
-from agents.dagger.agent import ensure_baseline_weights
+from agents.dagger.agent import ensure_mnet2_baseline_weights
 from gym_deepdrive.envs.deepdrive_gym_env import DrivingStyle
 
 
@@ -21,7 +21,11 @@ def main():
     parser.add_argument('-r', '--record', action='store_true', default=False,
                         help='Records game driving, including recovering from random actions')
     parser.add_argument('--baseline', action='store_true', default=False,
-                        help='Runs pretrained imitation learning based agent')
+                        help='Runs pretrained alexnet-based imitation learning based agent')
+    parser.add_argument('--mnet2-baseline', action='store_true', default=False,
+                        help='Runs pretrained mnet2-based imitation learning based agent')
+    parser.add_argument('--ppo-baseline', action='store_true', default=False,
+                        help='Runs pretrained ppo-based imitation learning based agent')
     parser.add_argument('-t', '--train', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
     parser.add_argument('--discrete-actions', action='store_true', default=False,
@@ -99,7 +103,8 @@ def run_trained_agent(args, camera_rigs, driving_style):
     from agents.dagger import agent
     agent.run(args.experiment_name,
               should_record=args.record, net_path=args.net_path, env_id=args.env_id,
-              run_baseline_agent=args.baseline, render=args.render, camera_rigs=camera_rigs,
+              run_baseline_agent=args.baseline, run_mnet2_baseline_agent=args.mnet2_baseline,
+              run_ppo_baseline_agent=args.ppo_baseline, render=args.render, camera_rigs=camera_rigs,
               should_record_recovery_from_random_actions=args.record_recovery_from_random_actions, fps=args.fps,
               net_name=args.net_type, is_sync=args.sync, driving_style=driving_style,
               is_remote=args.is_remote_client)
@@ -157,10 +162,10 @@ def train_agent(args, driving_style):
         net_path = args.net_path
         if not net_path:
             log.info('Bootstrapping from baseline agent')
-            net_path = ensure_baseline_weights(args.net_path)
+            net_path = ensure_mnet2_baseline_weights(args.net_path)
         train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent,
                   render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync, driving_style=driving_style,
-                  is_remote_client=args.is_remote_client)
+                  is_remote_client=args.is_remote_client, eval_only=args.eval_only)
     else:
         raise Exception('Agent type not recognized')
 

@@ -8,6 +8,8 @@ import datetime
 import tempfile
 from collections import defaultdict
 
+import config as c
+
 LOG_OUTPUT_FORMATS = ['stdout', 'log', 'csv']
 # Also valid: json, tensorboard
 
@@ -346,22 +348,22 @@ class Logger(object):
 
 Logger.DEFAULT = Logger.CURRENT = Logger(dir=None, output_formats=[HumanOutputFormat(sys.stdout)])
 
-def configure(dir=None, format_strs=None):
-    if dir is None:
-        dir = os.getenv('OPENAI_LOGDIR')
-    if dir is None:
-        dir = osp.join(osp.expanduser('~'), 'baselines_results',
-            datetime.datetime.now().strftime("openai-%Y-%m-%d-%H-%M-%S-%f"))
-    assert isinstance(dir, str)
-    os.makedirs(dir, exist_ok=True)
+def configure(log_dir=None, format_strs=None):
+    if log_dir is None:
+        log_dir = os.getenv('OPENAI_LOGDIR')
+    if log_dir is None:
+        log_dir = osp.join(c.BASELINES_DIR,
+                           datetime.datetime.now().strftime("openai-%Y-%m-%d-%H-%M-%S-%f"))
+    assert isinstance(log_dir, str)
+    os.makedirs(log_dir, exist_ok=True)
 
     if format_strs is None:
         strs = os.getenv('OPENAI_LOG_FORMAT')
         format_strs = strs.split(',') if strs else LOG_OUTPUT_FORMATS
-    output_formats = [make_output_format(f, dir) for f in format_strs]
+    output_formats = [make_output_format(f, log_dir) for f in format_strs]
 
-    Logger.CURRENT = Logger(dir=dir, output_formats=output_formats)
-    log('Logging to %s'%dir)
+    Logger.CURRENT = Logger(dir=log_dir, output_formats=output_formats)
+    log('Logging to %s' % log_dir)
 
 def reset():
     if Logger.CURRENT is not Logger.DEFAULT:
