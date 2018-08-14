@@ -421,8 +421,7 @@ class DeepDriveEnv(gym.Env):
         if self.should_render:
             self.render()
 
-        if obz:
-            self.regulate_fps()
+        self.regulate_fps()
 
         self.previous_obz = obz
 
@@ -471,6 +470,8 @@ class DeepDriveEnv(gym.Env):
             fps = 1. / delta
             if delta < self.period:
                 self.sync_step_time = self.period
+                if not self.is_sync:
+                    time.sleep(delta)  # TODO: Set environment capture FPS so that sleep is not needed here.
             else:
                 self.sync_step_time = self.period / 2
                 if self.step_num > 5 and fps < self.fps / 2:

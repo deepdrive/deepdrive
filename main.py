@@ -88,6 +88,9 @@ def main():
         else:
             args.net_path = get_latest_model()
 
+    if args.mnet2_baseline:
+        args.net_type = net.MOBILENET_V2_NAME
+
     driving_style = DrivingStyle[args.driving_style.upper()]
 
     if args.train:
