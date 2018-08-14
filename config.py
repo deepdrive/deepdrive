@@ -87,7 +87,7 @@ BVLC_CKPT_NAME = 'bvlc_alexnet.ckpt'
 BVLC_CKPT_PATH = os.path.join(WEIGHTS_DIR, BVLC_CKPT_NAME)
 
 # Urls
-BASE_URL = 'https://d1y4edi1yk5yok.cloudfront.net'
+BASE_URL = 'https://s3-us-west-1.amazonaws.com/deepdrive'
 BASE_WEIGHTS_URL = BASE_URL + '/weights'
 BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/baseline_agent_weights.zip'
 BVLC_CKPT_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, BVLC_CKPT_NAME)
