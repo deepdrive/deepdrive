@@ -157,7 +157,12 @@ def frame_worker(socket, queue):
                 for cam_idx, cam in enumerate(cameras):
                     image = cam['img_raw'] if 'img_raw' in cam else cam['image']
                     depth = np.ascontiguousarray(utils.depth_heatmap(np.copy(cam['depth'])))
-                    image = np.concatenate((image, depth), axis=1)
+                    try:
+                        image = np.concatenate((image, depth), axis=1)
+                    except ValueError as e:
+                        log.error('Could not concatenate image with shape %r and depth with shape %r %s',
+                                  image.shape, depth.shape, str(e))
+
                     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                     if all_cams_image is None:
                         all_cams_image = image
