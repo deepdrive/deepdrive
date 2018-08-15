@@ -30,7 +30,7 @@ def deserialize_space(resp):
 class Client(object):
     def __init__(self, **kwargs):
         self.socket = None
-        self.prev_obz = None
+        self.last_obz = None
         self.create_socket()
         self.should_render = 'render' in kwargs and kwargs['render'] is True
         if kwargs['cameras'] is None:
@@ -71,19 +71,19 @@ class Client(object):
         if isinstance(action, Action):
             action = action.as_gym()
         obz, reward, done, info = self._send(m.STEP, args=[action])
-        if self.should_render:
-            self.render()
         if not obz:
             obz = None
-        self.prev_obz = obz
+        self.last_obz = obz
+        if self.should_render:
+            self.render()
         return obz, reward, done, info
 
     def reset(self):
         return self._send(m.RESET)
 
     def render(self):
-        if self.prev_obz is not None:
-            self.renderer.render(self.prev_obz)
+        if self.last_obz is not None:
+            self.renderer.render(self.last_obz)
 
     def close(self):
         self.socket.close()

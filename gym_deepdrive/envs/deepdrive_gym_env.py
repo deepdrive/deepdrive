@@ -255,7 +255,7 @@ class DeepDriveEnv(gym.Env):
         self.previous_distance_along_route = None  # type: bool
         self.renderer = None
         self.np_random = None
-        self.previous_obz = None
+        self.last_obz = None
 
         if not c.REUSE_OPEN_SIM:
             utils.download_sim()
@@ -400,6 +400,9 @@ class DeepDriveEnv(gym.Env):
         log.debug('send_control took %fs', time.time() - send_control_start)
 
         obz = self.get_observation()
+        self.last_obz = obz
+        if self.should_render:
+            self.render()
         if obz and 'is_game_driving' in obz:
             self.has_control = not obz['is_game_driving']
         now = time.time()
@@ -418,12 +421,7 @@ class DeepDriveEnv(gym.Env):
 
         info = self.get_step_info(done)
 
-        if self.should_render:
-            self.render()
-
         self.regulate_fps()
-
-        self.previous_obz = obz
 
         return obz, reward, done, info
 
@@ -771,8 +769,8 @@ class DeepDriveEnv(gym.Env):
         self.close_sim()
 
     def render(self, mode='human', close=False):
-        if self.previous_obz is not None:
-            self.renderer.render(self.previous_obz)
+        if self.last_obz:
+            self.renderer.render(self.last_obz)
 
     def seed(self, seed=None):
         self.np_random = seeding.np_random(seed)
