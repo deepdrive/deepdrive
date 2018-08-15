@@ -76,16 +76,20 @@ class Agent(object):
 
     def act(self, obz, reward, done):
         net_out = None
-        if obz is not None:
-            log.debug('steering %r', obz['steering'])
-            log.debug('throttle %r', obz['throttle'])
+        if obz:
+            try:
+                log.debug('steering %r', obz['steering'])
+                log.debug('throttle %r', obz['throttle'])
+            except TypeError as e:
+                log.error('Could not parse this observation %r', obz)
+                raise
             obz = self.preprocess_obz(obz)
 
         if self.should_record_recovery_from_random_actions:
             action = self.toggle_random_action()
             self.action_count += 1
         elif self.net is not None:
-            if obz is None or not obz['cameras']:
+            if not obz or not obz['cameras']:
                 net_out = None
             else:
                 image = obz['cameras'][0]['image']

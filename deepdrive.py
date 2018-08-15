@@ -11,7 +11,7 @@ import logs
 
 import config as c
 from api import client
-from api.client import RemoteEnv
+from api.client import Client
 from utils import remotable
 
 # noinspection PyUnresolvedReferences
@@ -38,7 +38,7 @@ def start(**kwargs):
     if kwargs['is_remote_client']:
         if not isinstance(kwargs['driving_style'], str):
             kwargs['driving_style'] = kwargs['driving_style'].name
-        env = RemoteEnv(**kwargs)
+        env = Client(**kwargs)
     else:
         if isinstance(kwargs['driving_style'], str):
             driving_style = DrivingStyle.__members__[kwargs['driving_style']]

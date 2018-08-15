@@ -19,3 +19,5 @@ cloudpickle
 pyarrow
 pyglet
 six
+cherrypy
+paste

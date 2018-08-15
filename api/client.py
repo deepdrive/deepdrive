@@ -27,7 +27,7 @@ def deserialize_space(resp):
     return ret
 
 
-class RemoteEnv(object):
+class Client(object):
     def __init__(self, **kwargs):
         self.socket = None
         self.prev_obz = None
@@ -73,6 +73,8 @@ class RemoteEnv(object):
         obz, reward, done, info = self._send(m.STEP, args=[action])
         if self.should_render:
             self.render()
+        if not obz:
+            obz = None
         self.prev_obz = obz
         return obz, reward, done, info
 
@@ -82,6 +84,9 @@ class RemoteEnv(object):
     def render(self):
         if self.prev_obz is not None:
             self.renderer.render(self.prev_obz)
+
+    def close(self):
+        self.socket.close()
 
     @property
     def action_space(self):
