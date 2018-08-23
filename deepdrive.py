@@ -51,7 +51,8 @@ def start(**kwargs):
 
         raw_env = env.unwrapped
 
-        # This becomes our constructor - to facilitate using Gym API without registering combinations of params
+        # This becomes our constructor - to facilitate using Gym API without registering combinations of params for the
+        # wide variety of different environments we want.
         raw_env.is_discrete = kwargs['is_discrete']
         raw_env.preprocess_with_tensorflow = kwargs['preprocess_with_tensorflow']
         raw_env.is_sync = kwargs['is_sync']
@@ -71,11 +72,10 @@ def start(**kwargs):
         raw_env.set_step_mode()
         if kwargs['combine_box_action_spaces']:
             env = CombineBoxSpaceWrapper(env)
-        env = gym.wrappers.Monitor(env, directory=c.GYM_DIR, force=True)
         if kwargs['sess']:
             raw_env.set_tf_session(kwargs['sess'])
-        if kwargs['start_dashboard']:
-            raw_env.start_dashboard()
+        # if kwargs['start_dashboard']:
+        #     raw_env.start_dashboard()
         if kwargs['should_benchmark']:
             log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
             raw_env.init_benchmarking()

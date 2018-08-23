@@ -99,10 +99,10 @@ def main():
         run_path_follower(args, driving_style, camera_rigs)
     else:
         # TODO: Run PPO agent here, not with c.TEST_PPO
-        run_trained_agent(args, camera_rigs, driving_style)
+        run_agent(args, camera_rigs, driving_style)
 
 
-def run_trained_agent(args, camera_rigs, driving_style):
+def run_agent(args, camera_rigs, driving_style):
     from agents.dagger import agent
     agent.run(args.experiment_name,
               should_record=args.record, net_path=args.net_path, env_id=args.env_id,
@@ -110,7 +110,7 @@ def run_trained_agent(args, camera_rigs, driving_style):
               run_ppo_baseline_agent=args.ppo_baseline, render=args.render, camera_rigs=camera_rigs,
               should_record_recovery_from_random_actions=args.record_recovery_from_random_actions, fps=args.fps,
               net_name=args.net_type, is_sync=args.sync, driving_style=driving_style,
-              is_remote=args.is_remote_client)
+              is_remote=args.is_remote_client, recording_dir=args.recording_dir)
 
 
 def run_path_follower(args, driving_style, camera_rigs):

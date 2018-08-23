@@ -32,6 +32,7 @@ from gym.utils import seeding
 import config as c
 import logs
 import utils
+from common.sampler import Sampler
 from gym_deepdrive.renderer import renderer_factory
 from utils import obj2dict, download
 from dashboard import dashboard_fn, DashboardPub
@@ -39,6 +40,7 @@ from dashboard import dashboard_fn, DashboardPub
 log = logs.get_log(__name__)
 SPEED_LIMIT_KPH = 64.
 HEAD_START_TIME = 0
+LAP_LENGTH = 2736.7
 
 
 class Score(object):
@@ -48,7 +50,7 @@ class Score(object):
     time_penalty = 0
     progress_reward = 0
     speed_reward = 0
-    progess = 0
+    progress = 0
     got_stuck = False
     wrong_way = False
 
@@ -56,6 +58,7 @@ class Score(object):
         self.start_time = time.time()
         self.end_time = None
         self.episode_time = 0
+        self.speed_sampler = Sampler()
 
 
 class Action(object):
@@ -252,7 +255,7 @@ class DeepDriveEnv(gym.Env):
         self.driving_style = None  # type: DrivingStyle
         self.reset_returns_zero = None  # type: bool
         self.started_driving_wrong_way_time = None  # type: bool
-        self.previous_distance_along_route = None  # type: bool
+        self.previous_distance_along_route = None  # type: float
         self.renderer = None
         self.np_random = None
         self.last_obz = None
@@ -403,8 +406,11 @@ class DeepDriveEnv(gym.Env):
         self.last_obz = obz
         if self.should_render:
             self.render()
-        if obz and 'is_game_driving' in obz:
-            self.has_control = not obz['is_game_driving']
+
+        # TODO: Fix is_game_driving by hooking shared mem up to new agent in sim C++ (For now assuming RPC works)
+        # if obz and 'is_game_driving' in obz:
+        #     self.has_control = not obz['is_game_driving']
+
         now = time.time()
 
         start_reward_stuff = time.time()
@@ -481,11 +487,17 @@ class DeepDriveEnv(gym.Env):
         lap_bonus = 0
         done = False
         if obz:
+            # lap_number = obz.get('lap_number')  # We want to provide extra checks to prevent erroneous short laps, so ignore this.
             lap_number = obz.get('lap_number')
             if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
+                took_shortcut = self.score.speed_sampler.mean() / 100 * self.score.episode_time < LAP_LENGTH * 0.9
+                if took_shortcut:
+                    log.warn('Shortcut detected, not scoring lap')
+                else:
+                    lap_bonus = 10
                 self.total_laps += 1
                 done = True  # One lap per episode
-                lap_bonus = 10
+                log.info('episode finished, lap complete')
                 self.log_up_time()
             self.lap_number = lap_number
             log.debug('compute lap stats took %fs', time.time() - start_compute_lap_stats)
@@ -494,7 +506,8 @@ class DeepDriveEnv(gym.Env):
 
     def get_reward(self, obz, now):
         start_get_reward = time.time()
-        done, lap_bonus = self.compute_lap_statistics(obz)
+        done = False
+        lap_done, lap_bonus = self.compute_lap_statistics(obz)
         reward = 0
         if obz:
             if self.is_sync:
@@ -520,11 +533,12 @@ class DeepDriveEnv(gym.Env):
 
             self.score.wrong_way = self.driving_wrong_way()
             if self.score.wrong_way:
-                log.warn('Going the wrong way, end of episode')
+                log.warn('episode finished, going the wrong way')
             if self.is_stuck(obz) or self.score.wrong_way:  # TODO: Done if collision, or near collision
                 done = True
                 reward -= 10
 
+            self.score.speed_sampler.sample(obz['speed'])
             self.score.total += reward + lap_bonus
             self.display_stats['time']['value'] = self.score.episode_time
             self.display_stats['time']['total'] = self.score.episode_time
@@ -533,8 +547,16 @@ class DeepDriveEnv(gym.Env):
 
             log.debug('reward %r', reward)
             log.debug('score %r', self.score.total)
+            log.debug('throttle %f', obz['throttle'])
+            log.debug('steering %f', obz['steering'])
+            log.debug('brake %f', obz['brake'])
+            log.debug('handbrake %f', obz['handbrake'])
+
+
 
         log.debug('get reward took %fs', time.time() - start_get_reward)
+
+        done = done or lap_done
 
         return reward, done
 
@@ -598,7 +620,7 @@ class DeepDriveEnv(gym.Env):
         self.score.progress_reward += progress_reward
         self.score.speed_reward += speed_reward
 
-        self.score.progress = self.distance_along_route / 2736.7  # TODO Get length of route dynamically
+        self.score.progress = self.distance_along_route / LAP_LENGTH  # TODO Get length of route dynamically
 
         self.display_stats['lap progress']['total'] = self.score.progress
         self.display_stats['lap progress']['value'] = self.display_stats['lap progress']['total']
@@ -621,21 +643,33 @@ class DeepDriveEnv(gym.Env):
 
     def is_stuck(self, obz):
         start_is_stuck = time.time()
+
         # TODO: Get this from the game instead
         ret = False
-        if 'TEST_BENCHMARK_WRITE' in os.environ:
+        if 'TEST_END_OF_EPISODE' in os.environ and self.step_num >= 9:
+            log.warn('TEST_END_OF_EPISODE is set triggering end of episode via is_stuck!')
             self.score.got_stuck = True
             self.log_benchmark_trial()
             ret = True
         elif obz is None:
+            log.debug('obz is None, not checking if stuck')
             ret = False
         elif obz['speed'] < 100:  # cm/s
+            log.debug('speed less than 1m/s, checking if stuck')
             self.steps_crawling += 1
             if obz['throttle'] > 0 and obz['brake'] == 0 and obz['handbrake'] == 0:
                 self.steps_crawling_with_throttle_on += 1
+                log.debug('crawling detected num steps crawling is %d', self.steps_crawling_with_throttle_on)
+            else:
+                log.debug('not stuck, throttle %f, brake %f, handbrake %f', obz['throttle'], obz['brake'],
+                          obz['handbrake'])
+
             time_crawling = time.time() - self.last_not_stuck_time
-            portion_crawling = self.steps_crawling_with_throttle_on / max(1, self.steps_crawling)
-            if self.steps_crawling_with_throttle_on > 20 and time_crawling > 2 and portion_crawling > 0.8:
+
+            # This was to detect legitimate stops, but we will have real collision detection before the need to stop
+            # portion_crawling = self.steps_crawling_with_throttle_on / max(1, self.steps_crawling)
+
+            if self.steps_crawling_with_throttle_on > 20 and time_crawling > 2:
                 log.warn('No progress made while throttle on - assuming stuck and ending episode. steps crawling: %r, '
                          'steps crawling with throttle on: %r, time crawling: %r',
                          self.steps_crawling, self.steps_crawling_with_throttle_on, time_crawling)
@@ -644,8 +678,12 @@ class DeepDriveEnv(gym.Env):
                     self.score.got_stuck = True
                 ret = True
         else:
+            log.debug('speed greater than 1m/s, not stuck')
             self.set_forward_progress()
         log.debug('is stuck took %fs', time.time() - start_is_stuck)
+
+        if ret:
+            log.info('episode finished, detected we were stuck')
 
         return ret
 
@@ -764,8 +802,11 @@ class DeepDriveEnv(gym.Env):
         deepdrive_client.release_agent_control(self.client_id)
         deepdrive_client.close(self.client_id)
         self.client_id = 0
-        if self.sess:
-            self.sess.close()
+
+        # Keep this open as agents share this session and restart the env for things like changing cameras during recording.
+        # if self.sess:
+        #     self.sess.close()
+
         self.close_sim()
 
     def render(self, mode='human', close=False):
@@ -866,7 +907,7 @@ class DeepDriveEnv(gym.Env):
         self.client_id = self.connection_props['client_id']
         server_version = self.connection_props['server_protocol_version']
         if not server_version:
-            log.warn('Server version not reported! Hoping for the best.')
+            log.warn('Server version not reported. Can not check version compatibility.')
         else:
             server_version = semvar(server_version).version
             # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
@@ -1084,9 +1125,10 @@ class DeepDriveRewardCalculator(object):
         gforce_penalty = 0
         if gforces < 0:
             raise ValueError('G-Force should be positive')
-        if gforces > 0.3:
-            # Based on regression model on page 47 - can achieve 92/100 comfort with ~0.3 combined x and y acceleration
+        if gforces > 0.1:
+            # Based on regression model on page 47 - can achieve 92/100 comfort with 0.15 x and y acceleration
             # http://www.diva-portal.org/smash/get/diva2:950643/FULLTEXT01.pdf
+            # Perhaps we should combine x, 0.15 and y 0.15,
             time_weighted_gs = time_passed * gforces
             time_weighted_gs = min(time_weighted_gs,
                                    5)  # Don't allow a large frame skip to ruin the approximation

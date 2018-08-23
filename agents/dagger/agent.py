@@ -105,7 +105,11 @@ class Agent(object):
         self.previous_action = action
         self.step += 1
 
-        if obz and obz['is_game_driving'] == 1 and self.should_record:
+        log.debug('obz_exists? %r performing_random_actions? %r should_record? %r',
+                  obz is not None, self.performing_random_actions, self.should_record)
+
+        if obz and not self.performing_random_actions and self.should_record:
+            log.debug('Recording frame')
             self.obz_recording.append(obz)
             if TEST_SAVE_IMAGE:
                 utils.save_camera(obz['cameras'][0]['image'], obz['cameras'][0]['depth'],
@@ -113,7 +117,7 @@ class Agent(object):
                 input('continue?')
             self.recorded_obz_count += 1
         else:
-            log.debug('Not recording frame')
+            log.debug('Not recording frame.')
 
         self.maybe_save()
 
@@ -327,7 +331,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         run_baseline_agent=False, run_mnet2_baseline_agent=False, run_ppo_baseline_agent=False,
         camera_rigs=None, should_rotate_sim_types=False, should_record_recovery_from_random_actions=False, render=False,
         path_follower=False, fps=c.DEFAULT_FPS, net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL,
-        is_sync=False, is_remote=False):
+        is_sync=False, is_remote=False, recording_dir=c.RECORDING_DIR):
     """Run a trained agent"""
 
     if run_baseline_agent:
@@ -370,15 +374,20 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         randomize_cameras(cameras)
 
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
-    env = deepdrive.start(experiment_name=experiment, env_id=env_id, should_benchmark=should_benchmark, cameras=cameras,
+
+    def start_env():
+        return deepdrive.start(experiment_name=experiment, env_id=env_id, should_benchmark=should_benchmark, cameras=cameras,
                           use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
                           driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False,
                           is_remote_client=is_remote)
 
+    env = start_env()
+
     agent = Agent(sess,
                   should_record_recovery_from_random_actions=should_record_recovery_from_random_actions,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,
-                  path_follower=path_follower, net_name=net_name, driving_style=driving_style)
+                  path_follower=path_follower, net_name=net_name, driving_style=driving_style,
+                  recording_dir=recording_dir)
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
 
@@ -419,8 +428,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                     cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
                     # TODO: Allow changing viewpoint as remote client
-                    env.unwrapped.change_viewpoint(cameras, use_sim_start_command=random_use_sim_start_command(
-                        should_rotate_sim_types))
+                    env.close()
+                    env = start_env()
                 if episode >= max_episodes:
                     session_done = True
     except KeyboardInterrupt:

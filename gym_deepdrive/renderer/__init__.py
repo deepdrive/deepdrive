@@ -27,8 +27,8 @@ def renderer_factory(renderer_type=None, cameras=None):
             renderer_type = RendererType.PYGLET
 
     if renderer_type is RendererType.WEB:
-        from gym_deepdrive.renderer.web_renderer import WebRenderer
-        return WebRenderer()
+        from gym_deepdrive.renderer.web_renderer import get_web_renderer
+        return get_web_renderer()
     elif renderer_type is RendererType.PYGLET:
         from gym_deepdrive.renderer.pyglet_renderer import PygletRenderer
         return PygletRenderer(cameras)

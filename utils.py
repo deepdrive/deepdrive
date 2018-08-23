@@ -97,8 +97,10 @@ def save_hdf5_thread(out, filename):
                 del camera['image_data']
                 del camera['depth_data']
                 del camera['image']
+                del camera['image_raw']
                 del camera['depth']
                 for k, v in camera.items():
+                    # TODO: Move this to a 'props' dataset as attrs can only be 64kB
                     camera_grp.attrs[k] = v
             del frame['cameras']
             for k, v in frame.items():

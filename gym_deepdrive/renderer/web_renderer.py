@@ -19,10 +19,20 @@ from gym_deepdrive.renderer.base_renderer import Renderer
 log = logs.get_log(__name__)
 app = Flask(__name__)
 
+web_renderer = None
+
+def get_web_renderer():
+    # Singleton is a hack around difficulties setting up multiple ZMQ contexts on same port in the same process
+    global web_renderer
+    if web_renderer is None:
+        web_renderer = WebRenderer()
+    return web_renderer
 
 class WebRenderer(Renderer):
+
     def __init__(self):
-        # TODO: Move source ZMQ to base renderer and replace pyglet renderer's use or multiprocessing
+
+        # TODO: Move source ZMQ to base renderer and replace pyglet renderer's use of multiprocessing
         import zmq
 
         self.prev_render_time = None
@@ -128,10 +138,13 @@ class StreamServer(object):
                 time.sleep(0.001)
 
     def __del__(self):
-        if self.socket is not None:
-            # In background process
-            self.socket.close()
-            self.context.term()
+        try:
+            if self.socket is not None:
+                # In background process
+                self.socket.close()
+                self.context.term()
+        except Exception as e:
+            print(e)
 
 # def frame_worker(socket, queue):
 #     while True:
