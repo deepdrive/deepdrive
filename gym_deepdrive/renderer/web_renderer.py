@@ -64,8 +64,6 @@ def background_server_process():
     StreamServer()
 
 class StreamServer(object):
-    """Note that this will only send frames to one viewer as we use a ZMQ pair server in the background for speed vs
-    pub/sub"""
     def __init__(self):
         import zmq
 
