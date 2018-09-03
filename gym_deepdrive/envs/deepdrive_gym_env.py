@@ -202,6 +202,16 @@ class DrivingStyle(Enum):
     STEER_ONLY = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
 
 
+class ViewMode(Enum):
+    NORMAL = ''
+    WORLD_NORMAL = 'WorldNormal'
+    BASE_COLOR = 'BaseColor'
+    ROUGHNESS = 'Roughness'
+    REFLECTIVITY = 'Reflectivity'
+    AMBIENT_OCCLUSION = 'AmbientOcclusion'
+    DEPTH_HEAT_MAP = 'HeatMap'
+
+
 default_cam = Camera(**c.DEFAULT_CAM)  # TODO: Switch camera dicts to this object
 
 
@@ -349,7 +359,10 @@ class DeepDriveEnv(gym.Env):
     def close_sim(self):
         log.info('Closing sim')
         if self.sim_process is not None:
-            self.sim_process.kill()
+            try:
+                self.sim_process.kill()
+            except Exception as e:
+                log.error('Error closing sim', e)
 
     def _kill_competing_procs(self):
         # TODO: Allow for many environments on the same machine by using registry DB for this and sharedmem
@@ -469,14 +482,19 @@ class DeepDriveEnv(gym.Env):
 
     def regulate_fps(self):
         now = time.time()
+        log.debug('in regulate_fps')
         if self.previous_action_time:
             delta = now - self.previous_action_time
             fps = 1. / delta
+            log.debug('step duration delta actual %f desired %f', delta, self.period)
             if delta < self.period:
                 self.sync_step_time = self.period
                 if not self.is_sync:
-                    time.sleep(delta)  # TODO: Set environment capture FPS so that sleep is not needed here.
+                    sleep_time = max(0., self.period - delta - 0.001)
+                    log.debug('regulating fps by sleeping for %f', sleep_time)
+                    time.sleep(sleep_time)  # TODO: Set environment capture FPS so that sleep is not needed here.
             else:
+                log.debug('step longer than desired')
                 self.sync_step_time = self.period / 2
                 if self.step_num > 5 and fps < self.fps / 2:
                     log.warning('Step %r took %rs - target is %rs', self.step_num, delta, 1 / self.fps)
@@ -669,7 +687,7 @@ class DeepDriveEnv(gym.Env):
             # This was to detect legitimate stops, but we will have real collision detection before the need to stop
             # portion_crawling = self.steps_crawling_with_throttle_on / max(1, self.steps_crawling)
 
-            if self.steps_crawling_with_throttle_on > 20 and time_crawling > 2:
+            if self.steps_crawling_with_throttle_on > 40 and time_crawling > 5:
                 log.warn('No progress made while throttle on - assuming stuck and ending episode. steps crawling: %r, '
                          'steps crawling with throttle on: %r, time crawling: %r',
                          self.steps_crawling, self.steps_crawling_with_throttle_on, time_crawling)
@@ -946,7 +964,6 @@ class DeepDriveEnv(gym.Env):
             self.renderer = renderer_factory(cameras=cameras)
 
         self._perform_first_step()
-        self.has_control = False
 
     def _connect_with_retries(self):
 
@@ -1100,6 +1117,9 @@ class DeepDriveEnv(gym.Env):
             self.started_driving_wrong_way_time = None
         return False
 
+    def set_view_mode(self, view_mode):
+        # Passing a cam id of -1 sets all cameras with the same view mode
+        deepdrive_client.set_view_mode(self.client_id, -1, view_mode.value.lower())
 
 class DeepDriveRewardCalculator(object):
     @staticmethod

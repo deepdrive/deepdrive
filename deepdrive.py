@@ -15,7 +15,7 @@ from api.client import Client
 from utils import remotable
 
 # noinspection PyUnresolvedReferences
-from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action, DrivingStyle
+from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action, DrivingStyle, ViewMode
 from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxSpaceWrapper
 
 log = logs.get_log(__name__)
@@ -41,7 +41,7 @@ def start(**kwargs):
         env = Client(**kwargs)
     else:
         if isinstance(kwargs['driving_style'], str):
-            driving_style = DrivingStyle.__members__[kwargs['driving_style']]
+            kwargs['driving_style'] = DrivingStyle.__members__[kwargs['driving_style']]
 
         env = gym.make(kwargs['env_id'])
         env.seed(c.RNG_SEED)
@@ -70,6 +70,7 @@ def start(**kwargs):
             input('Press any key when the game has loaded')
         raw_env.connect(kwargs['cameras'])
         raw_env.set_step_mode()
+        raw_env.set_view_mode(ViewMode.REFLECTIVITY)
         if kwargs['combine_box_action_spaces']:
             env = CombineBoxSpaceWrapper(env)
         if kwargs['sess']:

@@ -90,22 +90,40 @@ def save_hdf5_thread(out, filename):
     with h5py.File(filename, 'w') as f:
         for i, frame in enumerate(out):
             frame_grp = f.create_group('frame_%s' % str(i).zfill(10))
-            for j, camera in enumerate(frame['cameras']):
-                camera_grp = frame_grp.create_group('camera_%s' % str(j).zfill(5))
-                camera_grp.create_dataset('image', data=camera['image'], **opts)
-                camera_grp.create_dataset('depth', data=camera['depth'], **opts)
-                del camera['image_data']
-                del camera['depth_data']
-                del camera['image']
-                del camera['image_raw']
-                del camera['depth']
-                for k, v in camera.items():
-                    # TODO: Move this to a 'props' dataset as attrs can only be 64kB
-                    camera_grp.attrs[k] = v
+            add_collision_to_hdf5(frame, frame_grp)
+            add_cams_to_hdf5(frame, frame_grp, opts)
             del frame['cameras']
             for k, v in frame.items():
                 frame_grp.attrs[k] = v
     log.info('Saved to %s', filename)
+
+
+def add_cams_to_hdf5(frame, frame_grp, opts):
+    for j, camera in enumerate(frame['cameras']):
+        camera_grp = frame_grp.create_group('camera_%s' % str(j).zfill(5))
+        camera_grp.create_dataset('image', data=camera['image'], **opts)
+        camera_grp.create_dataset('depth', data=camera['depth'], **opts)
+        del camera['image_data']
+        del camera['depth_data']
+        del camera['image']
+        if 'image_raw' in camera:
+            del camera['image_raw']
+        del camera['depth']
+        for k, v in camera.items():
+            # TODO: Move this to a 'props' dataset as attrs can only be 64kB
+            camera_grp.attrs[k] = v
+
+
+def add_collision_to_hdf5(frame, frame_grp):
+    clsn_grp = frame_grp.create_group('last_collision')
+    clsn = frame['last_collision']
+    clsn_grp.attrs['collidee_velocity'] = tuple(clsn.collidee_velocity)
+    clsn_grp.attrs['collidee_location'] = clsn.collidee_location if (clsn.time_utc and clsn.collidee_location) else ''
+    clsn_grp.attrs['collision_normal'] = tuple(clsn.collision_normal)
+    clsn_grp.attrs['time_since_last_collision'] = clsn.time_since_last_collision
+    clsn_grp.attrs['time_stamp'] = clsn.time_stamp
+    clsn_grp.attrs['time_utc'] = clsn.time_utc
+    del frame['last_collision']
 
 
 def read_hdf5(filename, save_png_dir=None, overfit=False):

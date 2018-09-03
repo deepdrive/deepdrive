@@ -39,10 +39,11 @@ class Agent(object):
 
         # State for toggling random actions
         self.should_record_recovery_from_random_actions = should_record_recovery_from_random_actions
-        self.random_action_count = random_action_count
-        self.non_random_action_count = non_random_action_count
+        self.sequence_random_action_count = random_action_count
+        self.sequence_non_random_action_count = non_random_action_count
         self.semirandom_sequence_step = 0
-        self.action_count = 0
+        self.sequence_action_count = 0
+        self.episode_action_count = 0
         self.recorded_obz_count = 0
         self.performing_random_actions = False
         self.path_follower_mode = path_follower
@@ -74,7 +75,7 @@ class Agent(object):
             self.net = None
             self.sess = None
 
-    def act(self, obz, reward, done):
+    def act(self, obz, reward, done, episode_time=None):
         net_out = None
         if obz:
             try:
@@ -86,8 +87,14 @@ class Agent(object):
             obz = self.preprocess_obz(obz)
 
         if self.should_record_recovery_from_random_actions:
-            action = self.toggle_random_action()
-            self.action_count += 1
+            if episode_time is None or episode_time < 10:
+                action = Action(has_control=False)
+                self.sequence_action_count = 0
+                self.performing_random_actions = False
+            else:
+                action = self.toggle_random_action(episode_time)
+
+            self.sequence_action_count += 1
         elif self.net is not None:
             if not obz or not obz['cameras']:
                 net_out = None
@@ -116,6 +123,8 @@ class Agent(object):
                                   self.sess_dir, 'screenshot_' + str(self.step).zfill(10))
                 input('continue?')
             self.recorded_obz_count += 1
+            if self.recorded_obz_count % 100 == 0:
+                log.info('%d recorded observations', self.recorded_obz_count)
         else:
             log.debug('Not recording frame.')
 
@@ -205,26 +214,58 @@ class Agent(object):
             log.info('Flushing output data')
             self.obz_recording = []
 
-    def toggle_random_action(self):
-        """Reduce sampling error by diversifying experience"""
+    def set_random_action_repeat_count(self):
+        if self.semirandom_sequence_step == (self.sequence_random_action_count + self.sequence_non_random_action_count):
+            self.semirandom_sequence_step = 0
+            rand = c.RNG.random()
+            if 0 <= rand < 0.67:
+                self.sequence_random_action_count = 0
+                self.sequence_non_random_action_count = 10
+            elif 0.67 <= rand < 0.85:
+                self.sequence_random_action_count = 4
+                self.sequence_non_random_action_count = 5
+            elif 0.85 <= rand < 0.95:
+                self.sequence_random_action_count = 8
+                self.sequence_non_random_action_count = 10
+            else:
+                self.sequence_random_action_count = 12
+                self.sequence_non_random_action_count = 15
+
+
+            log.debug('random actions at %r, non-random %r', self.sequence_random_action_count, self.sequence_non_random_action_count)
+
+        else:
+            self.semirandom_sequence_step += 1
+
+    def toggle_random_action(self, episode_time):
+        """Reduce sampling error by randomly exploring space around non-random agent's trajectory"""
+
         if self.performing_random_actions:
-            if self.action_count < self.random_action_count and self.previous_action is not None:
+            if self.sequence_action_count < self.sequence_random_action_count and self.previous_action is not None:
                 action = self.previous_action
             else:
                 # switch to non-random
+                log.debug('Switching to non-random action. action_count %d random_action_count %d '
+                          'non_random_action_count %d', self.sequence_action_count, self.sequence_random_action_count,
+                          self.sequence_non_random_action_count)
                 action = Action(has_control=False)
-                self.action_count = 0
+                self.sequence_action_count = 0
                 self.performing_random_actions = False
         else:
-            if self.action_count < self.non_random_action_count and self.previous_action is not None:
+            if self.sequence_action_count < self.sequence_non_random_action_count and self.previous_action is not None:
                 action = self.previous_action
             else:
                 # switch to random
+                log.debug('Switching to random action. action_count %d random_action_count %d '
+                          'non_random_action_count %d', self.sequence_action_count, self.sequence_random_action_count,
+                          self.sequence_non_random_action_count)
                 steering = np.random.uniform(-0.5, 0.5, 1)[0]  # Going too large here gets us stuck
                 log.debug('random steering %f', steering)
-                throttle = 0.65  # TODO: Make throttle random to get better variation here
+
+                # TODO: Make throttle random as well
+                throttle = 0.65
                 action = Action(steering, throttle)
-                self.action_count = 0
+                self.sequence_action_count = 0
                 self.performing_random_actions = True
         return action
 
@@ -304,27 +345,6 @@ class Agent(object):
             camera['image'] = image
             log.debug('prepro took %fs',  time.time() - prepro_start)
         return obz
-
-    def set_random_action_repeat_count(self):
-        if self.semirandom_sequence_step == (self.random_action_count + self.non_random_action_count):
-            self.semirandom_sequence_step = 0
-            rand = c.RNG.random()
-            if 0 <= rand < 0.67:
-                self.random_action_count = 0
-                self.non_random_action_count = 10
-            elif 0.67 <= rand < 0.85:
-                self.random_action_count = 4
-                self.non_random_action_count = 5
-            elif 0.85 <= rand < 0.95:
-                self.random_action_count = 8
-                self.non_random_action_count = 10
-            else:
-                self.random_action_count = 12
-                self.non_random_action_count = 15
-            log.debug('random actions at %r, non-random %r', self.random_action_count, self.non_random_action_count)
-
-        else:
-            self.semirandom_sequence_step += 1
 
 
 def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, should_benchmark=True,
@@ -407,7 +427,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
             while not episode_done:
 
                 act_start = time.time()
-                action, net_out = agent.act(obz, reward, episode_done)
+                action, net_out = agent.act(obz, reward, episode_done, env.score.episode_time)
                 log.debug('act took %fs',  time.time() - act_start)
 
                 env_step_start = time.time()
@@ -425,11 +445,11 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                 log.info('Episode done')
                 episode += 1
                 if should_rotate_camera_rigs:
-                    cameras = camera_rigs[episode % len(camera_rigs)]
-                    randomize_cameras(cameras)
                     # TODO: Allow changing viewpoint as remote client
                     env.close()
                     env = start_env()
+                    cameras = camera_rigs[episode % len(camera_rigs)]
+                    randomize_cameras(cameras)
                 if episode >= max_episodes:
                     session_done = True
     except KeyboardInterrupt:
