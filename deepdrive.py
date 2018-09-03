@@ -1,21 +1,20 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
-                             int, map, next, oct, open, pow, range, round,
-                             str, super, zip)
+from future.builtins import (dict, input,
+                             str)
 
 # noinspection PyUnresolvedReferences
-import gym_deepdrive  # forward registers gym environment
+import sim  # forward registers gym environment
 import gym
 import logs
 
 import config as c
-from api import client
 from api.client import Client
-from utils import remotable
 
 # noinspection PyUnresolvedReferences
-from gym_deepdrive.envs.deepdrive_gym_env import gym_action as action, DrivingStyle, ViewMode
+from sim.action import gym_action as action
+from sim.driving_style import DrivingStyle
+from sim.view_mode import ViewMode
 from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxSpaceWrapper
 
 log = logs.get_log(__name__)
@@ -70,7 +69,6 @@ def start(**kwargs):
             input('Press any key when the game has loaded')
         raw_env.connect(kwargs['cameras'])
         raw_env.set_step_mode()
-        raw_env.set_view_mode(ViewMode.REFLECTIVITY)
         if kwargs['combine_box_action_spaces']:
             env = CombineBoxSpaceWrapper(env)
         if kwargs['sess']:

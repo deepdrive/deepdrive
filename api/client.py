@@ -1,10 +1,6 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
-                             int, map, next, oct, open, pow, range, round,
-                             str, super, zip)
-
 import zmq
 
 import pyarrow
@@ -13,8 +9,8 @@ from gym import spaces
 import config as c
 import api.methods as m
 import logs
-from gym_deepdrive.envs.deepdrive_gym_env import Action
-from gym_deepdrive.renderer import renderer_factory
+from sim.action import Action
+from renderer import renderer_factory
 
 log = logs.get_log(__name__)
 

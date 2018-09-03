@@ -1,30 +1,24 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
-                             int, map, next, oct, open, pow, range, round,
-                             str, super, zip)
-import math
+from future.builtins import (int, open, round,
+                             str)
 import csv
-import subprocess
 import deepdrive_client
 import deepdrive_capture
 import os
 import random
 import sys
 import time
-from collections import deque, OrderedDict
-from multiprocessing import Process, Queue
+from collections import OrderedDict
+from multiprocessing import Process
 from subprocess import Popen
 import pkg_resources
 from distutils.version import LooseVersion as semvar
-from itertools import product
-from enum import Enum
 
 import arrow
 import gym
 import numpy as np
 from GPUtil import GPUtil
-from boto.s3.connection import S3Connection
 from gym import spaces
 from gym.utils import seeding
 
@@ -32,196 +26,18 @@ from gym.utils import seeding
 import config as c
 import logs
 import utils
-from common.sampler import Sampler
-from gym_deepdrive.renderer import renderer_factory
-from utils import obj2dict, download
+from sim.action import Action, DiscreteActions
+from sim.reward_calculator import RewardCalculator
+from sim.score import Score
+from sim.view_mode import ViewMode
+from renderer import renderer_factory
+from utils import obj2dict
 from dashboard import dashboard_fn, DashboardPub
 
 log = logs.get_log(__name__)
 SPEED_LIMIT_KPH = 64.
 HEAD_START_TIME = 0
 LAP_LENGTH = 2736.7
-
-
-class Score(object):
-    total = 0
-    gforce_penalty = 0
-    lane_deviation_penalty = 0
-    time_penalty = 0
-    progress_reward = 0
-    speed_reward = 0
-    progress = 0
-    got_stuck = False
-    wrong_way = False
-
-    def __init__(self):
-        self.start_time = time.time()
-        self.end_time = None
-        self.episode_time = 0
-        self.speed_sampler = Sampler()
-
-
-class Action(object):
-    STEERING_INDEX = 0
-    THROTTLE_INDEX = 1
-    BRAKE_INDEX = 2
-    HANDBRAKE_INDEX = 3
-    HAS_CONTROL_INDEX = 4
-
-    STEERING_MIN, STEERING_MAX = -1, 1
-    THROTTLE_MIN, THROTTLE_MAX = -1, 1
-    BRAKE_MIN, BRAKE_MAX = 0, 1
-    HANDBRAKE_MIN, HANDBRAKE_MAX = 0, 1
-
-    def __init__(self, steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
-        self.steering = steering
-        self.throttle = throttle
-        self.brake = brake
-        self.handbrake = handbrake
-        self.has_control = has_control
-
-    def clip(self):
-        self.steering  = min(max(self.steering,  self.STEERING_MIN),  self.STEERING_MAX)
-        self.throttle  = min(max(self.throttle,  self.THROTTLE_MIN),  self.THROTTLE_MAX)
-        self.brake     = min(max(self.brake,     self.BRAKE_MIN),     self.BRAKE_MAX)
-        self.handbrake = min(max(self.handbrake, self.HANDBRAKE_MIN), self.HANDBRAKE_MAX)
-
-    def as_gym(self):
-        ret = gym_action(steering=self.steering, throttle=self.throttle, brake=self.brake,
-                         handbrake=self.handbrake, has_control=self.has_control)
-        return ret
-
-    @classmethod
-    def from_gym(cls, action):
-        has_control = True
-        if len(action) > 4:
-            if isinstance(action[4], list):
-                has_control = action[4][0]
-            else:
-                has_control = action[cls.HAS_CONTROL_INDEX]
-        handbrake = action[cls.HANDBRAKE_INDEX][0]
-        if handbrake <= 0 or math.isnan(handbrake):
-            handbrake = 0
-        else:
-            handbrake = 1
-        ret = cls(steering=action[cls.STEERING_INDEX][0],
-                  throttle=action[cls.THROTTLE_INDEX][0],
-                  brake=action[cls.BRAKE_INDEX][0],
-                  handbrake=handbrake, has_control=has_control)
-        return ret
-
-
-class Camera(object):
-    def __init__(self, name, field_of_view, capture_width, capture_height, relative_position, relative_rotation):
-        self.name = name
-        self.field_of_view = field_of_view
-        self.capture_width = capture_width
-        self.capture_height = capture_height
-        self.relative_position = relative_position
-        self.relative_rotation = relative_rotation
-        self.connection_id = None
-
-
-class DiscreteActions(object):
-    def __init__(self, steer, throttle, brake):
-        self.steer = steer
-        self.throttle = throttle
-        self.brake = brake
-
-        self.product = list(product(steer, throttle, brake))
-
-    def get_components(self, idx):
-        steer, throttle, brake = self.product[idx]
-        return steer, throttle, brake
-
-
-class RewardWeighting(object):
-    def __init__(self, progress, gforce, lane_deviation, total_time, speed):
-        # Progress and time were used in DeepDrive-v0 (2.0) - keeping for now in case we want to use again
-        self.progress_weight = progress
-        self.gforce_weight = gforce
-        self.lane_deviation_weight = lane_deviation
-        self.time_weight = total_time
-        self.speed_weight = speed
-
-    @staticmethod
-    def combine(progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty, speed):
-        return progress_reward \
-               - gforce_penalty \
-               - lane_deviation_penalty \
-               - time_penalty \
-               + speed
-
-
-class DrivingStyle(Enum):
-    """Idea: Adjust these weights dynamically to produce a sort of curriculum where speed is learned first,
-    then lane, then gforce. Also, need to record unweighted score components in physical units (m, m/s^2, etc...)
-    so that scores can be compared across different weightings and environments.
-
-    To adjust dynamically, the reward weighting should be changed per episode, or a horizon based on discount factor,
-    in order to achieve a desired reward component balance.
-
-    So say we wanted speed to be the majority of the reward received, i.e. 50%. We would look at the share made up by
-    speed in the return for an episode (i.e. trip or lap for driving). If it's 25% of the absolute reward
-    (summing positive and abs(negative) rewards), then we double a "curriculum coefficient" or CC for speed. These curriculum
-    coefficients then get normalized so the final aggregate reward maintains the same scale as before.
-
-    Then, as speed gets closer to 50% of the reward, the smaller components of the reward will begin to get weighted
-    more heavily. If speed becomes more than 50% of the reward, then its CC will shrink and allow learning how to achieve
-    other objectives.
-
-    Why do this?
-    Optimization should find the best way to squeeze out all the juice from the reward, right? Well, maybe, but
-    I'm finding the scale and *order* to be very important in practice. In particular, lane deviation grows like crazy
-    once you are out of the lane, regardless of the weight. So if speed is not learned first, our agent just decides
-    to not move. Also, g-force penalties counter initial acceleration required to get speed, so we end up needing to
-    weight g-force too small or too large with respect to speed over the long term.
-
-    The above curriculum approach aims to fix these things by targeting a certain balance of objectives over the
-    long-term, rather than the short-term, while adjusting short-term curriculum weights in order to get there. Yes,
-    it does feel like the model should take care of this, but it's only optimized for the expected aggregate reward
-    across all the objectives. Perhaps inputting the different components running averages or real-time values to
-    a recurrent part of the model would allow it to balance the objectives through SGD rather than the above
-    simple linear tweaking.
-
-    (looks like EPG is a nicer formulation of this https://blog.openai.com/evolved-policy-gradients/)
-    (Now looks like RUDDER is another principled step in this direction https://arxiv.org/abs/1806.07857)
-
-    - After some experimentation, seems like we may not need this yet. Observation normalization was causing the
-    motivating problem by learning too slow. Optimization does find a way. I think distributional RL may be helpful here
-    especially if we can get dimensions for all the compoenents of the reward. Also a novelty bonus on
-    (observation,action) or (game-state,action) would be helpful most likely to avoid local minima.
-    """
-    __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'
-    # TODO: Possibly assign function rather than just weights
-    CRUISING   = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
-    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.10, total_time=0.0)
-    LATE       = RewardWeighting(speed=2.0, progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0)
-    EMERGENCY  = RewardWeighting(speed=2.0, progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0)
-    CHASE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
-    STEER_ONLY = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
-
-
-class ViewMode(Enum):
-    NORMAL = ''
-    WORLD_NORMAL = 'WorldNormal'
-    BASE_COLOR = 'BaseColor'
-    ROUGHNESS = 'Roughness'
-    REFLECTIVITY = 'Reflectivity'
-    AMBIENT_OCCLUSION = 'AmbientOcclusion'
-    DEPTH_HEAT_MAP = 'HeatMap'
-
-
-default_cam = Camera(**c.DEFAULT_CAM)  # TODO: Switch camera dicts to this object
-
-
-def gym_action(steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
-    action = [np.array([steering]),
-              np.array([throttle]),
-              np.array([brake]),
-              np.array([handbrake]),
-              has_control]
-    return action
 
 
 # noinspection PyMethodMayBeStatic
@@ -266,9 +82,10 @@ class DeepDriveEnv(gym.Env):
         self.reset_returns_zero = None  # type: bool
         self.started_driving_wrong_way_time = None  # type: bool
         self.previous_distance_along_route = None  # type: float
-        self.renderer = None
-        self.np_random = None
-        self.last_obz = None
+        self.renderer = None  # type: sim.gym.renderer.Renderer
+        self.np_random = None  # type: tuple
+        self.last_obz = None  # type: dict
+        self.view_mode = ViewMode.NORMAL  # type: ViewMode
 
         if not c.REUSE_OPEN_SIM:
             utils.download_sim()
@@ -584,7 +401,7 @@ class DeepDriveEnv(gym.Env):
     def get_lane_deviation_penalty(self, obz, time_passed):
         lane_deviation_penalty = 0.
         if 'distance_to_center_of_lane' in obz:
-            lane_deviation_penalty = DeepDriveRewardCalculator.get_lane_deviation_penalty(
+            lane_deviation_penalty = RewardCalculator.get_lane_deviation_penalty(
                 obz['distance_to_center_of_lane'], time_passed)
 
         lane_deviation_penalty *= self.driving_style.value.lane_deviation_weight
@@ -602,7 +419,7 @@ class DeepDriveEnv(gym.Env):
                 gforces = np.sqrt(a.dot(a)) / 980  # g = 980 cm/s**2
                 self.display_stats['g-forces']['value'] = gforces
                 self.display_stats['g-forces']['total'] = gforces
-                gforce_penalty = DeepDriveRewardCalculator.get_gforce_penalty(gforces, time_passed)
+                gforce_penalty = RewardCalculator.get_gforce_penalty(gforces, time_passed)
 
         gforce_penalty *= self.driving_style.value.gforce_weight
         self.score.gforce_penalty += gforce_penalty
@@ -619,7 +436,7 @@ class DeepDriveEnv(gym.Env):
             if self.distance_along_route:
                 self.previous_distance_along_route = self.distance_along_route
             self.distance_along_route = dist
-            progress_reward, speed_reward = DeepDriveRewardCalculator.get_progress_and_speed_reward(progress, time_passed)
+            progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress, time_passed)
 
         progress_reward *= self.driving_style.value.progress_weight
         speed_reward *= self.driving_style.value.speed_weight
@@ -1120,68 +937,7 @@ class DeepDriveEnv(gym.Env):
     def set_view_mode(self, view_mode):
         # Passing a cam id of -1 sets all cameras with the same view mode
         deepdrive_client.set_view_mode(self.client_id, -1, view_mode.value.lower())
+        self.view_mode = view_mode
 
-class DeepDriveRewardCalculator(object):
-    @staticmethod
-    def clip(reward):
-        # time_passed not parameter in order to set hard limits on reward magnitude
-        return min(max(reward, -1e2), 1e2)
 
-    @staticmethod
-    def get_lane_deviation_penalty(lane_deviation, time_passed):
-        lane_deviation_penalty = 0
-        if lane_deviation < 0:
-            raise ValueError('Lane deviation should be positive')
-        if time_passed is not None and lane_deviation > 200:  # Tuned for Canyons spline - change for future maps
-            lane_deviation_coeff = 0.1
-            lane_deviation_penalty = lane_deviation_coeff * time_passed * lane_deviation ** 2 / 100.
-        log.debug('distance_to_center_of_lane %r', lane_deviation)
-        lane_deviation_penalty = DeepDriveRewardCalculator.clip(lane_deviation_penalty)
-        return lane_deviation_penalty
-
-    @staticmethod
-    def get_gforce_penalty(gforces, time_passed):
-        log.debug('gforces %r', gforces)
-        gforce_penalty = 0
-        if gforces < 0:
-            raise ValueError('G-Force should be positive')
-        if gforces > 0.1:
-            # Based on regression model on page 47 - can achieve 92/100 comfort with 0.15 x and y acceleration
-            # http://www.diva-portal.org/smash/get/diva2:950643/FULLTEXT01.pdf
-            # Perhaps we should combine x, 0.15 and y 0.15,
-            time_weighted_gs = time_passed * gforces
-            time_weighted_gs = min(time_weighted_gs,
-                                   5)  # Don't allow a large frame skip to ruin the approximation
-            balance_coeff = 24  # 24 meters of reward every second you do this
-            gforce_penalty = time_weighted_gs * balance_coeff
-            log.debug('accumulated_gforce %r', time_weighted_gs)
-            log.debug('gforce_penalty %r', gforce_penalty)
-        gforce_penalty = DeepDriveRewardCalculator.clip(gforce_penalty)
-        return gforce_penalty
-
-    @staticmethod
-    def get_progress_and_speed_reward(progress, time_passed):
-        if not time_passed:
-            progress = speed_reward = 0
-        else:
-            progress = progress / 100.  # cm=>meters
-            speed = progress / time_passed
-            if speed < -400:
-                # Lap completed
-                # TODO: Read the lap length on reset and
-                log.debug('assuming lap complete, progress zero')
-                progress = speed = 0
-
-            # Square speed to outweigh advantage of longer lap time from going slower
-            speed_reward = np.sign(speed) * speed ** 2 * time_passed  # i.e. sign(progress) * progress ** 2 / time_passed
-
-        progress_balance_coeff = 1.0
-        progress_reward = progress * progress_balance_coeff
-
-        speed_balance_coeff = 0.15
-        speed_reward *= speed_balance_coeff
-
-        progress_reward = DeepDriveRewardCalculator.clip(progress_reward)
-        speed_reward = DeepDriveRewardCalculator.clip(speed_reward)
-        return progress_reward, speed_reward
 

@@ -1,11 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
-                             int, map, next, oct, open, pow, range, round,
-                             str, super, zip)
-
-from collections import deque
+from future.builtins import (super)
 
 import gym
 import tensorflow as tf
@@ -17,8 +13,9 @@ import config as c
 from agents.common import get_throttle
 from agents.dagger.agent import Agent
 from agents.dagger.net import MOBILENET_V2_NAME
-from gym_deepdrive.envs.deepdrive_gym_env import Action, DrivingStyle
-from gym_deepdrive.experience_buffer import ExperienceBuffer
+from sim.gym_env import DrivingStyle
+from sim.action import Action
+from util.experience_buffer import ExperienceBuffer
 from vendor.openai.baselines.ppo2.run_deepdrive import train
 
 

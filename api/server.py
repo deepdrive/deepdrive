@@ -1,22 +1,14 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
-                             int, map, next, oct, open, pow, range, round,
-                             str, super, zip)
+from future.builtins import (str)
 
 import zmq
-import random
-import sys
-import time
-import numpy as np
 import pyarrow
 from gym import spaces
 
 import logs
-import utils
 
 import deepdrive
-from gym_deepdrive.envs.deepdrive_gym_env import DeepDriveEnv, Action
 import config as c
 import api.methods as m
 

@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 from agents.common import get_throttle
-from gym_deepdrive.envs.deepdrive_gym_env import Action
+from sim.action import Action
 from vendor.openai.baselines import logger
 
 from vendor.openai.baselines.common.math_util import explained_variance

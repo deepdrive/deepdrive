@@ -1,5 +1,6 @@
 import deepdrive
-from gym_deepdrive.envs.deepdrive_gym_env import Action
+from sim.action import Action
+
 
 # Usage: Please make sure to start a fresh api/server.py as connection life cycle is not properly implemented yet
 

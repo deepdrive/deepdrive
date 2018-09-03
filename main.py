@@ -2,9 +2,6 @@ import argparse
 import glob
 import logging
 import os
-import time
-
-import tensorflow as tf
 
 import camera_config
 import config as c
@@ -12,7 +9,7 @@ import deepdrive
 import logs
 from agents.dagger import net
 from agents.dagger.agent import ensure_mnet2_baseline_weights
-from gym_deepdrive.envs.deepdrive_gym_env import DrivingStyle
+from sim.driving_style import DrivingStyle
 
 
 def main():

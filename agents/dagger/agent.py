@@ -4,7 +4,6 @@ from datetime import datetime
 import math
 import glob
 
-import gym
 import tensorflow as tf
 import numpy as np
 
@@ -14,7 +13,9 @@ import utils
 from agents.common import get_throttle
 from agents.dagger import net
 from agents.dagger.train.train import resize_images
-from gym_deepdrive.envs.deepdrive_gym_env import Action, DrivingStyle
+from sim.driving_style import DrivingStyle
+from sim.action import Action
+from sim.view_mode import ViewMode
 from agents.dagger.net import AlexNet, MobileNetV2
 from utils import save_hdf5, download
 import logs
@@ -351,65 +352,17 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         run_baseline_agent=False, run_mnet2_baseline_agent=False, run_ppo_baseline_agent=False,
         camera_rigs=None, should_rotate_sim_types=False, should_record_recovery_from_random_actions=False, render=False,
         path_follower=False, fps=c.DEFAULT_FPS, net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL,
-        is_sync=False, is_remote=False, recording_dir=c.RECORDING_DIR):
-    """Run a trained agent"""
+        is_sync=False, is_remote=False, recording_dir=c.RECORDING_DIR, should_rotate_view_modes=True):
 
-    if run_baseline_agent:
-        net_path = ensure_alexnet_baseline_weights(net_path)
-    elif run_mnet2_baseline_agent:
-        net_path = ensure_mnet2_baseline_weights(net_path)
-    elif run_ppo_baseline_agent:
-        net_path = ensure_ppo_baseline_weights(net_path)
+    agent, env, should_rotate_camera_rigs, start_env = \
+        setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir,
+              run_baseline_agent,
+              run_mnet2_baseline_agent, run_ppo_baseline_agent, should_record,
+              should_record_recovery_from_random_actions, env_id, render, fps, should_benchmark, is_remote, is_sync)
 
     reward = 0
     episode_done = False
     max_episodes = 1000
-
-    # The following will work with 4GB vram
-    if net_name == net.ALEXNET_NAME:
-        per_process_gpu_memory_fraction = 0.8
-    else:
-        per_process_gpu_memory_fraction = 0.4
-
-    tf_config = tf.ConfigProto(
-        gpu_options=tf.GPUOptions(
-            per_process_gpu_memory_fraction=per_process_gpu_memory_fraction,
-            # leave room for the game,
-            # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
-            allow_growth=True
-        ),
-    )
-    sess = tf.Session(config=tf_config)
-    if camera_rigs:
-        cameras = camera_rigs[0]
-    else:
-        cameras = None
-
-    if should_record and camera_rigs is not None and len(camera_rigs) >= 1:
-        should_rotate_camera_rigs = True
-    else:
-        should_rotate_camera_rigs = False
-
-    if should_rotate_camera_rigs:
-        randomize_cameras(cameras)
-
-    use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
-
-    def start_env():
-        return deepdrive.start(experiment_name=experiment, env_id=env_id, should_benchmark=should_benchmark, cameras=cameras,
-                          use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
-                          driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False,
-                          is_remote_client=is_remote)
-
-    env = start_env()
-
-    agent = Agent(sess,
-                  should_record_recovery_from_random_actions=should_record_recovery_from_random_actions,
-                  should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,
-                  path_follower=path_follower, net_name=net_name, driving_style=driving_style,
-                  recording_dir=recording_dir)
-    if net_path:
-        log.info('Running tensorflow agent checkpoint: %s', net_path)
 
     def close():
         env.close()
@@ -450,12 +403,68 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                     env = start_env()
                     cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
+                if should_rotate_view_modes:
+                    env.unwrapped.set_view_mode(list(ViewMode.__members__.items())[episode % len(ViewMode)][1])
                 if episode >= max_episodes:
                     session_done = True
     except KeyboardInterrupt:
         log.info('keyboard interrupt detected, closing')
         close()
     close()
+
+
+def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir, run_baseline_agent,
+          run_mnet2_baseline_agent, run_ppo_baseline_agent, should_record, should_record_recovery_from_random_actions,
+          env_id, render, fps, should_benchmark, is_remote, is_sync):
+    if run_baseline_agent:
+        net_path = ensure_alexnet_baseline_weights(net_path)
+    elif run_mnet2_baseline_agent:
+        net_path = ensure_mnet2_baseline_weights(net_path)
+    elif run_ppo_baseline_agent:
+        net_path = ensure_ppo_baseline_weights(net_path)
+
+    # The following will work with 4GB vram
+    if net_name == net.ALEXNET_NAME:
+        per_process_gpu_memory_fraction = 0.8
+    else:
+        per_process_gpu_memory_fraction = 0.4
+    tf_config = tf.ConfigProto(
+        gpu_options=tf.GPUOptions(
+            per_process_gpu_memory_fraction=per_process_gpu_memory_fraction,
+            # leave room for the game,
+            # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
+            allow_growth=True
+        ),
+    )
+    sess = tf.Session(config=tf_config)
+    if camera_rigs:
+        cameras = camera_rigs[0]
+    else:
+        cameras = None
+    if should_record and camera_rigs is not None and len(camera_rigs) >= 1:
+        should_rotate_camera_rigs = True
+    else:
+        should_rotate_camera_rigs = False
+    if should_rotate_camera_rigs:
+        randomize_cameras(cameras)
+    use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
+
+    def start_env():
+        return deepdrive.start(experiment_name=experiment, env_id=env_id, should_benchmark=should_benchmark,
+                               cameras=cameras,
+                               use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
+                               driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False,
+                               is_remote_client=is_remote)
+
+    env = start_env()
+    agent = Agent(sess,
+                  should_record_recovery_from_random_actions=should_record_recovery_from_random_actions,
+                  should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,
+                  path_follower=path_follower, net_name=net_name, driving_style=driving_style,
+                  recording_dir=recording_dir)
+    if net_path:
+        log.info('Running tensorflow agent checkpoint: %s', net_path)
+    return agent, env, should_rotate_camera_rigs, start_env
 
 
 def randomize_cameras(cameras):
