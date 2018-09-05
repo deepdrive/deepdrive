@@ -12,6 +12,9 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
 from collections import deque
 import numpy as np
 
+import config as c
+
+
 class Sampler(object):
     """
     Simple data structure that maintains a fixed sized random sample of an input stream for computing mean, etc...
@@ -34,7 +37,7 @@ class Sampler(object):
         if not self.is_full:
             self.q.append(x)
         else:
-            should_replace = self.is_full and random.random() < (1. / self.num_samples ** 0.85)
+            should_replace = self.is_full and c.rng.rand() < (1. / self.num_samples ** 0.85)
             if should_replace:
                 index = randint(0, self.maxlen-1)
                 del self.q[index]

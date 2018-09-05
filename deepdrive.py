@@ -48,36 +48,38 @@ def start(**kwargs):
         if kwargs['experiment_name'] is None:
             kwargs['experiment_name'] = ''
 
-        raw_env = env.unwrapped
+        deepdrive_env = env.unwrapped
 
         # This becomes our constructor - to facilitate using Gym API without registering combinations of params for the
         # wide variety of different environments we want.
-        raw_env.is_discrete = kwargs['is_discrete']
-        raw_env.preprocess_with_tensorflow = kwargs['preprocess_with_tensorflow']
-        raw_env.is_sync = kwargs['is_sync']
-        raw_env.reset_returns_zero = kwargs['reset_returns_zero']
-        raw_env.init_action_space()
-        raw_env.fps = kwargs['fps']
-        raw_env.experiment = kwargs['experiment_name'].replace(' ', '_')
-        raw_env.period = raw_env.sync_step_time = 1. / kwargs['fps']
-        raw_env.driving_style = kwargs['driving_style']
-        raw_env.should_render = kwargs['render']
-        raw_env.set_use_sim_start_command(kwargs['use_sim_start_command'])
-        raw_env.open_sim()
+        deepdrive_env.is_discrete = kwargs['is_discrete']
+        deepdrive_env.preprocess_with_tensorflow = kwargs['preprocess_with_tensorflow']
+        deepdrive_env.is_sync = kwargs['is_sync']
+        deepdrive_env.reset_returns_zero = kwargs['reset_returns_zero']
+        deepdrive_env.init_action_space()
+        deepdrive_env.fps = kwargs['fps']
+        deepdrive_env.experiment = kwargs['experiment_name'].replace(' ', '_')
+        deepdrive_env.period = deepdrive_env.sync_step_time = 1. / kwargs['fps']
+        deepdrive_env.driving_style = kwargs['driving_style']
+        deepdrive_env.should_render = kwargs['render']
+        deepdrive_env.set_use_sim_start_command(kwargs['use_sim_start_command'])
+        deepdrive_env.open_sim()
         if kwargs['use_sim_start_command']:
             # TODO: Find a better way to do this. Waiting for the hwnd and focusing does not work in windows.
             input('Press any key when the game has loaded')
-        raw_env.connect(kwargs['cameras'])
-        raw_env.set_step_mode()
+        deepdrive_env.connect(kwargs['cameras'])
+        deepdrive_env.set_step_mode()
+
+
         if kwargs['combine_box_action_spaces']:
             env = CombineBoxSpaceWrapper(env)
         if kwargs['sess']:
-            raw_env.set_tf_session(kwargs['sess'])
+            deepdrive_env.set_tf_session(kwargs['sess'])
         # if kwargs['start_dashboard']:
         #     raw_env.start_dashboard()
         if kwargs['should_benchmark']:
             log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
-            raw_env.init_benchmarking()
+            deepdrive_env.init_benchmarking()
 
         env.reset()
     return env

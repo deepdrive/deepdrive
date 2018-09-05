@@ -5,6 +5,7 @@ import glob
 
 from datetime import datetime
 import numpy as np
+from gym.utils import seeding
 
 # General
 CONTROL_NAMES = ['spin', 'direction', 'speed', 'speed_change', 'steering', 'throttle']
@@ -115,7 +116,7 @@ PPO_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/ppo_baseline_agent_weights.zip'
 
 # Seeded random number generator for reproducibility
 RNG_SEED = 0
-RNG = random.Random(0)
+rng = seeding.np_random(RNG_SEED)[0]
 
 # Sim
 if 'DEEPDRIVE_SIM_START_COMMAND' in os.environ:

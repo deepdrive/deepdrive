@@ -37,7 +37,7 @@ class BackgroundGenerator(threading.Thread):
                 log.debug('waiting for queue size to decrease')
                 self.cv.wait()
             if self.should_shuffle:
-                queue_index = c.RNG.randint(0, len(self.queue))
+                queue_index = c.rng.randint(0, len(self.queue) + 1)
                 log.debug('inserting randomly at', queue_index)
                 self.queue.insert(queue_index, item)
             else:
@@ -88,7 +88,7 @@ def load_file(h5_filename, overfit=False, mute_spurious_targets=False):
     out_targets = []
     try:
         frames = read_hdf5(h5_filename, overfit=overfit)
-        c.RNG.shuffle(frames)
+        c.rng.shuffle(frames)
         for frame in frames:
             out_images.append(frame['cameras'][0]['image'])  # Just use one camera for now
             out_targets.append([*normalize_frame(frame, mute_spurious_targets)])  # TODO(py27): Python versions < 3.5 do not support starred expressions in tuples, lists, and sets
@@ -167,7 +167,7 @@ class Dataset(object):
     def iterate_forever(self, batch_size):
         def file_stream():
             while True:
-                c.RNG.shuffle(self._files)  # File order will be the same every epoch
+                c.rng.shuffle(self._files)  # File order will be the same every epoch
                 for file_name in self._files:
                     log.info('queueing data from %s for iterate forever', file_name)
                     yield file_name

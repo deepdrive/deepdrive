@@ -1,5 +1,8 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
+
+import deepdrive_simulation
+
 from future.builtins import (int, open, round,
                              str)
 import csv
@@ -773,6 +776,7 @@ class DeepDriveEnv(gym.Env):
 
             shared_mem = deepdrive_client.get_shared_memory(self.client_id)
             self.reset_capture(shared_mem[0], shared_mem[1])
+            assert deepdrive_simulation.connect('127.0.0.1', 9009)
             self._init_observation_space()
         else:
             self.raise_connect_fail()

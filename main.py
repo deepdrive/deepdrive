@@ -37,6 +37,14 @@ def main():
                         help='Use synchronous stepping mode where the simulation advances only when calling step')
     parser.add_argument('--record-recovery-from-random-actions', action='store_true', default=False,
                         help='Whether to occasionally perform random actions and record recovery from them')
+    parser.add_argument('--randomize-sun-speed', action='store_true', default=False,
+                        help='Whether to randomize the virtual speed of the earth\'s orbit around the sun')
+    parser.add_argument('--randomize-view-mode', action='store_true', default=False,
+                        help='Whether to randomize view mode')
+    parser.add_argument('--randomize-shadow-level', action='store_true', default=False,
+                        help='Whether to randomize virtual position of Earth around Sun via month')
+    parser.add_argument('--randomize-month', action='store_true', default=False,
+                        help='Whether to randomize shadow quality render levels')
     parser.add_argument('--path-follower', action='store_true', default=False,
                         help='Whether to let the in-game path follower drive')
     parser.add_argument('--overfit', action='store_true', default=False,
@@ -107,7 +115,9 @@ def run_agent(args, camera_rigs, driving_style):
               run_ppo_baseline_agent=args.ppo_baseline, render=args.render, camera_rigs=camera_rigs,
               should_record_recovery_from_random_actions=args.record_recovery_from_random_actions, fps=args.fps,
               net_name=args.net_type, is_sync=args.sync, driving_style=driving_style,
-              is_remote=args.is_remote_client, recording_dir=args.recording_dir)
+              is_remote=args.is_remote_client, recording_dir=args.recording_dir,
+              randomize_view_mode=args.randomize_view_mode, randomize_sun_speed=args.randomize_sun_speed,
+              randomize_shadow_level=args.randomize_shadow_level, randomize_month=args.randomize_month)
 
 
 def run_path_follower(args, driving_style, camera_rigs):

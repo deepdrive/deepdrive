@@ -2,8 +2,6 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
 import numpy as np
-from future.builtins import (int, open, round,
-                             str)
 import logs
 log = logs.get_log(__name__)
 
@@ -70,3 +68,5 @@ class RewardCalculator(object):
         progress_reward = RewardCalculator.clip(progress_reward)
         speed_reward = RewardCalculator.clip(speed_reward)
         return progress_reward, speed_reward
+
+

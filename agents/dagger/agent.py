@@ -13,6 +13,7 @@ import utils
 from agents.common import get_throttle
 from agents.dagger import net
 from agents.dagger.train.train import resize_images
+from sim import world, graphics
 from sim.driving_style import DrivingStyle
 from sim.action import Action
 from sim.view_mode import ViewMode
@@ -218,7 +219,7 @@ class Agent(object):
     def set_random_action_repeat_count(self):
         if self.semirandom_sequence_step == (self.sequence_random_action_count + self.sequence_non_random_action_count):
             self.semirandom_sequence_step = 0
-            rand = c.RNG.random()
+            rand = c.rng.rand()
             if 0 <= rand < 0.67:
                 self.sequence_random_action_count = 0
                 self.sequence_non_random_action_count = 10
@@ -231,8 +232,6 @@ class Agent(object):
             else:
                 self.sequence_random_action_count = 12
                 self.sequence_non_random_action_count = 15
-
-
             log.debug('random actions at %r, non-random %r', self.sequence_random_action_count, self.sequence_non_random_action_count)
 
         else:
@@ -349,10 +348,11 @@ class Agent(object):
 
 
 def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, should_benchmark=True,
-        run_baseline_agent=False, run_mnet2_baseline_agent=False, run_ppo_baseline_agent=False,
-        camera_rigs=None, should_rotate_sim_types=False, should_record_recovery_from_random_actions=False, render=False,
+        run_baseline_agent=False, run_mnet2_baseline_agent=False, run_ppo_baseline_agent=False, camera_rigs=None,
+        should_rotate_sim_types=False, should_record_recovery_from_random_actions=False, render=False,
         path_follower=False, fps=c.DEFAULT_FPS, net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL,
-        is_sync=False, is_remote=False, recording_dir=c.RECORDING_DIR, should_rotate_view_modes=True):
+        is_sync=False, is_remote=False, recording_dir=c.RECORDING_DIR, randomize_view_mode=False,
+        randomize_sun_speed=False, randomize_shadow_level=False, randomize_month=False):
 
     agent, env, should_rotate_camera_rigs, start_env = \
         setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir,
@@ -403,8 +403,14 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                     env = start_env()
                     cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
-                if should_rotate_view_modes:
-                    env.unwrapped.set_view_mode(list(ViewMode.__members__.items())[episode % len(ViewMode)][1])
+                if randomize_view_mode:
+                    env.unwrapped.set_view_mode(c.rng.choice(list(ViewMode.__members__.items())[1]))
+                if randomize_sun_speed:
+                    world.randomize_sun_speed()
+                if randomize_shadow_level:
+                    graphics.randomize_shadow_level()
+                if randomize_month:
+                    world.randomize_month()
                 if episode >= max_episodes:
                     session_done = True
     except KeyboardInterrupt:
