@@ -9,6 +9,24 @@ from enum import Enum
 import logs
 log = logs.get_log(__name__)
 
+class RewardWeighting(object):
+    def __init__(self, progress, gforce, lane_deviation, total_time, speed):
+        # Progress and time were used in DeepDrive-v0 (2.0) - keeping for now in case we want to use again
+        self.progress_weight = progress
+        self.gforce_weight = gforce
+        self.lane_deviation_weight = lane_deviation
+        self.time_weight = total_time
+        self.speed_weight = speed
+
+    @staticmethod
+    def combine(progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty, speed):
+        return progress_reward \
+               - gforce_penalty \
+               - lane_deviation_penalty \
+               - time_penalty \
+               + speed
+
+
 class DrivingStyle(Enum):
     """Idea: Adjust these weights dynamically to produce a sort of curriculum where speed is learned first,
     then lane, then gforce. Also, need to record unweighted score components in physical units (m, m/s^2, etc...)
@@ -58,19 +76,3 @@ class DrivingStyle(Enum):
     STEER_ONLY = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
 
 
-class RewardWeighting(object):
-    def __init__(self, progress, gforce, lane_deviation, total_time, speed):
-        # Progress and time were used in DeepDrive-v0 (2.0) - keeping for now in case we want to use again
-        self.progress_weight = progress
-        self.gforce_weight = gforce
-        self.lane_deviation_weight = lane_deviation
-        self.time_weight = total_time
-        self.speed_weight = speed
-
-    @staticmethod
-    def combine(progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty, speed):
-        return progress_reward \
-               - gforce_penalty \
-               - lane_deviation_penalty \
-               - time_penalty \
-               + speed
