@@ -14,8 +14,8 @@ log = logs.get_log(__name__)
 
 def sun_speed(speed):
     """Seconds of sun rotation per second of simulation time"""
-    assert isinstance(speed, int)
-    assert 0 < speed < 10 ** 5
+    assert np.issubdtype(type(speed), np.integer)
+    assert 0 < speed <= 10 ** 6
     deepdrive_simulation.set_sun_simulation_speed(int(speed))
 
 
