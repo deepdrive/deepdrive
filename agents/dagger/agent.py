@@ -47,6 +47,7 @@ class Agent(object):
         self.sequence_action_count = 0
         self.episode_action_count = 0
         self.recorded_obz_count = 0
+        self.num_saved_observations = 0
         self.performing_random_actions = False
         self.path_follower_mode = path_follower
         self.recording_dir = recording_dir
@@ -208,13 +209,14 @@ class Agent(object):
         # TODO: Move recording to env
         if (
             self.should_record and self.recorded_obz_count % c.FRAMES_PER_HDF5_FILE == 0 and
-            self.recorded_obz_count != 0
+            self.recorded_obz_count != 0 and self.num_saved_observations < self.recorded_obz_count
            ):
             filename = os.path.join(self.sess_dir, '%s.hdf5' %
                                     str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10))
             save_hdf5(self.obz_recording, filename=filename)
             log.info('Flushing output data')
             self.obz_recording = []
+            self.num_saved_observations = self.recorded_obz_count
 
     def set_random_action_repeat_count(self):
         if self.semirandom_sequence_step == (self.sequence_random_action_count + self.sequence_non_random_action_count):
@@ -377,6 +379,18 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                 episode_done = False
             else:
                 obz = None
+
+            if randomize_view_mode:
+                env.unwrapped.set_view_mode(c.rng.choice(list(ViewMode.__members__.values())))
+            if randomize_sun_speed:
+                world.randomize_sun_speed()
+            if randomize_shadow_level:
+                graphics.randomize_shadow_level()
+            if randomize_month:
+                world.randomize_sun_month()
+            if episode >= max_episodes:
+                session_done = True
+
             while not episode_done:
 
                 act_start = time.time()
@@ -403,16 +417,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                     env = start_env()
                     cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
-                if randomize_view_mode:
-                    env.unwrapped.set_view_mode(c.rng.choice(list(ViewMode.__members__.items())[1]))
-                if randomize_sun_speed:
-                    world.randomize_sun_speed()
-                if randomize_shadow_level:
-                    graphics.randomize_shadow_level()
-                if randomize_month:
-                    world.randomize_month()
-                if episode >= max_episodes:
-                    session_done = True
+
     except KeyboardInterrupt:
         log.info('keyboard interrupt detected, closing')
         close()

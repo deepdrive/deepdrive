@@ -33,5 +33,5 @@ def randomize_sun_speed():
     sun_speed(rand_sun_speed)
 
 
-def randomize_month():
+def randomize_sun_month():
     deepdrive_simulation.set_date_and_time(month=c.rng.choice(list(range(1, 13))))

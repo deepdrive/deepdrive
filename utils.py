@@ -118,7 +118,8 @@ def add_collision_to_hdf5(frame, frame_grp):
     clsn_grp = frame_grp.create_group('last_collision')
     clsn = frame['last_collision']
     clsn_grp.attrs['collidee_velocity'] = tuple(clsn.collidee_velocity)
-    clsn_grp.attrs['collidee_location'] = clsn.collidee_location if (clsn.time_utc and clsn.collidee_location) else ''
+    collidee_location = getattr(clsn, 'collidee_location', None)
+    clsn_grp.attrs['collidee_location'] = collidee_location if (clsn.time_utc and collidee_location) else ''
     clsn_grp.attrs['collision_normal'] = tuple(clsn.collision_normal)
     clsn_grp.attrs['time_since_last_collision'] = clsn.time_since_last_collision
     clsn_grp.attrs['time_stamp'] = clsn.time_stamp

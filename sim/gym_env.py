@@ -639,6 +639,7 @@ class DeepDriveEnv(gym.Env):
         deepdrive_capture.close()
         deepdrive_client.release_agent_control(self.client_id)
         deepdrive_client.close(self.client_id)
+        deepdrive_simulation.disconnect()
         self.client_id = 0
 
         # Keep this open as agents share this session and restart the env for things like changing cameras during recording.
@@ -663,6 +664,7 @@ class DeepDriveEnv(gym.Env):
                 ret['cameras'] = self.preprocess_cameras(cameras)
             else:
                 ret['cameras'] = []
+            ret['view_mode'] = self.view_mode.name.lower()
         else:
             ret = None
         return ret
@@ -707,6 +709,7 @@ class DeepDriveEnv(gym.Env):
             ret = None
         else:
             ret = self.preprocess_observation(obz)
+
         log.debug('completed capture step')
         return ret
 
@@ -940,6 +943,7 @@ class DeepDriveEnv(gym.Env):
 
     def set_view_mode(self, view_mode):
         # Passing a cam id of -1 sets all cameras with the same view mode
+        deepdrive_client.set_view_mode(self.client_id, -1, '')   # TODO: Figure out why snapshots are None without this
         deepdrive_client.set_view_mode(self.client_id, -1, view_mode.value.lower())
         self.view_mode = view_mode
 
