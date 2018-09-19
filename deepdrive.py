@@ -51,7 +51,7 @@ def start(**kwargs):
         deepdrive_env = env.unwrapped
 
         # This becomes our constructor - to facilitate using Gym API without registering combinations of params for the
-        # wide variety of different environments we want.
+        # wide variety of configurations we want.
         deepdrive_env.is_discrete = kwargs['is_discrete']
         deepdrive_env.preprocess_with_tensorflow = kwargs['preprocess_with_tensorflow']
         deepdrive_env.is_sync = kwargs['is_sync']
@@ -75,8 +75,8 @@ def start(**kwargs):
             env = CombineBoxSpaceWrapper(env)
         if kwargs['sess']:
             deepdrive_env.set_tf_session(kwargs['sess'])
-        # if kwargs['start_dashboard']:
-        #     raw_env.start_dashboard()
+        if kwargs['start_dashboard']:
+            deepdrive_env.start_dashboard()
         if kwargs['should_benchmark']:
             log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
             deepdrive_env.init_benchmarking()

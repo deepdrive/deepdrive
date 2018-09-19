@@ -356,6 +356,9 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         is_sync=False, is_remote=False, recording_dir=c.RECORDING_DIR, randomize_view_mode=False,
         randomize_sun_speed=False, randomize_shadow_level=False, randomize_month=False):
 
+    if should_record:
+        path_follower = True
+
     agent, env, should_rotate_camera_rigs, start_env = \
         setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir,
               run_baseline_agent,
@@ -380,14 +383,9 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
             else:
                 obz = None
 
-            if randomize_view_mode:
-                env.unwrapped.set_view_mode(c.rng.choice(list(ViewMode.__members__.values())))
-            if randomize_sun_speed:
-                world.randomize_sun_speed()
-            if randomize_shadow_level:
-                graphics.randomize_shadow_level()
-            if randomize_month:
-                world.randomize_sun_month()
+            domain_randomization(env, randomize_month, randomize_shadow_level,
+                                 randomize_sun_speed, randomize_view_mode)
+
             if episode >= max_episodes:
                 session_done = True
 
@@ -413,6 +411,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                 episode += 1
                 if should_rotate_camera_rigs:
                     # TODO: Allow changing viewpoint as remote client
+                    # TODO: Add this to domain_randomization()
                     env.close()
                     env = start_env()
                     cameras = camera_rigs[episode % len(camera_rigs)]
@@ -422,6 +421,17 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         log.info('keyboard interrupt detected, closing')
         close()
     close()
+
+
+def domain_randomization(env, randomize_month, randomize_shadow_level, randomize_sun_speed, randomize_view_mode):
+    if randomize_view_mode:
+        env.unwrapped.set_view_mode(c.rng.choice(list(ViewMode.__members__.values())))
+    if randomize_sun_speed:
+        world.randomize_sun_speed()
+    if randomize_shadow_level:
+        graphics.randomize_shadow_level()
+    if randomize_month:
+        world.randomize_sun_month()
 
 
 def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir, run_baseline_agent,

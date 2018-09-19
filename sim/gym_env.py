@@ -173,8 +173,13 @@ class DeepDriveEnv(gym.Env):
 
             pass
         else:
-            log.info('Starting simulator at %s (takes a few seconds the first time).', utils.get_sim_bin_path())
-            self.sim_process = Popen([utils.get_sim_bin_path()])
+            cmd = utils.get_sim_bin_path()
+
+            if log.getEffectiveLevel() < 20:  # More verbose than info (i.e. debug)
+                cmd += ' -LogCmds="global Verbose, LogPython Verbose, LogAnimMontage off, LogDeepDriveAgent VeryVerbose"'
+
+            self.sim_process = Popen(cmd.split())
+            log.info('Starting simulator at %s (takes a few seconds the first time).', cmd)
 
     def close_sim(self):
         log.info('Closing sim')
@@ -252,7 +257,8 @@ class DeepDriveEnv(gym.Env):
 
         if self.dashboard_pub is not None:
             start_dashboard_put = time.time()
-            self.dashboard_pub.put(OrderedDict({'display_stats': list(self.display_stats.items()), 'should_stop': False}))
+            self.dashboard_pub.put(OrderedDict({'display_stats': list(self.display_stats.items()),
+                                                'should_stop': False}))
             log.debug('dashboard put took %fs', time.time() - start_dashboard_put)
 
         self.step_num += 1
@@ -325,7 +331,6 @@ class DeepDriveEnv(gym.Env):
         lap_bonus = 0
         done = False
         if obz:
-            # lap_number = obz.get('lap_number')  # We want to provide extra checks to prevent erroneous short laps, so ignore this.
             lap_number = obz.get('lap_number')
             if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
                 took_shortcut = self.score.speed_sampler.mean() / 100 * self.score.episode_time < LAP_LENGTH * 0.9
@@ -389,8 +394,6 @@ class DeepDriveEnv(gym.Env):
             log.debug('steering %f', obz['steering'])
             log.debug('brake %f', obz['brake'])
             log.debug('handbrake %f', obz['handbrake'])
-
-
 
         log.debug('get reward took %fs', time.time() - start_get_reward)
 
@@ -943,8 +946,14 @@ class DeepDriveEnv(gym.Env):
 
     def set_view_mode(self, view_mode):
         # Passing a cam id of -1 sets all cameras with the same view mode
+
+        # TODO: Fix this bug
+        import deepdrive_client
+        import deepdrive_capture
+        import deepdrive_simulation
+
         deepdrive_client.set_view_mode(self.client_id, -1, '')   # TODO: Figure out why snapshots are None without this
-        deepdrive_client.set_view_mode(self.client_id, -1, view_mode.value.lower())
+        deepdrive_client.set_view_mode(self.client_id, -1, view_mode.value)
         self.view_mode = view_mode
 
 
