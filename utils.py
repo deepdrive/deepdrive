@@ -1,3 +1,6 @@
+from __future__ import (absolute_import, division, print_function, unicode_literals)
+from future.builtins import (dict, input, str)
+
 import glob
 import inspect
 import os
@@ -227,6 +230,7 @@ def file_has_stuff(path):
 
 
 def has_stuff(path, warn_existing=False, overwrite=False):
+    # TODO: Remove overwrite as a parameter, doesn't make sense here.
     if os.path.exists(path) and (dir_has_stuff(path) or file_has_stuff(path)):
         if warn_existing:
             print('%s exists, do you want to re-download and overwrite the existing files (y/n)?' % path, end=' ')
@@ -271,6 +275,21 @@ def get_sim_bin_path():
         path = None
     return path
 
+def get_sim_project_dir():
+    if c.REUSE_OPEN_SIM:
+        path = input('What is the path to your simulator project directory?'
+                     '\n\ti.e. for sources something like ~/src/deepdrive-sim '
+                     '\n\tor for packaged binaries, something like ~/Deepdrive/sim/LinuxNoEditor/DeepDrive')
+    elif c.IS_LINUX:
+        path = os.path.join(c.SIM_PATH, 'LinuxNoEditor/DeepDrive')
+    elif c.IS_MAC:
+        raise NotImplementedError('Support for OSX not yet implemented, see FAQs')
+    elif c.IS_WINDOWS:
+        path = os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive')
+    else:
+        raise RuntimeError('OS not recognized')
+
+    return path
 
 def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors=True):
     def say(*args):
@@ -328,6 +347,15 @@ def download_sim():
         else:
             raise NotImplementedError('Sim download not yet implemented for this OS')
     ensure_executable(get_sim_bin_path())
+    download_sim_embedded_py_req()
+
+
+def download_sim_embedded_py_req():
+    lib_url = 'https://s3-us-west-1.amazonaws.com/deepdrive/unreal_python_lib/python_libs.zip'
+    lib_path = os.path.join(get_sim_project_dir(), 'python_libs')
+    print('Downloading Python libs (71MB) for Unreal embedded Python from', lib_url, '...')
+    if not (os.path.exists(lib_path) and has_stuff(lib_path)):
+        download(lib_url, lib_path)
 
 
 def is_docker():
@@ -346,4 +374,5 @@ def remotable(f):
 
 if __name__ == '__main__':
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
-    read_hdf5_manual()
+    # read_hdf5_manual()
+    download_sim()
