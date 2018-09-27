@@ -176,16 +176,16 @@ class DeepDriveEnv(gym.Env):
             cmd = utils.get_sim_bin_path()
 
             if log.getEffectiveLevel() < 20:  # More verbose than info (i.e. debug)
-                cmd += ' -LogCmds="global Verbose, LogPython Verbose, LogAnimMontage off, LogDeepDriveAgent VeryVerbose"'
+                cmd += ' -LogCmds="LogPython Verbose, LogSharedMemoryImpl_Linux VeryVerbose, LogDeepDriveAgent VeryVerbose"'
 
-            self.sim_process = Popen(cmd.split())
+            self.sim_process = Popen(utils.get_sim_bin_path())
             log.info('Starting simulator at %s (takes a few seconds the first time).', cmd)
 
     def close_sim(self):
         log.info('Closing sim')
         if self.sim_process is not None:
             try:
-                self.sim_process.kill()
+                self.sim_process.terminate()
             except Exception as e:
                 log.error('Error closing sim', e)
 
@@ -390,6 +390,7 @@ class DeepDriveEnv(gym.Env):
 
             log.debug('reward %r', reward)
             log.debug('score %r', self.score.total)
+            log.debug('progress %r', self.score.progress)
             log.debug('throttle %f', obz['throttle'])
             log.debug('steering %f', obz['steering'])
             log.debug('brake %f', obz['brake'])
@@ -660,7 +661,7 @@ class DeepDriveEnv(gym.Env):
         # TODO: Generate random actions with this seed
 
     def preprocess_observation(self, observation):
-        if observation:
+        if observation and len(observation.cameras[0].image_data):
             ret = obj2dict(observation, exclude=['cameras'])
             if observation.camera_count > 0 and getattr(observation, 'cameras', None) is not None:
                 cameras = observation.cameras
