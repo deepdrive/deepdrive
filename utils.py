@@ -353,8 +353,8 @@ def download_sim():
 def download_sim_embedded_py_req():
     lib_url = 'https://s3-us-west-1.amazonaws.com/deepdrive/unreal_python_lib/python_libs.zip'
     lib_path = os.path.join(get_sim_project_dir(), 'python_libs')
-    print('Downloading Python libs (71MB) for Unreal embedded Python from', lib_url, '...')
     if not (os.path.exists(lib_path) and has_stuff(lib_path)):
+        print('Downloading Python libs (71MB) for Unreal embedded Python from', lib_url, '...')
         download(lib_url, lib_path)
 
 
