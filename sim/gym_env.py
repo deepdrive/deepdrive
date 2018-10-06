@@ -186,6 +186,17 @@ class DeepDriveEnv(gym.Env):
         if self.sim_process is not None:
             try:
                 self.sim_process.terminate()
+                time.sleep(0.2)
+                i = 0
+                while self.sim_process.poll() is None:
+                    log.info('Waiting for sim process to die')
+                    time.sleep(0.1 * 2**i)
+                    if i > 4:
+                        # Die!
+                        log.warn('Forcefully killing sim')
+                        self.sim_process.kill()
+                        break
+                    i += 1
             except Exception as e:
                 log.error('Error closing sim', e)
 
