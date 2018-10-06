@@ -95,8 +95,10 @@ class Agent(object):
                 self.sequence_action_count = 0
                 self.performing_random_actions = False
             else:
-                action = self.toggle_random_action(episode_time)
-
+                if not okay_to_act_randomly(obz):
+                    action = Action(has_control=False)
+                else:
+                    action = self.toggle_random_action(episode_time)
             self.sequence_action_count += 1
         elif self.net is not None:
             if not obz or not obz['cameras']:
@@ -412,10 +414,9 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                 if should_rotate_camera_rigs:
                     # TODO: Allow changing viewpoint as remote client
                     # TODO: Add this to domain_randomization()
-                    env.close()
-                    env = start_env()
                     cameras = camera_rigs[episode % len(camera_rigs)]
                     randomize_cameras(cameras)
+                    env.unwrapped.change_cameras(cameras)
 
     except KeyboardInterrupt:
         log.info('keyboard interrupt detected, closing')
@@ -486,6 +487,17 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follo
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
     return agent, env, should_rotate_camera_rigs, start_env
+
+
+def okay_to_act_randomly(obz):
+    if obz is None:
+        return False
+    elif obz['distance_to_next_agent'] < (100 * 100) or obz['distance_to_prev_agent'] < (50 * 100):
+        log.info('Not okay to act randomly passing %r distance next %r distance prev %r',
+                 obz['is_passing'], obz['distance_to_next_agent'], obz['distance_to_prev_agent'])
+        return False
+    else:
+        return True
 
 
 def randomize_cameras(cameras):
