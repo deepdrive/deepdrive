@@ -360,6 +360,10 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
     if should_record:
         path_follower = True
+        randomize_month = True
+        randomize_shadow_level = True
+        randomize_sun_speed = True
+        randomize_view_mode = True
 
     agent, env, should_rotate_camera_rigs, start_env = \
         setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir,
