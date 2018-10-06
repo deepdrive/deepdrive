@@ -33,7 +33,7 @@ from sim.action import Action, DiscreteActions
 from sim.reward_calculator import RewardCalculator
 from sim.score import Score
 from sim.view_mode import ViewMode
-from renderer import renderer_factory
+from renderer import renderer_factory, base_renderer
 from utils import obj2dict
 from dashboard import dashboard_fn, DashboardPub
 
@@ -85,7 +85,7 @@ class DeepDriveEnv(gym.Env):
         self.reset_returns_zero = None  # type: bool
         self.started_driving_wrong_way_time = None  # type: bool
         self.previous_distance_along_route = None  # type: float
-        self.renderer = None  # type: sim.gym.renderer.Renderer
+        self.renderer = None  # type: base_renderer.Renderer
         self.np_random = None  # type: tuple
         self.last_obz = None  # type: dict
         self.view_mode = ViewMode.NORMAL  # type: ViewMode
@@ -252,6 +252,9 @@ class DeepDriveEnv(gym.Env):
         log.debug('send_control took %fs', time.time() - send_control_start)
 
         obz = self.get_observation()
+        if not obz:
+            log.debug('Observation not available - step %r', self.step_num)
+
         self.last_obz = obz
         if self.should_render:
             self.render()
@@ -634,6 +637,7 @@ class DeepDriveEnv(gym.Env):
             return 0
 
     def change_viewpoint(self, cameras, use_sim_start_command):
+        # TODO: Delete this method
         self.use_sim_start_command = use_sim_start_command
         deepdrive_capture.close()
         deepdrive_client.close(self.client_id)
@@ -782,16 +786,9 @@ class DeepDriveEnv(gym.Env):
 
         if cameras is None:
             cameras = [c.DEFAULT_CAM]
-        self.cameras = cameras
-        if self.client_id and self.client_id > 0:
-            for cam in self.cameras:
-                cam['cxn_id'] = deepdrive_client.register_camera(self.client_id, cam['field_of_view'],
-                                                                 cam['capture_width'],
-                                                                 cam['capture_height'],
-                                                                 cam['relative_position'],
-                                                                 cam['relative_rotation'],
-                                                                 cam['name'])
 
+        if self.client_id and self.client_id > 0:
+            self.register_cameras(cameras)
             shared_mem = deepdrive_client.get_shared_memory(self.client_id)
             self.reset_capture(shared_mem[0], shared_mem[1])
             assert deepdrive_simulation.connect('127.0.0.1', 9009)
@@ -803,6 +800,16 @@ class DeepDriveEnv(gym.Env):
             self.renderer = renderer_factory(cameras=cameras)
 
         self._perform_first_step()
+
+    def register_cameras(self, cameras):
+        for cam in cameras:
+            cam['cxn_id'] = deepdrive_client.register_camera(self.client_id, cam['field_of_view'],
+                                                             cam['capture_width'],
+                                                             cam['capture_height'],
+                                                             cam['relative_position'],
+                                                             cam['relative_rotation'],
+                                                             cam['name'])
+            self.cameras = cameras
 
     def _connect_with_retries(self):
 
@@ -958,15 +965,16 @@ class DeepDriveEnv(gym.Env):
 
     def set_view_mode(self, view_mode):
         # Passing a cam id of -1 sets all cameras with the same view mode
-
-        # TODO: Fix this bug
-        import deepdrive_client
-        import deepdrive_capture
-        import deepdrive_simulation
-
-        deepdrive_client.set_view_mode(self.client_id, -1, '')   # TODO: Figure out why snapshots are None without this
         deepdrive_client.set_view_mode(self.client_id, -1, view_mode.value)
         self.view_mode = view_mode
 
+    def change_cameras(self, cameras):
+        self.unregister_cameras()
+        self.register_cameras(cameras)
+
+    def unregister_cameras(self):
+        if not deepdrive_client.unregister_camera(self.client_id, 0):  # 0 => Unregister all
+            raise RuntimeError('Not able to unregister cameras')
+        self.cameras = None
 
 
