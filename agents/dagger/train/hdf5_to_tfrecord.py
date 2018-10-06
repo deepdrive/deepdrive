@@ -96,16 +96,17 @@ def save_tfrecord_file(file_idx, filename, images, targets):
             log.error('invalid target shape %r skipping' % len(tgt))
             valid_target_shape = False
     if valid_target_shape:
+        # TODO: Remove this?
         pass
     for image_idx in range(len(images)):
 
-        # print how many images are saved every 1000 images
         if not image_idx % 1000:
             log.info('Train data: {}/{}'.format(image_idx, len(images)))
 
         image = images[image_idx]
         image += c.MEAN_PIXEL
-        assert(min(image) == 0)
+        if min(image) < 0:
+            raise RuntimeError('Min image less than zero')
 
         target = targets[image_idx]
 
