@@ -121,7 +121,7 @@ class Agent(object):
                   obz is not None, self.performing_random_actions, self.should_record)
 
         if obz and not self.performing_random_actions and self.should_record:
-            log.debug('Recording frame')
+            log.info('Recording frame')
             self.obz_recording.append(obz)
             if TEST_SAVE_IMAGE:
                 utils.save_camera(obz['cameras'][0]['image'], obz['cameras'][0]['depth'],
@@ -257,7 +257,7 @@ class Agent(object):
                 self.performing_random_actions = False
         else:
             if self.sequence_action_count < self.sequence_non_random_action_count and self.previous_action is not None:
-                action = self.previous_action
+                action = self.previous_action  # Where has_control can be False, meaning no change, i.e. Game AI is driving
             else:
                 # switch to random
                 log.debug('Switching to random action. action_count %d random_action_count %d '
