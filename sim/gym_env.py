@@ -1,13 +1,9 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-import deepdrive_simulation
-
 from future.builtins import (int, open, round,
                              str)
 import csv
-import deepdrive_client
-import deepdrive_capture
 import os
 import random
 import sys
@@ -24,7 +20,9 @@ import numpy as np
 from GPUtil import GPUtil
 from gym import spaces
 from gym.utils import seeding
-
+import deepdrive_client
+import deepdrive_capture
+import deepdrive_simulation
 
 import config as c
 import logs
@@ -346,8 +344,14 @@ class DeepDriveEnv(gym.Env):
         done = False
         if obz:
             lap_number = obz.get('lap_number')
-            if lap_number is not None and self.lap_number is not None and self.lap_number < lap_number:
-                took_shortcut = self.score.speed_sampler.mean() / 100 * self.score.episode_time < LAP_LENGTH * 0.9
+            have_lap_numbers = lap_number is not None and self.lap_number is not None
+            lap_via_number = have_lap_numbers and self.lap_number < lap_number
+            progress_wrapped = self.score.progress < self.score.prev_progress * 0.1
+            lap_via_progress = self.score.progress > 99.9 or progress_wrapped
+            if lap_via_progress or lap_via_number:
+                average_meters_per_sec = self.score.speed_sampler.mean() / 100
+                est_travel_distance = average_meters_per_sec * self.score.episode_time
+                took_shortcut = est_travel_distance < obz['route_length'] * 0.9
                 if took_shortcut:
                     log.warn('Shortcut detected, not scoring lap')
                 else:
@@ -476,7 +480,8 @@ class DeepDriveEnv(gym.Env):
         self.score.progress_reward += progress_reward
         self.score.speed_reward += speed_reward
 
-        self.score.progress = self.distance_along_route / LAP_LENGTH  # TODO Get length of route dynamically
+        self.score.prev_progress = self.score.progress
+        self.score.progress = self.distance_along_route / (obz['route_length'] * .01)
 
         self.display_stats['lap progress']['total'] = self.score.progress
         self.display_stats['lap progress']['value'] = self.display_stats['lap progress']['total']
@@ -791,7 +796,8 @@ class DeepDriveEnv(gym.Env):
             self.register_cameras(cameras)
             shared_mem = deepdrive_client.get_shared_memory(self.client_id)
             self.reset_capture(shared_mem[0], shared_mem[1])
-            assert deepdrive_simulation.connect('127.0.0.1', 9009)
+            if not deepdrive_simulation.connect('127.0.0.1', 9009, seed=c.rng.randint(1, 10**9)):
+                raise RuntimeError('Could not connect to Deepdrive simulation server')
             self._init_observation_space()
         else:
             self.raise_connect_fail()

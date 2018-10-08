@@ -16,6 +16,7 @@ class Score(object):
     progress_reward = 0
     speed_reward = 0
     progress = 0
+    prev_progress = 0
     got_stuck = False
     wrong_way = False
 

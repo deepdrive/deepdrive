@@ -19,13 +19,17 @@ def set_capture_graphics(shadow_level):
         Note: We can set texture level, ambient occlusion, etc... but it only affects
         the display window, not the captured cameras.
     """
-    assert np.issubdtype(shadow_level, int)
+    if not np.issubdtype(shadow_level, int):
+        raise ValueError('Shadow level should be an integer')
     shadow_level = int(shadow_level)
-    assert shadow_level in SHADOW_RANGE
+    if shadow_level not in SHADOW_RANGE:
+        raise ValueError('Shadow level should be between 0 and 4')
     settings = deepdrive_simulation.SimulationGraphicsSettings()
     settings.shadow_quality = shadow_level
     deepdrive_simulation.set_graphics_settings(settings)
 
 
 def randomize_shadow_level():
-    set_capture_graphics(shadow_level=c.rng.choice(SHADOW_RANGE))
+    level = c.rng.choice(SHADOW_RANGE)
+    log.info('Setting new shadow quality level (%r/%r)', level, max(SHADOW_RANGE))
+    set_capture_graphics(shadow_level=level)
