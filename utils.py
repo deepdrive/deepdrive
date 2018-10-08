@@ -1,4 +1,7 @@
 from __future__ import (absolute_import, division, print_function, unicode_literals)
+
+import traceback
+
 from future.builtins import (dict, input, str)
 
 import glob
@@ -134,24 +137,46 @@ def read_hdf5(filename, save_png_dir=None, overfit=False):
     ret = []
     with h5py.File(filename, 'r') as file:
         for i, frame_name in enumerate(file):
-            frame = file[frame_name]
-            out_frame = dict(frame.attrs)
-            out_cameras = []
-            for camera_name in frame:
-                camera = frame[camera_name]
-                out_camera = dict(camera.attrs)
-                out_camera['image'] = camera['image'].value
-                out_camera['depth'] = camera['depth'].value
-                out_cameras.append(out_camera)
-                if save_png_dir is not None:
-                    save_camera(out_camera['image'], out_camera['depth'], save_dir=save_png_dir, name=str(i).zfill(10))
-            out_frame['cameras'] = out_cameras
-            ret.append(out_frame)
-            if overfit:
-                log.info('overfitting to %r, image# %d', filename, i)
-                if i == 1:
-                    break
+            out_frame = read_frame(file, frame_name, i, save_png_dir)
+            if out_frame is None:
+                log.error('Could not read frame, skipping')
+            else:
+                ret.append(out_frame)
+                if overfit:
+                    log.info('overfitting to %r, image# %d', filename, i)
+                    if i == 1:
+                        break
     return ret
+
+
+def read_frame(file, frame_name, frame_index, save_png_dir):
+    try:
+        frame = file[frame_name]
+        out_frame = dict(frame.attrs)
+        out_cameras = []
+        for dataset_name in frame:
+            if dataset_name.startswith('camera_'):
+                read_camera(dataset_name, frame, frame_index,
+                            out_cameras, save_png_dir)
+            elif dataset_name == 'last_collision':
+                out_frame['last_collision'] = dict(frame[dataset_name].attrs)
+        out_frame['cameras'] = out_cameras
+    except Exception as e:
+        traceback.print_stack()
+        log.error('Exception reading frame %s', str(e))
+        out_frame = None
+    return out_frame
+
+
+def read_camera(dataset_name, frame, frame_index, out_cameras, save_png_dir):
+    camera = frame[dataset_name]
+    out_camera = dict(camera.attrs)
+    out_camera['image'] = camera['image'].value
+    out_camera['depth'] = camera['depth'].value
+    out_cameras.append(out_camera)
+    if save_png_dir is not None:
+        save_camera(out_camera['image'], out_camera['depth'],
+                    save_dir=save_png_dir, name=str(frame_index).zfill(10))
 
 
 def save_camera(image, depth, save_dir, name):

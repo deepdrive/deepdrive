@@ -65,10 +65,10 @@ def add_total_to_tfrecord_files(directory, filename_prefix):
 def save_dataset(dataset, buffer_size, filename, parallelize=True):
     if parallelize:
         def get_callback(_file_idx):
-            log.info('getting callback for %d', _file_idx)
+            log.debug('getting callback for %d', _file_idx)
             
             def callback(result):
-                log.info('inside callback for %r', _file_idx)
+                log.debug('inside callback for %r', _file_idx)
                 imgs, tgts = result
                 save_tfrecord_file(_file_idx, filename, imgs, tgts)
             return callback
@@ -88,7 +88,8 @@ def save_tfrecord_file(file_idx, filename, images, targets):
     colorspace = b'RGB'
     channels = 3
     image_format = b'RAW'
-    writer = tf.python_io.TFRecordWriter(filename + '_' + str(file_idx).zfill(5) + '.tfrecord')
+    out_filename = filename + '_' + str(file_idx).zfill(5) + '.tfrecord'
+    writer = tf.python_io.TFRecordWriter(out_filename)
     valid_target_shape = True
     resize_images(INPUT_IMAGE_SHAPE, images)
     for tgt in targets:
@@ -100,13 +101,17 @@ def save_tfrecord_file(file_idx, filename, images, targets):
         pass
     for image_idx in range(len(images)):
 
-        if not image_idx % 1000:
-            log.info('Train data: {}/{}'.format(image_idx, len(images)))
+        if not image_idx % 500:
+            log.info('{}/{} examples saved to {}'.format(
+                image_idx, len(images), out_filename))
 
         image = images[image_idx]
-        image += c.MEAN_PIXEL
-        if min(image) < 0:
-            raise RuntimeError('Min image less than zero')
+
+        # Undo initial subtraction of mean pixel during recording
+        image += c.MEAN_PIXEL.astype(image.dtype)
+
+        if image.min() < 0:
+            raise ValueError('Min image less than zero')
 
         target = targets[image_idx]
 
@@ -126,6 +131,7 @@ def save_tfrecord_file(file_idx, filename, images, targets):
         # Serialize to string and write on the file
         writer.write(example.SerializeToString())
     writer.close()
+    log.info('Wrote %r examples to %s', len(images), out_filename)
 
 
 # TODO: See whether HDF5 images have negative, mean subtracted values. If so, it must be the tf record process that gets rid of those
@@ -140,7 +146,7 @@ def encode(parallelize=True):
                  parallelize=parallelize)
 
 
-def decode():
+def test_decode():
     data_path = os.path.join(c.RECORDING_DIR, 'deepdrive_train_00000-of-00162.tfrecord')
 
     with tf.Session() as sess:
@@ -188,7 +194,7 @@ def decode():
 
 if __name__ == '__main__':
     if 'decode' in sys.argv:
-        decode()
+        test_decode()
     elif 'rename-only' in sys.argv:
         add_total_to_tfrecord_files(c.RECORDING_DIR, 'deepdrive_train')
         add_total_to_tfrecord_files(c.RECORDING_DIR, 'deepdrive_eval')

@@ -1,3 +1,4 @@
+import copy
 import os
 import time
 from datetime import datetime
@@ -361,7 +362,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
     if should_record:
         path_follower = True
         randomize_month = True
-        randomize_shadow_level = True
+        randomize_shadow_level = False
         randomize_sun_speed = True
         randomize_view_mode = True
 
@@ -418,7 +419,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                 if should_rotate_camera_rigs:
                     # TODO: Allow changing viewpoint as remote client
                     # TODO: Add this to domain_randomization()
-                    cameras = camera_rigs[episode % len(camera_rigs)]
+                    cameras = copy.deepcopy(camera_rigs[episode % len(camera_rigs)])
                     randomize_cameras(cameras)
                     env.unwrapped.change_cameras(cameras)
 

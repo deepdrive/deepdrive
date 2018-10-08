@@ -1,3 +1,9 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+from future.builtins import (int, open, round,
+                             str)
+
 import glob
 import multiprocessing
 import threading
@@ -91,7 +97,9 @@ def load_file(h5_filename, overfit=False, mute_spurious_targets=False):
         c.rng.shuffle(frames)
         for frame in frames:
             out_images.append(frame['cameras'][0]['image'])  # Just use one camera for now
-            out_targets.append([*normalize_frame(frame, mute_spurious_targets)])  # TODO(py27): Python versions < 3.5 do not support starred expressions in tuples, lists, and sets
+
+            # TODO(py27): Python versions < 3.5 do not support starred expressions in tuples, lists, and sets
+            out_targets.append([*normalize_frame(frame, mute_spurious_targets)])
     except Exception as e:
         log.error('Could not load %s - skipping - error was: %r', h5_filename, e)
 
@@ -162,7 +170,12 @@ class Dataset(object):
             for file_name in self._files:
                 log.info('queueing data from %s for iterate once', file_name)
                 yield file_name
-        yield from batch_gen(file_stream(), batch_size, mute_spurious_targets=self.mute_spurious_targets)  # TODO(py27): Python versions < 3.3 do not support this syntax. Delegating to a subgenerator is available since Python 3.3; use explicit iteration over subgenerator instead.
+
+        # TODO(py27): Python versions < 3.3 do not support this syntax.
+        #  Delegating to a subgenerator is available since Python 3.3; use explicit iteration
+        #  over subgenerator instead.
+        yield from batch_gen(file_stream(), batch_size,
+                             mute_spurious_targets=self.mute_spurious_targets)
 
     def iterate_forever(self, batch_size):
         def file_stream():
