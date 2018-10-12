@@ -167,18 +167,27 @@ class Agent(object):
         log.debug('actual_speed %f', actual_speed)
         log.debug('desired_speed %f', desired_speed)
 
-        if isinstance(self.net, MobileNetV2):
-            # target_speed = 8 * 100
-            target_speed = desired_speed
-            # desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
-            # desired_throttle = min(max(desired_throttle, 0.), 1.)
-            target_speed = 8 * 100
-            desired_throttle = get_throttle(actual_speed, target_speed)
+        # max_meters_per_sec = 8
 
-            # if self.previous_net_out:
-            #     desired_throttle = 0.2 * self.previous_action.throttle + 0.7 * desired_throttle
-            # else:
-            # desired_throttle = desired_throttle * 0.95
+        if isinstance(self.net, MobileNetV2):
+            # target_speed = desired_speed
+            # desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
+
+            # target_speed = 8 * 100
+
+            # if actual_speed > 0.8 * (max_meters_per_sec * 100):
+            #     desired_speed *= 0.8
+
+            # TODO: Support different driving styles
+
+            desired_throttle = get_throttle(actual_speed, desired_speed * 0.48)
+
+            desired_throttle = min(max(desired_throttle, 0.), 1.)
+
+            if self.previous_net_out:
+                desired_throttle = 0.2 * self.previous_action.throttle + 0.5 * desired_throttle
+            else:
+                desired_throttle = desired_throttle * 0.95
             # desired_throttle = 0.4
         else:
             # AlexNet
@@ -192,7 +201,7 @@ class Agent(object):
             else:
                 raise NotImplementedError('Driving style not supported')
 
-            # Network overfit on speed, plus it's nice to be able to change it,
+            # AlexNet overfit on speed, plus it's nice to be able to change it,
             # so we just ignore output speed of net
             desired_throttle = get_throttle(actual_speed, target_speed)
         log.debug('actual_speed %r' % actual_speed)
@@ -361,10 +370,6 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
     if should_record:
         path_follower = True
-        randomize_month = True
-        randomize_shadow_level = False
-        randomize_sun_speed = True
-        randomize_view_mode = True
 
     agent, env, should_rotate_camera_rigs, start_env = \
         setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir,

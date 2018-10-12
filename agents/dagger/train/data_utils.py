@@ -191,7 +191,7 @@ class Dataset(object):
         yield from batch_gen(file_stream(), batch_size, self.overfit, self.mute_spurious_targets)  # TODO(py27): Python versions < 3.3 do not support this syntax. Delegating to a subgenerator is available since Python 3.3; use explicit iteration over subgenerator instead.
 
     def iterate_parallel_once(self, get_callback):
-        with Pool(max(multiprocessing.cpu_count() - 2, 1)) as p:
+        with Pool(max(multiprocessing.cpu_count() // 2, 1)) as p:
             for i, file in enumerate(self._files):
                 # get_callback(i)(load_file(file, self.overfit, self.mute_spurious_targets))
                 p.apply_async(load_file, (file, self.overfit, self.mute_spurious_targets), callback=get_callback(i))

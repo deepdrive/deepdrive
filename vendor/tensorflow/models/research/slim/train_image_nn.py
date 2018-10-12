@@ -27,16 +27,17 @@ from __future__ import print_function
 
 import glob
 import os
+from datetime import datetime
 
 import tensorflow as tf
 
 from agents.dagger.net import MOBILENET_V2_SLIM_NAME
-from config import TENSORFLOW_OUT_DIR
+from config import TENSORFLOW_OUT_DIR, CONTROL_NAMES
 from vendor.tensorflow.models.research.slim.datasets import dataset_factory
 from vendor.tensorflow.models.research.slim.deployment import model_deploy
 from vendor.tensorflow.models.research.slim.nets import nets_factory
 from vendor.tensorflow.models.research.slim.preprocessing import preprocessing_factory
-from datetime import datetime
+
 
 slim = tf.contrib.slim
 
@@ -556,11 +557,11 @@ def slim_train_image_nn(resume_deepdrive=False, dataset_name='imagenet', dataset
                 target_delta = logits - targets
                 # target_delta = tf.Print(target_delta, [target_delta], 'target_delta ')
 
-                steering_delta = target_delta[:, 4]
-                mean_steering_delta = tf.reduce_mean(tf.abs(steering_delta))
-                # target_delta = tf.Print(target_delta, [mean_steering_delta], 'steering error ')
-
-                tf.summary.scalar('steering_error/train', mean_steering_delta)
+                for net_out_i, net_out_name in enumerate(CONTROL_NAMES):
+                    delta = target_delta[:, net_out_i]
+                    mean_delta = tf.reduce_mean(tf.abs(delta))
+                    # target_delta = tf.Print(target_delta, [mean_delta], net_out_name + ' error ')
+                    tf.summary.scalar('deepdrive_error/%s_train' % net_out_name, mean_delta)
 
                 sq_root_normalized_target_delta = target_delta / targets.shape[1].value ** .5
                 # sq_root_normalized_target_delta = tf.Print(sq_root_normalized_target_delta, [sq_root_normalized_target_delta], 'sq_root_normalized_target_delta ')

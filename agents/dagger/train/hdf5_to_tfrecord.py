@@ -90,15 +90,7 @@ def save_tfrecord_file(file_idx, filename, images, targets):
     image_format = b'RAW'
     out_filename = filename + '_' + str(file_idx).zfill(5) + '.tfrecord'
     writer = tf.python_io.TFRecordWriter(out_filename)
-    valid_target_shape = True
     resize_images(INPUT_IMAGE_SHAPE, images)
-    for tgt in targets:
-        if len(tgt) != c.NUM_TARGETS:
-            log.error('invalid target shape %r skipping' % len(tgt))
-            valid_target_shape = False
-    if valid_target_shape:
-        # TODO: Remove this?
-        pass
     for image_idx in range(len(images)):
 
         if not image_idx % 500:

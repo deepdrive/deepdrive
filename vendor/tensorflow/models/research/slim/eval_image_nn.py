@@ -24,7 +24,7 @@ import os
 
 import tensorflow as tf
 
-from config import TENSORFLOW_OUT_DIR
+from config import TENSORFLOW_OUT_DIR, CONTROL_NAMES
 from vendor.tensorflow.models.research.slim.datasets import dataset_factory
 from vendor.tensorflow.models.research.slim.nets import nets_factory
 from vendor.tensorflow.models.research.slim.preprocessing import preprocessing_factory
@@ -201,13 +201,13 @@ def slim_eval_image_nn(eval_dir=None, dataset_dir=None, dataset_name='imagenet',
             # targets = tf.Print(targets, [targets[0][5], logits[0][5]], 'epxpected and actual throttle ')
 
             target_delta = logits - targets
-            steering_delta = target_delta[:, 4]
-            target_delta = tf.Print(target_delta, [steering_delta], 'steering_delta ', summarize=1000)
-            mean_steering_delta = tf.reduce_mean(tf.abs(steering_delta))
 
-            tf.summary.scalar('steering_error/eval', mean_steering_delta)
-
-            targets = tf.Print(targets, [mean_steering_delta], 'eval steering error ')
+            for net_out_i, net_out_name in enumerate(CONTROL_NAMES):
+                delta = target_delta[:, i]
+                target_delta = tf.Print(target_delta, [delta], net_out_name + '_delta ', summarize=1000)
+                mean_delta = tf.reduce_mean(tf.abs(delta))
+                tf.summary.scalar('deepdrive_error/%s_eval' % net_out_name, mean_delta)
+                targets = tf.Print(targets, [mean_delta], 'eval %s error ' % net_out_name)
 
             sq_root_normalized_target_delta = target_delta / targets.shape[1].value ** .5
             # sq_root_normalized_target_delta = tf.Print(sq_root_normalized_target_delta, [sq_root_normalized_target_delta], 'sq_root_normalized_target_delta ')

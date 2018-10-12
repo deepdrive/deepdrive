@@ -27,8 +27,8 @@ def main():
                         help='Trains tensorflow agent on stored driving data')
     parser.add_argument('--discrete-actions', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
-    parser.add_argument('--use-last-model', action='store_true', default=False,
-                        help='Run the most recently trained model')
+    parser.add_argument('--use-latest-model', action='store_true', default=False,
+                        help='Use most recently trained model')
     parser.add_argument('--recording-dir', nargs='?', default=c.RECORDING_DIR, help='Where to store and read recorded '
                                                                                     'environment data from')
     parser.add_argument('--render', action='store_true', default=False,
@@ -87,7 +87,7 @@ def main():
     else:
         camera_rigs = camera_config.rigs['baseline_rigs']
 
-    if args.use_last_model:
+    if args.use_latest_model:
         if args.train:
             args.resume_train = get_latest_model()
         else:
@@ -181,14 +181,14 @@ def train_agent(args, driving_style):
 
 
 def get_latest_model():
-    train_dirs = glob.glob('%s/*_train' % c.TENSORFLOW_OUT_DIR)
-    latest_subdir = max(train_dirs, key=os.path.getmtime)
-    if not latest_subdir:
-        raise RuntimeError('Can not get latest model, no models found in % s' % c.TENSORFLOW_OUT_DIR)
-    latest_model = max(glob.glob('%s/model.ckpt-*.meta' % latest_subdir), key=os.path.getmtime)
+    # TODO: Get best performing model from n latest
+    latest_model = max(glob.glob(
+        '%s/*/model.ckpt-*.meta' % c.TENSORFLOW_OUT_DIR),
+        key=os.path.getmtime)
     if not latest_model:
-        raise RuntimeError('Can not get latest model, no models found in %s' % latest_subdir)
+        raise RuntimeError('Can not get latest model, no models found in %s' % c.TENSORFLOW_OUT_DIR)
     latest_prefix = latest_model[:-len('.meta')]
+    log.info('Latest model is %s', latest_prefix)
     return latest_prefix
 
 

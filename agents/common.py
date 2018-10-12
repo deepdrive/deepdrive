@@ -18,6 +18,7 @@ log = logs.get_log(__name__)
 
 
 def get_throttle(actual_speed, target_speed):
+    # TODO: Use a PID here
     desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
     desired_throttle = min(max(desired_throttle, 0.), 1.)
     return desired_throttle
