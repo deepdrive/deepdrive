@@ -1,20 +1,20 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-import glob
-import os
-
 from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
                              int, map, next, oct, open, pow, range, round,
                              str, super, zip)
 
+import glob
+import os
 import sys
+
 from multiprocessing import Pool
 import tensorflow as tf
 
+import utils
 from agents.dagger.train.data_utils import get_dataset
 from agents.dagger.train.train import resize_images
-from utils import read_hdf5
 import logs
 import config as c
 
@@ -53,6 +53,7 @@ def add_total_to_tfrecord_files(directory, filename_prefix):
     files_to_rename = []
     for file in all_files:
         if os.path.getsize(file) == 0:
+            log.warn('Encountered an empty tfrecord file! Deleting %s', file)
             os.remove(file)
         else:
             files_to_rename.append(file)
@@ -85,6 +86,7 @@ def save_dataset(dataset, buffer_size, filename, parallelize=True):
 
 
 def save_tfrecord_file(file_idx, filename, images, targets):
+    utils.assert_disk_space(filename)
     colorspace = b'RGB'
     channels = 3
     image_format = b'RAW'
@@ -128,6 +130,7 @@ def save_tfrecord_file(file_idx, filename, images, targets):
 
 # TODO: See whether HDF5 images have negative, mean subtracted values. If so, it must be the tf record process that gets rid of those
 def encode(parallelize=True):
+    # TODO: Get a couple separate hdf5 files from different situations / view modes for eval
     hdf5_path = c.RECORDING_DIR
     train_dataset = get_dataset(hdf5_path, train=True)
     eval_dataset = get_dataset(hdf5_path, train=False)

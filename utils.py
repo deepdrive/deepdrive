@@ -1,8 +1,13 @@
-from __future__ import (absolute_import, division, print_function, unicode_literals)
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
 
+from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
+                             int, map, next, oct, open, pow, range, round,
+                             str, super, zip)
+
+import ctypes
+import platform
 import traceback
-
-from future.builtins import (dict, input, str)
 
 import glob
 import inspect
@@ -82,6 +87,7 @@ def obj2dict(obj, exclude=None):
 
 
 def save_hdf5(out, filename):
+    assert_disk_space(filename)
     if 'DEEPDRIVE_NO_THREAD_SAVE' in os.environ:
         save_hdf5_thread(out, filename)
     else:
@@ -391,11 +397,30 @@ def is_docker():
     )
 
 
+def get_free_space_mb(dirname):
+    """Return folder/drive free space (in megabytes)."""
+    if platform.system() == 'Windows':
+        free_bytes = ctypes.c_ulonglong(0)
+        ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+            ctypes.c_wchar_p(dirname), None, None, ctypes.pointer(free_bytes))
+        return free_bytes.value / 1024 / 1024
+    else:
+        st = os.statvfs(dirname)
+        return st.f_bavail * st.f_frsize / 1024 / 1024
+
+
 def remotable(f):
     def extract_args(*args, **kwargs):
         return f((args, kwargs), *args, **kwargs)
 
     return extract_args
+
+
+def assert_disk_space(filename, mb=1000):
+    """Ubuntu was failing silently for me, creating 0byte files"""
+    if get_free_space_mb(os.path.dirname(filename)) < mb:
+        raise Exception('Less than %dMB left on device with file: %s' % (mb, filename))
+
 
 if __name__ == '__main__':
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')

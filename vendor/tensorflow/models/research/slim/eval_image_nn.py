@@ -203,7 +203,7 @@ def slim_eval_image_nn(eval_dir=None, dataset_dir=None, dataset_name='imagenet',
             target_delta = logits - targets
 
             for net_out_i, net_out_name in enumerate(CONTROL_NAMES):
-                delta = target_delta[:, i]
+                delta = target_delta[:, net_out_i]
                 target_delta = tf.Print(target_delta, [delta], net_out_name + '_delta ', summarize=1000)
                 mean_delta = tf.reduce_mean(tf.abs(delta))
                 tf.summary.scalar('deepdrive_error/%s_eval' % net_out_name, mean_delta)
