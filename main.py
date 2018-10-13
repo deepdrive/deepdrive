@@ -78,7 +78,7 @@ def main():
                                                           c.DAGGER_MNET2,
                                                           c.BOOTSTRAPPED_PPO2))
 
-    args = parser.parse_args()
+    args = c.PY_ARGS = parser.parse_args()
     if args.verbose:
         logs.set_level(logging.DEBUG)
 
@@ -88,6 +88,8 @@ def main():
         camera_rigs = camera_config.rigs['baseline_rigs']
 
     if args.use_latest_model:
+        if args.net_path:
+            raise ValueError('--use-latest-model and --net-path cannot both be set')
         if args.train:
             args.resume_train = get_latest_model()
         else:

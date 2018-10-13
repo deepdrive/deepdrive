@@ -157,3 +157,6 @@ IS_EVAL = False
 
 # Stream
 STREAM_PORT = 5558
+
+# Set via main
+PY_ARGS = None
