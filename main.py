@@ -59,7 +59,7 @@ def main():
     parser.add_argument('--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
-    parser.add_argument('--net-type', nargs='?', default=net.ALEXNET_NAME,
+    parser.add_argument('--net-type', nargs='?', default=net.MOBILENET_V2_NAME,
                         help='Your model type - i.e. AlexNet or MobileNetV2')
     parser.add_argument('--driving-style', nargs='?', default=DrivingStyle.NORMAL.name.lower(),
                         help='Speed vs comfort prioritization, i.e. ' +
