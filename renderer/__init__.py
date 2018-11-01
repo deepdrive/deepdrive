@@ -24,10 +24,10 @@ def renderer_factory(renderer_type=None, cameras=None):
             renderer_type = RendererType.PYGLET
 
     if renderer_type is RendererType.WEB:
-        from renderer import get_web_renderer
+        from renderer.web_renderer import get_web_renderer
         return get_web_renderer()
     elif renderer_type is RendererType.PYGLET:
-        from renderer import PygletRenderer
+        from renderer.pyglet_renderer import PygletRenderer
         return PygletRenderer(cameras)
     else:
         raise NotImplementedError('Renderer type not recognized')

@@ -34,6 +34,8 @@ class LambdaClient(object):
 
     world.all_actors()[0].set_actor_location(location)
 
+    # TODO: Show how to access vehicle and tire models
+
     """
     def __init__(self, **kwargs):
         self.socket = None

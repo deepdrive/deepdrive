@@ -188,7 +188,10 @@ class Dataset(object):
         # TODO: Make Python 2 compatible with something like
         # for x in batch_gen(file_stream(), batch_size):
         #     yield x
-        yield from batch_gen(file_stream(), batch_size, self.overfit, self.mute_spurious_targets)  # TODO(py27): Python versions < 3.3 do not support this syntax. Delegating to a subgenerator is available since Python 3.3; use explicit iteration over subgenerator instead.
+        # TODO(py27): Python versions < 3.3 do not support this syntax.
+        # Delegating to a subgenerator is available since Python 3.3;
+        # use explicit iteration over subgenerator instead.
+        yield from batch_gen(file_stream(), batch_size, self.overfit, self.mute_spurious_targets)
 
     def iterate_parallel_once(self, get_callback):
         with Pool(max(multiprocessing.cpu_count() // 2, 1)) as p:

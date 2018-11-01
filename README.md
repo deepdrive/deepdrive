@@ -49,6 +49,8 @@ If you run into issues, try starting the sim directly as Unreal may need to inst
 
 ## Usage
 
+#### Running
+
 Run the **baseline** agent
 ```
 python main.py --baseline --experiment-name my-baseline-test
@@ -64,6 +66,9 @@ python main.py --path-follower --experiment-name my-path-follower-test
 python main.py --record --record-recovery-from-random-actions
 ```
 
+
+#### Training
+
 **Train** on recorded data
 ```
 python main.py --train [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2]
@@ -75,6 +80,14 @@ Grab the [dataset](#dataset)
 ```
 python main.py --train --recording-dir <the-directory-with-the-dataset> [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2]
 ```
+
+**Tensorboard**
+
+```
+tensorboard --logdir="<your-deepdrive-home>/tensorflow"
+```
+
+Where `<your-deepdrive-home>` below is by default in `$HOME/Deepdrive` and can be configured in `$HOME/.deepdrive/deepdrive_dir`
 
 ### Key binds 
 

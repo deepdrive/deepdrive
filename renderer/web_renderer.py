@@ -14,12 +14,20 @@ from collections import deque
 import config as c
 import logs
 import utils
-from renderer import Renderer
+from renderer.base_renderer import Renderer
 
 log = logs.get_log(__name__)
 app = Flask(__name__)
 
 web_renderer = None
+
+"""
+Usage:
+Call main.py with --render and navigate to http://0.0.0.0:5000
+"""
+
+# TODO: Support rendering saved HDF5 and tfrecord's
+
 
 def get_web_renderer():
     # Singleton is a hack around difficulties setting up multiple ZMQ contexts on same port in the same process
@@ -143,19 +151,6 @@ class StreamServer(object):
                 self.context.term()
         except Exception as e:
             print(e)
-
-# def frame_worker(socket, queue):
-#     while True:
-#         msg = socket.recv()
-#         if msg:
-#             cameras = pyarrow.deserialize(msg)
-#             if cameras is not None:
-#
-#                 image = cameras[0]['image_raw']
-#                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-#                 ret, jpeg = cv2.imencode('.jpg', image)
-#                 queue.append(b'--frame\r\n'
-#                              b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
 
 
 def frame_worker(socket, queue):
