@@ -87,7 +87,7 @@ def obj2dict(obj, exclude=None):
 
 
 def save_hdf5(out, filename):
-    assert_disk_space(filename)
+    assert_disk_space(os.path.dirname(filename))
     if 'DEEPDRIVE_NO_THREAD_SAVE' in os.environ:
         save_hdf5_thread(out, filename)
     else:
