@@ -9,7 +9,7 @@ from multiprocessing import Process, Queue
 
 import utils
 import logs
-from renderer import Renderer
+from renderer.base_renderer import Renderer
 
 log = logs.get_log(__name__)
 
