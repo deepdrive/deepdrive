@@ -69,7 +69,7 @@ class DrivingStyle(Enum):
     __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'
     # TODO: Possibly assign function rather than just weights
     CRUISING   = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
-    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.10, total_time=0.0)
+    NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.10, total_time=0.0)  # TODO: Reinstate g-forces. Removed for PPO tuning.
     LATE       = RewardWeighting(speed=2.0, progress=0.0, gforce=0.50, lane_deviation=0.50, total_time=0.0)
     EMERGENCY  = RewardWeighting(speed=2.0, progress=0.0, gforce=0.75, lane_deviation=0.75, total_time=0.0)
     CHASE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
