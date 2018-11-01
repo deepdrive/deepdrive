@@ -323,7 +323,7 @@ class DeepDriveEnv(gym.Env):
         log.debug('in regulate_fps')
         if self.previous_action_time:
             delta = now - self.previous_action_time
-            fps = 1. / delta
+            fps = 1. / max(delta, 1E-9)
             log.debug('step duration delta actual %f desired %f', delta, self.period)
             if delta < self.period:
                 self.sync_step_time = self.period
