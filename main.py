@@ -2,6 +2,10 @@ import argparse
 import glob
 import logging
 import os
+import sys
+import traceback
+
+import six
 
 import camera_config
 import config as c
@@ -146,9 +150,10 @@ def run_path_follower(args, driving_style, camera_rigs):
         log.info('keyboard interrupt detected, closing')
     except Exception as e:
         log.error('Error running agent. %s', e)
+        print(traceback.format_exc())
         if gym_env:
             gym_env.close()
-        raise e
+
     if gym_env:
         gym_env.close()
     log.info('Last episode complete, closing')
