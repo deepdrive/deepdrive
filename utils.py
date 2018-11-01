@@ -264,7 +264,7 @@ def has_stuff(path, warn_existing=False, overwrite=False):
     # TODO: Remove overwrite as a parameter, doesn't make sense here.
     if os.path.exists(path) and (dir_has_stuff(path) or file_has_stuff(path)):
         if warn_existing:
-            print('%s exists, do you want to re-download and overwrite the existing files (y/n)?' % path, end=' ')
+            print('%s exists, do you want to re-download and overwrite any existing files (y/n)?' % path, end=' ')
             overwrite = input()
             if 'n' in overwrite.lower():
                 print('USING EXISTING %s - Try rerunning and overwriting if you run into problems.' % path)
@@ -298,7 +298,7 @@ def get_sim_bin_path():
     elif c.IS_LINUX:
         path = get_from_glob(c.SIM_PATH + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive*')
     elif c.IS_MAC:
-        raise NotImplementedError('Support for OSX not yet implemented, see FAQs')
+        raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
     elif c.IS_WINDOWS:
         path = get_from_glob(os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') + '/Win64/*.exe')
 
@@ -314,7 +314,7 @@ def get_sim_project_dir():
     elif c.IS_LINUX:
         path = os.path.join(c.SIM_PATH, 'LinuxNoEditor/DeepDrive')
     elif c.IS_MAC:
-        raise NotImplementedError('Support for OSX not yet implemented, see FAQs')
+        raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
     elif c.IS_WINDOWS:
         path = os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive')
     else:
@@ -378,15 +378,24 @@ def download_sim():
         else:
             raise NotImplementedError('Sim download not yet implemented for this OS')
     ensure_executable(get_sim_bin_path())
-    download_sim_embedded_py_req()
+    download_sim_python()
 
 
-def download_sim_embedded_py_req():
-    lib_url = 'https://s3-us-west-1.amazonaws.com/deepdrive/unreal_python_lib/python_libs.zip'
-    lib_path = os.path.join(get_sim_project_dir(), 'python_libs')
-    if not (os.path.exists(lib_path) and has_stuff(lib_path)):
-        print('Downloading Python libs (71MB) for Unreal embedded Python from', lib_url, '...')
+def download_sim_python():
+    base_url = c.BASE_URL + '/embedded_python_for_unreal'
+    if c.IS_WINDOWS:
+        lib_url = base_url + 'windows/python_bin_with_libs.zip'
+        lib_path = os.path.join(get_sim_project_dir(), 'Binaries', 'Win64')
+        print('Downloading Python libs (51MB) for Unreal embedded Python from', lib_url, '...')
         download(lib_url, lib_path)
+    elif c.IS_LINUX:
+        lib_url = base_url + '/python_libs.zip'
+        lib_path = os.path.join(get_sim_project_dir(), 'python_libs')
+        if not (os.path.exists(lib_path) and has_stuff(lib_path)):
+            print('Downloading Python libs (75MB) for Unreal embedded Python from', lib_url, '...')
+            download(lib_url, lib_path)
+    elif c.IS_MAC:
+        raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
 
 
 def is_docker():
@@ -425,4 +434,5 @@ def assert_disk_space(filename, mb=1000):
 if __name__ == '__main__':
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
     # read_hdf5_manual()
-    download_sim()
+    # download_sim()
+    download_sim_python()
