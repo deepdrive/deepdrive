@@ -386,12 +386,13 @@ def download_sim_python():
     if c.IS_WINDOWS:
         lib_url = base_url + 'windows/python_bin_with_libs.zip'
         lib_path = os.path.join(get_sim_project_dir(), 'Binaries', 'Win64')
-        print('Downloading Python libs (51MB) for Unreal embedded Python from', lib_url, '...')
-        download(lib_url, lib_path)
+        print('Downloading Python binaries and libs (51MB) for Unreal embedded Python from', lib_url, '...')
+        if not os.path.exists(lib_path) or not os.path.exists(os.path.join(lib_path, 'python3.dll')):
+            download(lib_url, lib_path)
     elif c.IS_LINUX:
         lib_url = base_url + '/python_libs.zip'
         lib_path = os.path.join(get_sim_project_dir(), 'python_libs')
-        if not (os.path.exists(lib_path) and has_stuff(lib_path)):
+        if not os.path.exists(lib_path) or not has_stuff(lib_path):
             print('Downloading Python libs (75MB) for Unreal embedded Python from', lib_url, '...')
             download(lib_url, lib_path)
     elif c.IS_MAC:
