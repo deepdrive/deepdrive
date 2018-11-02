@@ -15,6 +15,10 @@ all_loggers = []
 
 def get_log(namespace, rotator=log_rotator):
     ret = logging.getLogger(namespace)
+    if ret.parent != ret.root:
+        # Avoid duplicate log messages in multiprocessing scenarios
+        # where module is imported twice
+        return ret.parent
     ret.setLevel(log_level)
     ch = logging.StreamHandler(sys.stdout)
     ch.setFormatter(log_format)
