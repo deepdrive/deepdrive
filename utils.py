@@ -429,7 +429,7 @@ def remotable(f):
 def assert_disk_space(filename, mb=1000):
     """Ubuntu was failing silently for me, creating 0byte files"""
     if get_free_space_mb(os.path.dirname(filename)) < mb:
-        raise Exception('Less than %dMB left on device with file: %s' % (mb, filename))
+        raise Exception('Less than %dMB left on device, aborting save in %s' % (mb, filename))
 
 
 if __name__ == '__main__':
