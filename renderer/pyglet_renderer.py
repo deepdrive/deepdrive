@@ -1,5 +1,8 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
+from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
+                             int, map, next, oct, open, pow, range, round,
+                             str, super, zip)
 
 import time
 
@@ -29,7 +32,7 @@ class PygletRenderer(Renderer):
     def render(self, obz):
         now = time.time()
         if self.prev_render_time:
-            log.info(now - self.prev_render_time)
+            log.debug('render time %r', now - self.prev_render_time)
         self.prev_render_time = now
         if obz is not None:
             self.pyglet_queue.put(obz['cameras'])
