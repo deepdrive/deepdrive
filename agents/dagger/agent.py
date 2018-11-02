@@ -122,7 +122,7 @@ class Agent(object):
                   obz is not None, self.performing_random_actions, self.should_record)
 
         if obz and not self.performing_random_actions and self.should_record:
-            log.info('Recording frame')
+            log.debug('Recording frame')
             self.obz_recording.append(obz)
             if TEST_SAVE_IMAGE:
                 utils.save_camera(obz['cameras'][0]['image'], obz['cameras'][0]['depth'],
@@ -370,6 +370,9 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
     if should_record:
         path_follower = True
+        randomize_view_mode = True
+        randomize_sun_speed = True
+        randomize_month = True
 
     agent, env, should_rotate_camera_rigs, start_env = \
         setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir,
