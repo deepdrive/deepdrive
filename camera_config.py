@@ -1,5 +1,15 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
+                             int, map, next, oct, open, pow, range, round,
+                             str, super, zip)
+
+from copy import deepcopy
+
 import logs
-import config
+import config as c
+from sim.view_mode import ViewMode
 
 log = logs.get_log(__name__)
 
@@ -7,8 +17,9 @@ log = logs.get_log(__name__)
 # cameras in the first dimension are rotated through at the end of the episode during recording and...
 # cameras in the second dimension create multiple simultaneously rendering views from the vehicle.
 rigs = {
+    'default_rig': [[c.DEFAULT_CAM]],
     'baseline_rigs': [
-        [config.DEFAULT_CAM],
+        [c.DEFAULT_CAM],
         [dict(name='forward cam 90 FOV', field_of_view=90, capture_width=340, capture_height=227,
               relative_position=[150, 1.0, 200],
               relative_rotation=[0.0, 0.0, 0.0])],
@@ -28,3 +39,7 @@ rigs = {
              relative_rotation=[0.0, 0.0, 0.0])
     ]]
 }
+
+DEFAULT_BASE_COLOR_CAM = deepcopy(c.DEFAULT_CAM)
+DEFAULT_BASE_COLOR_CAM['view_mode'] = ViewMode.BASE_COLOR.value
+rigs['default_base_color_rig'] = [[DEFAULT_BASE_COLOR_CAM]]

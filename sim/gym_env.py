@@ -816,6 +816,10 @@ class DeepDriveEnv(gym.Env):
                                                              cam['relative_position'],
                                                              cam['relative_rotation'],
                                                              cam['name'])
+
+            if 'view_mode' in cam:
+                deepdrive_client.set_view_mode(self.client_id, cam['cxn_id'], cam['view_mode'])
+
             self.cameras = cameras
 
     def _connect_with_retries(self):
