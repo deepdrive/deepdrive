@@ -63,7 +63,7 @@ class DrivingStyle(Enum):
 
     - After some experimentation, seems like we may not need this yet. Observation normalization was causing the
     motivating problem by learning too slow. Optimization does find a way. I think distributional RL may be helpful here
-    especially if we can get dimensions for all the compoenents of the reward. Also a novelty bonus on
+    especially if we can get dimensions for all the components of the reward. Also a novelty bonus on
     (observation,action) or (game-state,action) would be helpful most likely to avoid local minima.
     """
     __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE'

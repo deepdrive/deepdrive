@@ -429,11 +429,12 @@ def remotable(f):
 def assert_disk_space(filename, mb=1000):
     """Ubuntu was failing silently for me, creating 0byte files"""
     if get_free_space_mb(os.path.dirname(filename)) < mb:
-        raise Exception('Less than %dMB left on device, aborting save in %s' % (mb, filename))
+        raise Exception('Less than %dMB left on device, aborting save of %s' % (mb, filename))
 
 
 if __name__ == '__main__':
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
     # read_hdf5_manual()
     # download_sim()
-    download_sim_python()
+    # download_sim_python()
+    assert_disk_space(r'C:\Users\a\DeepDrive\recordings\2018-11-03__12-29-33PM\0000000143.hdf5')
