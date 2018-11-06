@@ -11,6 +11,7 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
 import config as c
 import utils
 from agents.dagger.net import MOBILENET_V2_SLIM_NAME
+from install import get_tf_valid
 from vendor.tensorflow.models.research.slim.eval_image_nn import slim_eval_image_nn
 from vendor.tensorflow.models.research.slim.train_image_nn import slim_train_image_nn
 import logs
@@ -21,6 +22,9 @@ log = logs.get_log(__name__)
 IMG_SIZE = 224
 
 def train_mobile_net(data_dir):
+    if not get_tf_valid():
+        raise RuntimeError('Invalid Tensorflow version detected. See above for details.')
+
     """# Should see steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, train steering error: ~0.08"""
     if not os.path.exists(c.MNET2_PRETRAINED_PATH + '.meta'):
         utils.download(c.MNET2_PRETRAINED_URL + '?cache_bust=1', c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
