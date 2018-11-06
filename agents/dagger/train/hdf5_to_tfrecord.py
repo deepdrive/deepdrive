@@ -14,7 +14,6 @@ import tensorflow as tf
 
 import utils
 from agents.dagger.train.data_utils import get_dataset
-from agents.dagger.train.train import resize_images
 import logs
 import config as c
 
@@ -92,7 +91,7 @@ def save_tfrecord_file(file_idx, filename, images, targets):
     image_format = b'RAW'
     out_filename = filename + '_' + str(file_idx).zfill(5) + '.tfrecord'
     writer = tf.python_io.TFRecordWriter(out_filename)
-    resize_images(INPUT_IMAGE_SHAPE, images)
+    utils.resize_images(INPUT_IMAGE_SHAPE, images)
     for image_idx in range(len(images)):
 
         if not image_idx % 500:

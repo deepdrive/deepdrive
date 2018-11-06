@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import glob
 import os
 import sys
 
@@ -11,6 +12,7 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
 import config as c
 import utils
 from agents.dagger.net import MOBILENET_V2_SLIM_NAME
+from agents.dagger.train import hdf5_to_tfrecord
 from install import get_tf_valid
 from vendor.tensorflow.models.research.slim.eval_image_nn import slim_eval_image_nn
 from vendor.tensorflow.models.research.slim.train_image_nn import slim_train_image_nn
@@ -28,6 +30,11 @@ def train_mobile_net(data_dir):
     """# Should see steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, train steering error: ~0.08"""
     if not os.path.exists(c.MNET2_PRETRAINED_PATH + '.meta'):
         utils.download(c.MNET2_PRETRAINED_URL + '?cache_bust=1', c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
+
+    if not glob.glob(data_dir + '/*.tfrecord') and glob.glob(data_dir + '/*/*.hdf5'):
+        log.warn('Performing one time translation of HDF5 to TFRecord')
+        hdf5_to_tfrecord.encode()
+
 
     # # Fine-tune only the new layers
     initial_train_dir = slim_train_image_nn(

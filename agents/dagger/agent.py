@@ -13,7 +13,6 @@ import deepdrive
 import utils
 from agents.common import get_throttle
 from agents.dagger import net
-from agents.dagger.train.train import resize_images
 from sim import world, graphics
 from sim.driving_style import DrivingStyle
 from sim.action import Action
@@ -354,7 +353,7 @@ class Agent(object):
             image -= c.MEAN_PIXEL
             if isinstance(self.net, MobileNetV2):
                 resize_start = time.time()
-                image = resize_images(self.net.input_image_shape, [image], always=True)[0]
+                image = utils.resize_images(self.net.input_image_shape, [image], always=True)[0]
                 log.debug('resize took %fs', time.time() - resize_start)
             camera['image'] = image
             log.debug('prepro took %fs',  time.time() - prepro_start)

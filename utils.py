@@ -432,6 +432,20 @@ def assert_disk_space(filename, mb=1000):
         raise Exception('Less than %dMB left on device, aborting save of %s' % (mb, filename))
 
 
+def resize_images(input_image_shape, images, always=False):
+    import scipy.misc
+    for img_idx, img in enumerate(images):
+        img = images[img_idx]
+        if img.shape != input_image_shape or always:
+            # Interesting bug here. Since resize converts mean subtracted floats (~-120 to ~130) to 0-255 uint8,
+            # but we don't always resize since randomize_cameras does nothing to the size 5% of the time.
+            # This actually worked surprisingly well. Need to test whether this bug actually improves things or not.
+            log.debug('invalid image shape %s - resizing', str(img.shape))
+            images[img_idx] = scipy.misc.imresize(img, (input_image_shape[0],
+                                                        input_image_shape[1]))
+    return images
+
+
 if __name__ == '__main__':
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
     # read_hdf5_manual()

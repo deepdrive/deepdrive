@@ -7,10 +7,10 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
 import os
 
 import numpy as np
-import scipy.misc
 import tensorflow as tf
 
 import config as c
+import utils
 from agents.dagger import net
 from agents.dagger.net import Net, AlexNet, MobileNetV2
 from agents.dagger.train.data_utils import get_dataset
@@ -175,7 +175,7 @@ def train_batch(agent_net, i, sess, summary_op, sv, targets_tensor, train_data_p
     log.debug('num images %r', len(images))
     log.debug('num targets %r', len(targets))
     valid_target_shape = True
-    resize_images(agent_net.input_image_shape, images)
+    utils.resize_images(agent_net.input_image_shape, images)
     loss = None
     for tgt in targets:
         if len(tgt) != 6:
@@ -204,7 +204,7 @@ def perform_eval(step, agent_net, batch_size, eval_dataset, eval_sw, sess):
     log.info('performing evaluation')
     losses = []
     for images, targets in eval_dataset.iterate_once(batch_size):
-        resize_images(agent_net.input_image_shape, images)
+        utils.resize_images(agent_net.input_image_shape, images)
         predictions = sess.run(agent_net.eval_out, {agent_net.input: images})
         losses += [np.square(targets - predictions)]
     losses = np.concatenate(losses)
@@ -221,17 +221,7 @@ def perform_eval(step, agent_net, batch_size, eval_dataset, eval_sw, sess):
     eval_sw.flush()
 
 
-def resize_images(input_image_shape, images, always=False):
-    for img_idx, img in enumerate(images):
-        img = images[img_idx]
-        if img.shape != input_image_shape or always:
-            # Interesting bug here. Since resize converts mean subtracted floats (~-120 to ~130) to 0-255 uint8,
-            # but we don't always resize since randomize_cameras does nothing to the size 5% of the time.
-            # This actually worked surprisingly well. Need to test whether this bug actually improves things or not.
-            log.debug('invalid image shape %s - resizing', str(img.shape))
-            images[img_idx] = scipy.misc.imresize(img, (input_image_shape[0],
-                                                        input_image_shape[1]))
-    return images
+
 
 
 if __name__ == "__main__":
