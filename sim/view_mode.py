@@ -14,3 +14,5 @@ class ViewMode(Enum):
     REFLECTIVITY = 'Reflectivity'
     AMBIENT_OCCLUSION = 'AmbientOcclusion'
     DEPTH_HEAT_MAP = 'HeatMap'
+    SPECULARITY = 'Specularity'
+
