@@ -565,7 +565,7 @@ class DeepDriveEnv(gym.Env):
         diff_filepath = os.path.join(c.RESULTS_DIR, diff_filename)
 
         if self.git_diff is not None:
-            with open(diff_filepath, 'w') as diff_file:
+            with open(diff_filepath, 'w', encoding='utf-8') as diff_file:
                 diff_file.write(self.git_diff)
 
         if not utils.is_docker():
