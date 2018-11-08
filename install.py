@@ -1,4 +1,8 @@
-from __future__ import print_function
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+from future.builtins import (int, open, round,
+                             str)
 import argparse
 import os
 import tempfile
@@ -16,7 +20,18 @@ IS_UNIX = IS_LINUX or IS_MAC or 'bsd' in sys.platform.lower()
 IS_WINDOWS = sys.platform == 'win32'
 
 
-def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors=True):
+def run_command_async(cmd, throw=True):
+    from sarge import run, Capture
+    # TODO: p = run(..., stdout=Capture(buffer_size=-1), stderr=Capture(buffer_size=-1))
+    # TODO: Then log p.stdout. while process not complete in realtime and to file
+    p = run(cmd, async_=True)
+    # Allow streaming stdout and stderr to user while command executes
+    p.close()
+    if p.returncode != 0:
+        if throw:
+            raise RuntimeError('Command failed, see above')
+
+def run_command_no_deps(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors=True):
     def say(*args):
         if verbose:
             print(*args)
@@ -50,15 +65,32 @@ def check_py_version():
 
 
 def main():
-    print('Checking python version')
+    print('Checking python version...', end='')
     py = check_py_version()
+    print('check!')
+
     tf_valid = get_tf_valid()
+
+    # Install sarge to nicely stream commands
+    run_command_no_deps(py + ' -m pip install sarge', verbose=True)
+
 
     if 'ubuntu' in platform.platform().lower() and not is_docker():
         # Install tk for dashboard
-        run_command('sudo apt-get install -y python3-tk', throw=False, verbose=True)
+        run_command_async('sudo apt-get install -y python3-tk', throw=False)
 
-    run_command(py + ' -m pip install -r requirements.txt', verbose=True)
+    run_command_async(py + ' -m pip install -r requirements.txt')
+
+    print("""
+   ___                  __    _            
+  / _ \___ ___ ___  ___/ /___(_)  _____    
+ / // / -_) -_) _ \/ _  / __/ / |/ / -_)   
+/____/\__/\__/ .__/\_,_/_/ /_/|___/\__/    
+  _______ __/_/___/ /_ __                  
+ / __/ -_) _ `/ _  / // /                  
+/_/  \__/\_,_/\_,_/\_, /                   
+                  /___/            
+    """)  #  http://patorjk.com/software/taag/#p=display&f=Small%20Slant&t=Deepdrive%0AInstall%0AComplete
 
 
 def get_tf_valid():
@@ -114,4 +146,7 @@ def is_docker():
 
 
 if __name__ == '__main__':
-    main()
+    if 'TEST_RUN_CMD' in os.environ:
+        run_command_async('pip install sarge')
+    else:
+        main()
