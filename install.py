@@ -1,8 +1,6 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-from future.builtins import (int, open, round,
-                             str)
 import argparse
 import os
 import tempfile
@@ -11,6 +9,8 @@ import sys
 import platform
 from distutils.spawn import find_executable
 from distutils.version import LooseVersion as semvar
+
+import pkg_resources
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -102,33 +102,29 @@ def get_tf_valid():
     try:
         # noinspection PyUnresolvedReferences
         import tensorflow as tf
-        check = tf.constant('string tensors are not tensors but are called tensors in tensorflow')
-        with tf.Session(config=tf.ConfigProto(log_device_placement=False,
-                                              gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.01,
-                                                                        allow_growth=True))) as sess:
-            if not get_available_gpus():
-                print('\n\n*** Warning: %s \n\n' %
-                      'Tensorflow could not find a GPU, performance will be severely degraded on CPU. '
-                      'HINT: Try "pip install tensorflow-gpu"')
-                return False
-            sess.run(check)
-            print('Tensorflow is working on the GPU.')
-
     except ImportError:
         print(error_msg % 'Tensorflow not installed', file=sys.stderr)
         return False
-    except Exception:
-        print(error_msg % 'Tensorflow not working', file=sys.stderr)
-        return False
-
-    min_version = '1.7'
-    if semvar(tf.__version__) < semvar(min_version):
-        warn_msg = 'Tensorflow %s is less than the minimum required version (%s)' % (tf.__version__, min_version)
-        print(error_msg % warn_msg, file=sys.stderr)
-        return False
     else:
-        print('Tensorflow %s detected - meets min version (%s)' % (tf.__version__, min_version))
-        return True
+        try:
+            pkg_resources.get_distribution('tensorflow-gpu')
+        except pkg_resources.DistributionNotFound:
+            print('\n\n*** Warning: %s \n\n' %
+                  'tensorflow-gpu not found, performance will be severely degraded if run on CPU. '
+                  'HINT: Try "pip install tensorflow-gpu"')
+            # TODO: use get_available_gpu's on a given session or confirm assumption the plain tensorflow package is always cpu
+            # TODO: Handle TPU's
+        else:
+            print('tensorflow-gpu package successfully detected')
+
+        min_version = '1.7'
+        if semvar(tf.__version__) < semvar(min_version):
+            warn_msg = 'Tensorflow %s is less than the minimum required version (%s)' % (tf.__version__, min_version)
+            print(error_msg % warn_msg, file=sys.stderr)
+            return False
+        else:
+            print('Tensorflow %s detected - meets min version (%s)' % (tf.__version__, min_version))
+            return True
 
 
 def get_available_gpus():
