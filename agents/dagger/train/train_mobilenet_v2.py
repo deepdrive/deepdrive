@@ -1,13 +1,15 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-import glob
-import os
-import sys
-
 from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
                              int, map, next, oct, open, pow, range, round,
                              str, super, zip)
+
+from datetime import datetime
+import glob
+import os
+import sys
+from multiprocessing import Process
 
 import config as c
 import utils
@@ -27,7 +29,10 @@ def train_mobile_net(data_dir):
     if not get_tf_valid():
         raise RuntimeError('Invalid Tensorflow version detected. See above for details.')
 
-    """# Should see steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, train steering error: ~0.08"""
+    """# Should see steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, 
+    train steering error: ~0.08"""
+
+
     if not os.path.exists(c.MNET2_PRETRAINED_PATH + '.meta'):
         utils.download(c.MNET2_PRETRAINED_URL + '?cache_bust=1', c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
 
@@ -35,11 +40,36 @@ def train_mobile_net(data_dir):
         log.warn('Performing one time translation of HDF5 to TFRecord')
         hdf5_to_tfrecord.encode()
 
+    train_dir = datetime.now().strftime(os.path.join(c.TENSORFLOW_OUT_DIR, '%Y-%m-%d__%I-%M-%S%p'))
 
-    # # Fine-tune only the new layers
-    initial_train_dir = slim_train_image_nn(
+    # Execute sessions in separate processes to ensure Tensorflow cleans up nicely
+    # Without this, fine_tune_all_layers would crash towards the end with
+    #  Error polling for event status: failed to query event: CUDA_ERROR_LAUNCH_FAILED:
+    isolate_in_process(fine_tune_new_layers, args=(data_dir, train_dir))
+    isolate_in_process(eval_mobile_net, args=(data_dir,))
+    isolate_in_process(fine_tune_all_layers, args=(data_dir, train_dir))
+    isolate_in_process(eval_mobile_net, args=(data_dir,))
+    log.info('Finished training')
+
+
+def isolate_in_process(target, args):
+    p = Process(target=target, args=args)
+    p.start()
+    p.join()
+    if p.exitcode != 0:
+        raise RuntimeError("""
+        Process finished with error. See above for details. If you see CUDA errors like
+        
+        Error polling for event status: failed to query event: CUDA_ERROR_LAUNCH_FAILED
+        
+        ...try running with --use-latest-model to resume training from the last checkpoint""")
+
+
+def fine_tune_new_layers(data_dir, train_dir):
+    slim_train_image_nn(
         dataset_name='deepdrive',
         dataset_split_name='train',
+        train_dir=train_dir,
         dataset_dir=data_dir,
         model_name=MOBILENET_V2_SLIM_NAME,
         train_image_size=IMG_SIZE,
@@ -56,12 +86,11 @@ def train_mobile_net(data_dir):
         optimizer='rmsprop',
         weight_decay=0.00004)
 
-    eval_mobile_net(data_dir)
 
-    # Fine-tune all layers
+def fine_tune_all_layers(data_dir, train_dir):
     slim_train_image_nn(
         dataset_name='deepdrive',
-        checkpoint_path=initial_train_dir,
+        checkpoint_path=r'C:\Users\a\DeepDrive\tensorflow\2018-11-09__03-06-34PM',
         dataset_split_name='train',
         dataset_dir=data_dir,
         model_name=MOBILENET_V2_SLIM_NAME,
@@ -76,13 +105,8 @@ def train_mobile_net(data_dir):
         optimizer='rmsprop',
         weight_decay=0.00004)
 
-    eval_mobile_net(data_dir)
-
-    log.info('Finished training')
-
 
 def eval_mobile_net(data_dir):
-
     slim_eval_image_nn(dataset_name='deepdrive', dataset_split_name='eval', dataset_dir=data_dir,
                        model_name=MOBILENET_V2_SLIM_NAME, eval_image_size=IMG_SIZE)
 
