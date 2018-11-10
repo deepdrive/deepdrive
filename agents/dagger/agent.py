@@ -432,8 +432,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
     except KeyboardInterrupt:
         log.info('keyboard interrupt detected, closing')
+    finally:
         close()
-    close()
 
 
 def domain_randomization(env, randomize_month, randomize_shadow_level, randomize_sun_speed, randomize_view_mode):
