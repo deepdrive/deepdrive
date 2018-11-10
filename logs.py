@@ -18,6 +18,7 @@ def get_log(namespace, rotator=log_rotator):
     if ret.parent != ret.root:
         # Avoid duplicate log messages in multiprocessing scenarios
         # where module is imported twice
+        print('Warning, using parent logger to avoid nested loggers and duplicate errors messages')
         return ret.parent
     ret.setLevel(log_level)
     ch = logging.StreamHandler(sys.stdout)
