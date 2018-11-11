@@ -56,7 +56,7 @@ def add_total_to_tfrecord_files(directory, filename_prefix):
             os.remove(file)
         else:
             files_to_rename.append(file)
-    mid_fix = '-of-%s' % str(len(files_to_rename)).zfill(5)
+    mid_fix = '-of-%s' % str(len(files_to_rename) - 1).zfill(5)
     for i, file in enumerate(sorted(files_to_rename)):
         fname = os.path.basename(file)
         os.rename(file, os.path.join(directory, fname[:16] + str(i).zfill(5) + mid_fix + '.tfrecord'))
@@ -187,9 +187,9 @@ def test_decode():
 
 
 if __name__ == '__main__':
-    if 'decode' in sys.argv:
+    if '--decode' in sys.argv:
         test_decode()
-    elif 'rename-only' in sys.argv:
+    elif '--rename-only' in sys.argv:
         add_total_to_tfrecord_files(c.RECORDING_DIR, 'deepdrive_train')
         add_total_to_tfrecord_files(c.RECORDING_DIR, 'deepdrive_eval')
     else:
