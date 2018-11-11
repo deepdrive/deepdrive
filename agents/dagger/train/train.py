@@ -53,7 +53,7 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
     if agent_name == c.DAGGER_MNET2:
         # Use tf-slim training
         if not eval_only:
-            train_mobile_net(data_dir)
+            train_mobile_net(data_dir, resume_dir)
         else:
             eval_mobile_net(data_dir)
     else:

@@ -25,11 +25,11 @@ log = logs.get_log(__name__)
 
 IMG_SIZE = 224
 
-def train_mobile_net(data_dir):
+def train_mobile_net(data_dir, resume_dir=None):
     if not get_tf_valid():
         raise RuntimeError('Invalid Tensorflow version detected. See above for details.')
 
-    """# Should see steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, 
+    """# Should see eval steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, 
     train steering error: ~0.08"""
 
 
@@ -40,13 +40,20 @@ def train_mobile_net(data_dir):
         log.warn('Performing one time translation of HDF5 to TFRecord')
         hdf5_to_tfrecord.encode()
 
-    train_dir = datetime.now().strftime(os.path.join(c.TENSORFLOW_OUT_DIR, '%Y-%m-%d__%I-%M-%S%p'))
 
     # Execute sessions in separate processes to ensure Tensorflow cleans up nicely
     # Without this, fine_tune_all_layers would crash towards the end with
     #  Error polling for event status: failed to query event: CUDA_ERROR_LAUNCH_FAILED:
-    isolate_in_process(fine_tune_new_layers, args=(data_dir, train_dir))
-    isolate_in_process(eval_mobile_net, args=(data_dir,))
+
+    if resume_dir is None:
+        train_dir = datetime.now().strftime(os.path.join(c.TENSORFLOW_OUT_DIR, '%Y-%m-%d__%I-%M-%S%p'))
+        print('train_dir is ', train_dir)
+        isolate_in_process(fine_tune_new_layers, args=(data_dir, train_dir))
+        isolate_in_process(eval_mobile_net, args=(data_dir,))
+    else:
+        train_dir = resume_dir  # TODO: Fix MNET2/tf-slim issue resuming with train_dir
+        print('resume_dir is ', resume_dir)
+
     isolate_in_process(fine_tune_all_layers, args=(data_dir, train_dir))
     isolate_in_process(eval_mobile_net, args=(data_dir,))
     log.info('Finished training')
@@ -58,11 +65,16 @@ def isolate_in_process(target, args):
     p.join()
     if p.exitcode != 0:
         raise RuntimeError("""
-        Process finished with error. See above for details. If you see CUDA errors like
+        Process finished with error. See above for details. HINTS: 
         
-        Error polling for event status: failed to query event: CUDA_ERROR_LAUNCH_FAILED
+        1) If you see CUDA errors like:
         
-        ...try running with --use-latest-model to resume training from the last checkpoint""")
+                Error polling for event status: failed to query event: CUDA_ERROR_LAUNCH_FAILED
+        
+            try running with --use-latest-model to resume training from the last checkpoint. 
+        
+        2) Running training outside of IDE's like PyCharm seems to be more stable.
+        """)
 
 
 def fine_tune_new_layers(data_dir, train_dir):
@@ -90,12 +102,12 @@ def fine_tune_new_layers(data_dir, train_dir):
 def fine_tune_all_layers(data_dir, train_dir):
     slim_train_image_nn(
         dataset_name='deepdrive',
-        checkpoint_path=r'C:\Users\a\DeepDrive\tensorflow\2018-11-09__03-06-34PM',
+        checkpoint_path=train_dir,
         dataset_split_name='train',
         dataset_dir=data_dir,
         model_name=MOBILENET_V2_SLIM_NAME,
         train_image_size=IMG_SIZE,
-        max_number_of_steps=49147,
+        max_number_of_steps=10**5,
         batch_size=16,
         learning_rate=0.00004,
         learning_rate_decay_type='fixed',
