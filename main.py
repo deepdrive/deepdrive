@@ -151,12 +151,12 @@ def run_path_follower(args, driving_style, camera_rigs):
     except Exception as e:
         log.error('Error running agent. %s', e)
         print(traceback.format_exc())
+    else:
+        log.info('Last episode complete, closing')
+    finally:
         if gym_env:
             gym_env.close()
 
-    if gym_env:
-        gym_env.close()
-    log.info('Last episode complete, closing')
 
 
 def train_agent(args, driving_style):
