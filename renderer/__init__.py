@@ -19,8 +19,15 @@ def renderer_factory(renderer_type=None, cameras=None):
             import cv2
             renderer_type = RendererType.WEB
         except ImportError as e:
-            log.warn(
-                'Could not find opencv - install with `pip install opencv-python`. Falling back to pyglet renderer')
+            log.warn("""
+            
+***************************************************             
+    Could not start web renderer. Need OpenCV.
+    HINT: Install with:
+        pip install opencv-python
+    Falling back to pyglet renderer.
+***************************************************
+""")
             renderer_type = RendererType.PYGLET
 
     if renderer_type is RendererType.WEB:

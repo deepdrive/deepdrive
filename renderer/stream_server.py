@@ -55,7 +55,11 @@ class StreamServer(object):
 
     def start_server(self):
         # To see various options explored, go here: https://github.com/crizCraig/mjpg_server_test
-        log.info('Starting camera server at http://localhost:5000')
+        log.info("""
+        ***********************************************
+        Starting web renderer at http://localhost:5000
+        ***********************************************
+""")
         use_cherrypy_wsgi = True
         if use_cherrypy_wsgi:
             import cherrypy

@@ -431,7 +431,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                     env.unwrapped.change_cameras(cameras)
 
     except KeyboardInterrupt:
-        log.info('keyboard interrupt detected, closing')
+        log.info('keyboard interrupt detected in agent, closing')
     finally:
         close()
 
