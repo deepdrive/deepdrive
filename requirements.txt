@@ -2,7 +2,7 @@ deepdrive
 scipy
 numpy>=1.14.0
 h5py
-gym==0.9.6
+gym==0.10.0
 arrow
 matplotlib
 pytest-xdist

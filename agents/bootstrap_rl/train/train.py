@@ -13,7 +13,7 @@ import config as c
 from agents.common import get_throttle
 from agents.dagger.agent import Agent
 from agents.dagger.net import MOBILENET_V2_NAME
-from sim.gym_env import DrivingStyle
+from sim.driving_style import DrivingStyle
 from sim.action import Action
 from util.experience_buffer import ExperienceBuffer
 from vendor.openai.baselines.ppo2.run_deepdrive import train

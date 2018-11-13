@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--recording-dir', nargs='?', default=c.RECORDING_DIR, help='Where to store and read recorded '
                                                                                     'environment data from')
     parser.add_argument('--render', action='store_true', default=False,
-                        help='SLOW: render of camera data in Python - Use Unreal for real time camera rendering')
+                        help='Show the cameras as seen your agents in Python')
     parser.add_argument('--sync', action='store_true', default=False,
                         help='Use synchronous stepping mode where the simulation advances only when calling step')
     parser.add_argument('--record-recovery-from-random-actions', action='store_true', default=False,
@@ -180,6 +180,11 @@ def train_agent(args, driving_style):
         if not net_path:
             log.info('Bootstrapping from baseline agent')
             net_path = ensure_mnet2_baseline_weights(args.net_path)
+        if not args.sync and not args.eval_only:
+            args.sync = True
+            log.warning('Detected training RL in async mode which can cause unequal time deltas. '
+                        'Switching to synchronous mode. Use --sync to avoid this.')
+
         train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent,
                   render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync, driving_style=driving_style,
                   is_remote_client=args.is_remote_client, eval_only=args.eval_only)
