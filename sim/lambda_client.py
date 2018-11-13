@@ -108,8 +108,9 @@ def lambda_to_expr_str(lambda_fn):
 def main():
     client = LambdaClient()
     answer = client.eval('x**2', {'x': 2})
-    expr_str = lambda_to_expr_str(lambda x: x**2)
-    client.eval(expr_str, {'x': 2})
+    # expr_str = lambda_to_expr_str(lambda x: x**2)
+    # client.eval(expr_str, {'x': 2})
+    print('UnrealEnginePython evaluated answer to ', answer)
 
 
 if __name__ == '__main__':
