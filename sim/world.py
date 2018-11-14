@@ -9,6 +9,8 @@ import deepdrive_simulation
 
 import logs
 import config as c
+from sim.lambda_client import eval_in_unreal
+
 log = logs.get_log(__name__)
 
 
@@ -38,3 +40,12 @@ def randomize_sun_speed():
 
 def randomize_sun_month():
     deepdrive_simulation.set_date_and_time(month=c.rng.choice(list(range(1, 13))))
+
+
+def enable_traffic_next_reset():
+    return eval_in_unreal('enable_traffic_next_reset()')
+
+
+def disable_traffic_next_reset():
+    return eval_in_unreal('disable_traffic_next_reset()')
+

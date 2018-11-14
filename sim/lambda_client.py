@@ -6,6 +6,10 @@ import inspect
 import zmq
 import pyarrow
 
+import logs
+
+log = logs.get_log(__name__)
+
 API_PORT = 5657
 
 
@@ -37,6 +41,7 @@ class LambdaClient(object):
     # TODO: Show how to access vehicle and tire models
 
     """
+
     def __init__(self, **kwargs):
         self.socket = None
         self.last_obz = None
@@ -62,11 +67,16 @@ class LambdaClient(object):
         try:
             msg = pyarrow.serialize([expression_str, local_vars]).to_buffer()
             self.socket.send(msg)
-            return pyarrow.deserialize(self.socket.recv())
+            ret = pyarrow.deserialize(self.socket.recv())
         except zmq.error.Again:
             print('Waiting for server')
             self.create_socket()
             return None
+        else:
+            if not ret['success']:
+                log.error(ret['result'])
+        finally:
+            return ret
 
     def create_socket(self):
         if self.socket:
@@ -103,6 +113,16 @@ def lambda_to_expr_str(lambda_fn):
             # i.e. l = lambda2str(lambda x: x + 1) => x + 1)
             expression_str = expression_str[:-1]
         return expression_str
+
+
+client = None
+
+
+def eval_in_unreal(expression_str, local_vars=None):
+    global client
+    if client is None:
+        client = LambdaClient()
+    return client.eval(expression_str, local_vars)
 
 
 def main():

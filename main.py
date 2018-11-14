@@ -15,6 +15,7 @@ from agents.dagger import net
 from agents.dagger.agent import ensure_mnet2_baseline_weights
 from sim.driving_style import DrivingStyle
 
+log = logs.get_log(__name__)
 
 def main():
     parser = argparse.ArgumentParser(description=None)
@@ -39,6 +40,8 @@ def main():
                         help='Show the cameras as seen your agents in Python')
     parser.add_argument('--sync', action='store_true', default=False,
                         help='Use synchronous stepping mode where the simulation advances only when calling step')
+    parser.add_argument('--enable-traffic', action='store_true', default=False,
+                        help='Enable traffic within the simulator')
     parser.add_argument('--record-recovery-from-random-actions', action='store_true', default=False,
                         help='Whether to occasionally perform random actions and record recovery from them')
     parser.add_argument('--randomize-sun-speed', action='store_true', default=False,
@@ -123,7 +126,8 @@ def run_agent(args, camera_rigs, driving_style):
               net_name=args.net_type, is_sync=args.sync, driving_style=driving_style,
               is_remote=args.is_remote_client, recording_dir=args.recording_dir,
               randomize_view_mode=args.randomize_view_mode, randomize_sun_speed=args.randomize_sun_speed,
-              randomize_shadow_level=args.randomize_shadow_level, randomize_month=args.randomize_month)
+              randomize_shadow_level=args.randomize_shadow_level, randomize_month=args.randomize_month,
+              enable_traffic=args.enable_traffic)
 
 
 def run_path_follower(args, driving_style, camera_rigs):
@@ -203,8 +207,6 @@ def get_latest_model():
     log.info('Latest model is %s', latest_prefix)
     return latest_prefix
 
-
-log = logs.get_log(__name__)
 
 if __name__ == '__main__':
     main()

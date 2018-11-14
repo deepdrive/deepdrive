@@ -15,6 +15,7 @@ from api.client import Client
 from sim.action import gym_action as action
 from sim.driving_style import DrivingStyle
 from sim.view_mode import ViewMode
+import sim.world
 from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxSpaceWrapper
 
 log = logs.get_log(__name__)
@@ -24,7 +25,7 @@ def start(**kwargs):
                       should_benchmark=True, cameras=None, use_sim_start_command=False, render=False,
                       fps=c.DEFAULT_FPS, combine_box_action_spaces=False, is_discrete=False,
                       preprocess_with_tensorflow=False, is_sync=False, driving_style=DrivingStyle.NORMAL,
-                      reset_returns_zero=True, is_remote_client=False)
+                      reset_returns_zero=True, is_remote_client=False, enable_traffic=True)
 
     unexpected_args = set(kwargs) - set(all_kwargs)
 
@@ -70,7 +71,6 @@ def start(**kwargs):
         deepdrive_env.connect(kwargs['cameras'])
         deepdrive_env.set_step_mode()
 
-
         if kwargs['combine_box_action_spaces']:
             env = CombineBoxSpaceWrapper(env)
         if kwargs['sess']:
@@ -80,6 +80,11 @@ def start(**kwargs):
         if kwargs['should_benchmark']:
             log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
             deepdrive_env.init_benchmarking()
+
+        if kwargs['enable_traffic']:
+            sim.world.enable_traffic_next_reset()
+        else:
+            sim.world.disable_traffic_next_reset()
 
         env.reset()
     return env
