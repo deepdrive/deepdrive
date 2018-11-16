@@ -15,7 +15,7 @@ from api.client import Client
 from sim.action import gym_action as action
 from sim.driving_style import DrivingStyle
 from sim.view_mode import ViewMode
-import sim.world
+from sim import world
 from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxSpaceWrapper
 
 log = logs.get_log(__name__)
@@ -82,9 +82,9 @@ def start(**kwargs):
             deepdrive_env.init_benchmarking()
 
         if kwargs['enable_traffic']:
-            sim.world.enable_traffic_next_reset()
+            world.enable_traffic_next_reset()
         else:
-            sim.world.disable_traffic_next_reset()
+            world.disable_traffic_next_reset()
 
         env.reset()
     return env
