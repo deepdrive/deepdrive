@@ -506,7 +506,7 @@ def okay_to_act_randomly(obz):
     if obz is None:
         return False
     elif obz['distance_to_next_agent'] < (100 * 100) or obz['distance_to_prev_agent'] < (50 * 100):
-        log.info('Not okay to act randomly passing %r distance next %r distance prev %r',
+        log.debug('Not okay to act randomly passing %r distance next %r distance prev %r',
                  obz['is_passing'], obz['distance_to_next_agent'], obz['distance_to_prev_agent'])
         return False
     else:
