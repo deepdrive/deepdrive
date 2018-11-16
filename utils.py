@@ -378,19 +378,19 @@ def download_sim():
         else:
             raise NotImplementedError('Sim download not yet implemented for this OS')
     ensure_executable(get_sim_bin_path())
-    download_sim_python()
+    download_sim_python_binaries()
 
 
-def download_sim_python():
-    base_url = c.BASE_URL + '/embedded_python_for_unreal'
+def download_sim_python_binaries():
+    base_url = c.BASE_URL + '/embedded_python_for_unreal/'
     if c.IS_WINDOWS:
         lib_url = base_url + 'windows/python_bin_with_libs.zip'
         lib_path = os.path.join(get_sim_project_dir(), 'Binaries', 'Win64')
         print('Downloading Python binaries and libs (51MB) for Unreal embedded Python from', lib_url, '...')
         if not os.path.exists(lib_path) or not os.path.exists(os.path.join(lib_path, 'python3.dll')):
-            download(lib_url, lib_path)
+            download(lib_url, lib_path, overwrite=True, warn_existing=False)
     elif c.IS_LINUX:
-        lib_url = base_url + '/python_libs.zip'
+        lib_url = base_url + 'python_libs.zip'
         lib_path = os.path.join(get_sim_project_dir(), 'python_libs')
         if not os.path.exists(lib_path) or not has_stuff(lib_path):
             print('Downloading Python libs (75MB) for Unreal embedded Python from', lib_url, '...')
