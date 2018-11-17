@@ -43,9 +43,11 @@ def randomize_sun_month():
 
 
 def enable_traffic_next_reset():
+    log.info('Traffic enabled for next reset')
     return eval_in_unreal('enable_traffic_next_reset()')
 
 
 def disable_traffic_next_reset():
+    log.info('Traffic disabled for next reset')
     return eval_in_unreal('disable_traffic_next_reset()')
 
