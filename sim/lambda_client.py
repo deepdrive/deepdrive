@@ -75,6 +75,8 @@ class LambdaClient(object):
         else:
             if not ret['success']:
                 log.error(ret['result'])
+                raise RuntimeError(
+                    'Error executing %s(%s) in Unreal - Traceback above' % (expression_str, str(local_vars)))
         finally:
             return ret
 
