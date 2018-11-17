@@ -201,6 +201,19 @@ def show_camera(image, depth):
     input('Enter any key to continue')
 
 
+def save_random_hdf5_to_png(recording_dir=c.RECORDING_DIR):
+    random_file = np.random.choice(glob.glob(recording_dir + '/*/*.hdf5'))
+    if not random_file:
+        raise RuntimeError('No hdf5 files found')
+    else:
+        save_png_dir = os.path.join(os.path.join(recording_dir, 'random_hdf5_view'),
+                                    os.path.basename(os.path.dirname(random_file)),
+                                    os.path.basename(random_file)[:-5])
+        log.info('Saving random files to ' + save_png_dir)
+        os.makedirs(save_png_dir, exist_ok=True)
+        read_hdf5(os.path.join(recording_dir, random_file), save_png_dir=save_png_dir)
+
+
 def read_hdf5_manual(recording_dir=c.RECORDING_DIR):
     save_png_dir = os.path.join(recording_dir, 'test_view')
     os.makedirs(save_png_dir, exist_ok=True)
@@ -452,4 +465,5 @@ if __name__ == '__main__':
     # read_hdf5_manual()
     # download_sim()
     # download_sim_python()
-    assert_disk_space(r'C:\Users\a\DeepDrive\recordings\2018-11-03__12-29-33PM\0000000143.hdf5')
+    save_random_hdf5_to_png()
+    # assert_disk_space(r'C:\Users\a\DeepDrive\recordings\2018-11-03__12-29-33PM\0000000143.hdf5')
