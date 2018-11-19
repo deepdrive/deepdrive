@@ -71,7 +71,9 @@ def isolate_in_process(target, args):
         
                 Error polling for event status: failed to query event: CUDA_ERROR_LAUNCH_FAILED
         
-            try running with --use-latest-model to resume training from the last checkpoint. 
+            try restarting (esp. Windows), then running with 
+            
+            --use-latest-model to resume training from the last checkpoint. 
         
         2) Running training outside of IDE's like PyCharm seems to be more stable.
         """)
