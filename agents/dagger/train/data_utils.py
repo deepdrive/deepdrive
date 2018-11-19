@@ -78,10 +78,29 @@ def get_file_names(hdf5_path, train=True, overfit=False):
         files = files[-1:]
     elif train and len(files) > 1:
         files = files[1:]
-    elif not train and len(files) > 1:  # eval
+    elif not train:
+        # Eval
         files = files[0:1]
-    elif not train and len(files) <= 1:
-        raise NotImplementedError('only one file, eval not supported yet')
+        if len(files) <= 1:
+            log.error("""
+ .----------------. 
+| .--------------. |
+| |              | |
+| |      _       | |
+| |     | |      | |
+| |     | |      | |
+| |     | |      | |
+| |     |_|      | |
+| |     (_)      | |
+| '--------------' |
+ '----------------'             
+            
+Only one file in the
+      dataset.
+                  
+Will eval on train!!!
+""")
+
 
     if len(files) == 0:
         raise Exception('zero %s hdf5 files, aborting!' % 'train' if train else 'eval')
