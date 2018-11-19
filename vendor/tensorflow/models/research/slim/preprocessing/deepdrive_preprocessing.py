@@ -281,14 +281,16 @@ def preprocess_for_train(image, height, width, bbox,
             #                   'max ', tf.reduce_max(tf.reshape(distorted_image, shape=[-1])), image_with_box],
             #                  'image in train prepro 6')
 
-            if add_image_summaries:
-                tf.summary.image('final_distorted_image',
-                                 tf.expand_dims(distorted_image, 0))
+
         else:
             distorted_image = image
 
         distorted_image = tf.subtract(distorted_image, 0.5)
         distorted_image = tf.multiply(distorted_image, 2.0)
+
+        if add_image_summaries:
+            tf.summary.image('final_distorted_image',
+                             tf.expand_dims(distorted_image, 0))
 
         # distorted_image = tf.Print(distorted_image,
         #                  ['min ', tf.reduce_min(tf.reshape(distorted_image, shape=[-1])),
