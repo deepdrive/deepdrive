@@ -313,7 +313,8 @@ def get_sim_bin_path():
     elif c.IS_MAC:
         raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
     elif c.IS_WINDOWS:
-        path = get_from_glob(os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') + '/Win64/*.exe')
+        path = get_from_glob(os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') +
+                             '/Win64/DeepDrive*.exe')
 
     if path and not os.path.exists(path):
         path = None
@@ -399,8 +400,8 @@ def download_sim_python_binaries():
     if c.IS_WINDOWS:
         lib_url = base_url + 'windows/python_bin_with_libs.zip'
         lib_path = os.path.join(get_sim_project_dir(), 'Binaries', 'Win64')
-        print('Downloading Python binaries and libs (51MB) for Unreal embedded Python from', lib_url, '...')
         if not os.path.exists(lib_path) or not os.path.exists(os.path.join(lib_path, 'python3.dll')):
+            print('Unreal embedded Python not found. Downloading...')
             download(lib_url, lib_path, overwrite=True, warn_existing=False)
     elif c.IS_LINUX:
         lib_url = base_url + 'python_libs.zip'
@@ -440,8 +441,7 @@ def remotable(f):
     return extract_args
 
 
-def assert_disk_space(filename, mb=1000):
-    """Ubuntu was failing silently for me, creating 0byte files"""
+def assert_disk_space(filename, mb=2000):
     if get_free_space_mb(filename) < mb:
         raise Exception('Less than %dMB left on device, aborting save of %s' % (mb, filename))
 
