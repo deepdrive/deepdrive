@@ -134,6 +134,7 @@ def encode(parallelize=True):
     train_dataset = get_dataset(hdf5_path, train=True)
     eval_dataset = get_dataset(hdf5_path, train=False)
     buffer_size = 1000
+    utils.assert_disk_space(hdf5_path)
     save_dataset(train_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_train'),
                  parallelize=parallelize)
     save_dataset(eval_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_eval'),
