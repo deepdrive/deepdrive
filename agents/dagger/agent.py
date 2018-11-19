@@ -369,7 +369,6 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
     if should_record:
         path_follower = True
-        randomize_view_mode = True
         randomize_sun_speed = True
         randomize_month = True
 
