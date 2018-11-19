@@ -115,7 +115,7 @@ def get_tf_valid():
             # TODO: use get_available_gpu's on a given session or confirm assumption the plain tensorflow package is always cpu
             # TODO: Handle TPU's
         else:
-            print('tensorflow-gpu package successfully detected')
+            print('Found tensorflow-gpu - assuming you are running Tensorflow on GPU')
 
         min_version = '1.7'
         if semvar(tf.__version__) < semvar(min_version):
