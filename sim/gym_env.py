@@ -220,6 +220,7 @@ class DeepDriveEnv(gym.Env):
             return
 
         p = Process(target=dashboard_fn)
+        p.daemon = True
         p.start()
         self.dashboard_process = p
         self.dashboard_pub = DashboardPub()
@@ -646,10 +647,17 @@ class DeepDriveEnv(gym.Env):
 
     def close(self):
         if self.dashboard_pub is not None:
-            self.dashboard_pub.put({'should_stop': True})
+            log.info('Closing dashboard pub')
+            try:
+                self.dashboard_pub.put({'should_stop': True})
+                time.sleep(0.25)  # Give time for message to be received
+            except Exception as e:
+                log.error('Error closing dashboard. %s', e)
+                # print(traceback.format_exc())
             self.dashboard_pub.close()
+        log.info('Closed dashboard')
         if self.dashboard_process is not None:
-            self.dashboard_process.join()
+            self.dashboard_process.join(timeout=.25)
         deepdrive_capture.close()
         deepdrive_client.release_agent_control(self.client_id)
         deepdrive_client.close(self.client_id)

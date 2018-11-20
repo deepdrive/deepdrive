@@ -55,12 +55,15 @@ def dashboard_fn():
                 try:
                     anim._fig.canvas._tkcanvas.master.quit()  # Hack to avoid "Exiting Abnormally"
                 finally:
+                    print('Dashboard stopped')
                     exit()
             else:
                 Disp.stats = OrderedDict(q_next['display_stats'])
         except IndexError:
             # Reuuse old stats
             pass
+        except KeyboardInterrupt:
+            print('KeyboardInterrupt detected in dashboard')
 
     get_next()
     while not Disp.stats.items():
@@ -105,26 +108,35 @@ def dashboard_fn():
 
     def animate(_i):
         lines = []
-        get_next()
-        for s_name in Disp.stats:
-            s = Disp.stats[s_name]
-            xs = Disp.x_lists[s_name]
-            ys = Disp.y_lists[s_name]
-            tv = Disp.txt_values[s_name]
-            line = Disp.lines[s_name]
-            val = s['value']
-            total = s['total']
-            tv.set_text(str(round(total, 2)) + s['units'])
-            ys.pop()
-            ys.appendleft(val)
-            line.set_data(xs, ys)
-            lines.append(line)
-        plt.draw()
+        try:
+            get_next()
+            for s_name in Disp.stats:
+                s = Disp.stats[s_name]
+                xs = Disp.x_lists[s_name]
+                ys = Disp.y_lists[s_name]
+                tv = Disp.txt_values[s_name]
+                line = Disp.lines[s_name]
+                val = s['value']
+                total = s['total']
+                tv.set_text(str(round(total, 2)) + s['units'])
+                ys.pop()
+                ys.appendleft(val)
+                line.set_data(xs, ys)
+                lines.append(line)
+            plt.draw()
+        except KeyboardInterrupt:
+            print('KeyboardInterrupt detected in animate, exiting')
+            exit()
         return lines
 
     # TODO: Add blit=True and deal with updating the text if performance becomes unacceptable
     anim = animation.FuncAnimation(fig, animate, init_func=init, frames=200, interval=100)
-    plt.show()
+
+    try:
+        plt.show()
+    except KeyboardInterrupt:
+        print('KeyboardInterrupt detected in show dashboard, exiting')
+        exit()
 
 
 # ZMQ stuff (multiprocessing queue was taking 80ms, so switched to faster zmq) -----------------------------------------
@@ -132,10 +144,10 @@ def dashboard_fn():
 class DashboardPub(object):
     def __init__(self):
         # ZeroMQ Context
-        context = zmq.Context()
+        self.context = zmq.Context()
 
         # Define the socket using the "Context"
-        sock = context.socket(zmq.PUB)
+        sock = self.context.socket(zmq.PUB)
         sock.bind(ZMQ_CONN_STRING)
         self.sock = sock
 
@@ -148,7 +160,10 @@ class DashboardPub(object):
         log.debug('took %fs', time.time() - start)
 
     def close(self):
+        log.info('Closing dashboard sock')
         self.sock.close()
+        log.info('Closing dashboard context')
+        self.context.term()
 
 
 def get_message_q():
