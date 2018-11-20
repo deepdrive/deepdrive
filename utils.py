@@ -460,6 +460,24 @@ def resize_images(input_image_shape, images, always=False):
     return images
 
 
+def kill_process(process_to_kill):
+    try:
+        process_to_kill.terminate()
+        time.sleep(0.2)
+        i = 0
+        while process_to_kill and process_to_kill.poll() is None:
+            log.info('Waiting for process to die')
+            time.sleep(0.1 * 2 ** i)
+            if i > 4:
+                # Die!
+                log.warn('Forcefully killing process')
+                process_to_kill.kill()
+                break
+            i += 1
+    except Exception as e:
+        log.error('Error closing process', str(e))
+
+
 if __name__ == '__main__':
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
     # read_hdf5_manual()

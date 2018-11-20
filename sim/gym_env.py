@@ -1,6 +1,8 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import traceback
+
 from future.builtins import (int, open, round,
                              str)
 import csv
@@ -181,22 +183,9 @@ class DeepDriveEnv(gym.Env):
 
     def close_sim(self):
         log.info('Closing sim')
-        if self.sim_process is not None:
-            try:
-                self.sim_process.terminate()
-                time.sleep(0.2)
-                i = 0
-                while self.sim_process.poll() is None:
-                    log.info('Waiting for sim process to die')
-                    time.sleep(0.1 * 2**i)
-                    if i > 4:
-                        # Die!
-                        log.warn('Forcefully killing sim')
-                        self.sim_process.kill()
-                        break
-                    i += 1
-            except Exception as e:
-                log.error('Error closing sim', e)
+        process_to_kill = self.sim_process
+        if process_to_kill is not None:
+            utils.kill_process(process_to_kill)
 
     def _kill_competing_procs(self):
         # TODO: Allow for many environments on the same machine by using registry DB for this and sharedmem
