@@ -113,6 +113,7 @@ Web renderer at http://localhost:5000
 
 
 def frame_worker(socket, queue):
+    """Pull images from ZMQ and add them to the stream queue"""
     while True:
         msg = socket.recv()
         if msg:
