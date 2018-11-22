@@ -717,6 +717,7 @@ class DeepDriveEnv(gym.Env):
             camera_out['image'] = image
             if self.should_render:
                 # Keep copy of image without mean subtraction etc that agent does
+                # through side effect on this mutable sensor data that gets passed around
                 camera_out['image_raw'] = image
             camera_out['depth'] = depth
             ret.append(camera_out)
