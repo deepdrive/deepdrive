@@ -160,9 +160,8 @@ class DashboardPub(object):
         log.debug('took %fs', time.time() - start)
 
     def close(self):
-        log.info('Closing dashboard sock')
+        log.info('Closing dashboard')
         self.sock.close()
-        log.info('Closing dashboard context')
         self.context.term()
 
 
