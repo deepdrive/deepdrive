@@ -650,7 +650,6 @@ class DeepDriveEnv(gym.Env):
 
     def close(self):
         if self.dashboard_pub is not None:
-            log.info('Closing dashboard pub')
             try:
                 self.dashboard_pub.put({'should_stop': True})
                 time.sleep(0.25)  # Give time for message to be received
