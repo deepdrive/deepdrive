@@ -385,9 +385,12 @@ class DeepDriveEnv(gym.Env):
             self.score.wrong_way = self.driving_wrong_way()
             if self.score.wrong_way:
                 log.warn('episode finished, going the wrong way')
-            if self.is_stuck(obz) or self.score.wrong_way:  # TODO: Done if collision, or near collision
+            if self.is_stuck(obz) or self.score.wrong_way:  # TODO: Collision or near collision
                 done = True
                 reward -= 10
+                # TODO: Scale cost by collision momentum when speed is returned
+                # if obz['last_collision'].time_utc:
+                #     reward *= obz['last_collision'].speed
 
             self.score.speed_sampler.sample(obz['speed'])
             self.score.total += reward + lap_bonus
