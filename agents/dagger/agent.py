@@ -120,7 +120,7 @@ class Agent(object):
         log.debug('obz_exists? %r performing_random_actions? %r should_record? %r',
                   obz is not None, self.performing_random_actions, self.should_record)
 
-        if obz and not self.performing_random_actions and self.should_record:
+        if obz and not self.performing_random_actions and self.should_record and obz['is_game_driving'] == 1:
             log.debug('Recording frame')
             self.obz_recording.append(obz)
             if TEST_SAVE_IMAGE:
@@ -239,12 +239,12 @@ class Agent(object):
             elif 0.67 <= rand < 0.85:
                 self.sequence_random_action_count = 4
                 self.sequence_non_random_action_count = 5
-            elif 0.85 <= rand < 0.95:
+            else: #  0.85 <= rand < 0.95:
                 self.sequence_random_action_count = 8
                 self.sequence_non_random_action_count = 10
-            else:
-                self.sequence_random_action_count = 12
-                self.sequence_non_random_action_count = 15
+            # else:
+            #     self.sequence_random_action_count = 12
+            #     self.sequence_non_random_action_count = 15
             log.debug('random actions at %r, non-random %r', self.sequence_random_action_count, self.sequence_non_random_action_count)
 
         else:
@@ -389,6 +389,16 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
     session_done = False
     episode = 0
+
+    # if enable_traffic:
+    #     world.enable_traffic_next_reset()
+    # else:
+    #     world.disable_traffic_next_reset()
+    # time.sleep(5)
+    # env.reset()  # TODO: Remove once traffic bug is fixed
+    # time.sleep(5)
+    # env.reset()  # TODO: Remove once traffic bug is fixed
+
     try:
         while not session_done:
             if episode_done:
