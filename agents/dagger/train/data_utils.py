@@ -80,9 +80,16 @@ def get_file_names(hdf5_path, train=True, overfit=False):
         files = files[1:]
     elif not train:
         # Eval
+        if len(files) == 1:
+            egregious_error_message()
         files = files[0:1]
-        if len(files) <= 1:
-            log.error("""
+    if len(files) == 0:
+        raise Exception('zero %s hdf5 files, aborting!' % 'train' if train else 'eval')
+    return files
+
+
+def egregious_error_message():
+    log.error("""
  .----------------. 
 | .--------------. |
 | |              | |
@@ -100,11 +107,6 @@ Only one file in the
                   
 Will eval on train!!!
 """)
-
-
-    if len(files) == 0:
-        raise Exception('zero %s hdf5 files, aborting!' % 'train' if train else 'eval')
-    return files
 
 
 def load_file(h5_filename, overfit=False, mute_spurious_targets=False):
