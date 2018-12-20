@@ -7,6 +7,7 @@ import glob
 
 import tensorflow as tf
 import numpy as np
+from simple_pid import PID
 
 import config as c
 import deepdrive
@@ -17,6 +18,7 @@ from sim import world, graphics
 from sim.driving_style import DrivingStyle
 from sim.action import Action
 from sim.view_mode import ViewMode
+from sim import world
 from agents.dagger.net import AlexNet, MobileNetV2
 from utils import save_hdf5, download
 import logs
@@ -25,6 +27,10 @@ log = logs.get_log(__name__)
 
 
 TEST_SAVE_IMAGE = False
+
+TARGET_MPH = 25
+TARGET_MPS = TARGET_MPH / 2.237
+TARGET_MPS_TEST = 75 * TARGET_MPS
 
 class Agent(object):
     def __init__(self, tf_session, should_record_recovery_from_random_actions=True,
@@ -78,6 +84,9 @@ class Agent(object):
             self.net = None
             self.sess = None
 
+        self.throttle_pid = PID(Kp=0.2, Ki=0.05, Kd=0.05)
+
+
     def act(self, obz, reward, done, episode_time=None):
         net_out = None
         if obz:
@@ -98,7 +107,7 @@ class Agent(object):
                 if not okay_to_act_randomly(obz):
                     action = Action(has_control=False)
                 else:
-                    action = self.toggle_random_action(episode_time)
+                    action = self.toggle_random_action(obz)
             self.sequence_action_count += 1
         elif self.net is not None:
             if not obz or not obz['cameras']:
@@ -172,14 +181,13 @@ class Agent(object):
             # target_speed = desired_speed
             # desired_throttle = abs(target_speed / max(actual_speed, 1e-3))
 
-            # target_speed = 8 * 100
-
             # if actual_speed > 0.8 * (max_meters_per_sec * 100):
             #     desired_speed *= 0.8
 
             # TODO: Support different driving styles
 
-            desired_throttle = get_throttle(actual_speed, desired_speed * 0.48)
+            # desired_throttle = get_throttle(actual_speed, desired_speed * 0.48)
+            desired_throttle = get_throttle(actual_speed, TARGET_MPS_TEST)
 
             desired_throttle = min(max(desired_throttle, 0.), 1.)
 
@@ -233,18 +241,21 @@ class Agent(object):
         if self.semirandom_sequence_step == (self.sequence_random_action_count + self.sequence_non_random_action_count):
             self.semirandom_sequence_step = 0
             rand = c.rng.rand()
-            if 0 <= rand < 0.67:
+            if rand < 0.50:
                 self.sequence_random_action_count = 0
                 self.sequence_non_random_action_count = 10
-            elif 0.67 <= rand < 0.85:
+            elif rand < 0.67:
                 self.sequence_random_action_count = 4
                 self.sequence_non_random_action_count = 5
-            else: #  0.85 <= rand < 0.95:
+            elif rand < 0.85:
                 self.sequence_random_action_count = 8
                 self.sequence_non_random_action_count = 10
-            # else:
-            #     self.sequence_random_action_count = 12
-            #     self.sequence_non_random_action_count = 15
+            elif rand < 0.95:
+                self.sequence_random_action_count = 12
+                self.sequence_non_random_action_count = 15
+            else:
+                self.sequence_random_action_count = 24
+                self.sequence_non_random_action_count = 30
             log.debug('random actions at %r, non-random %r', self.sequence_random_action_count, self.sequence_non_random_action_count)
 
         else:
@@ -281,6 +292,20 @@ class Agent(object):
                 self.sequence_action_count = 0
                 self.performing_random_actions = True
         return action
+
+    def get_target_throttle(self, obz):
+        if obz and 'speed' in obz:
+            actual_speed = obz['speed']
+        else:
+            actual_speed = TARGET_MPS
+
+        pid = self.throttle_pid
+        target_cmps = TARGET_MPS * 100
+        if pid.setpoint != target_cmps:
+            pid.setpoint = target_cmps
+        throttle = pid(actual_speed)
+        throttle = min(max(throttle, 0.), 1.)
+        return throttle
 
     def load_net(self, net_path, is_frozen=False, image_shape=None):
         """
