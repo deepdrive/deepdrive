@@ -42,12 +42,9 @@ def randomize_sun_month():
     deepdrive_simulation.set_date_and_time(month=c.rng.choice(list(range(1, 13))))
 
 
-def enable_traffic_next_reset():
-    log.info('Traffic enabled for next reset')
-    return eval_in_unreal('enable_traffic_next_reset()')
+def reset(enable_traffic=False):
+    return eval_in_unreal('reset(enable_traffic)', enable_traffic=enable_traffic)
 
 
-def disable_traffic_next_reset():
-    log.info('Traffic disabled for next reset')
-    return eval_in_unreal('disable_traffic_next_reset()')
-
+def set_ego_mph(min_mph, max_mph):
+    return eval_in_unreal('set_ego_mph(min_mph, max_mph)', min_mph=min_mph, max_mph=max_mph)
