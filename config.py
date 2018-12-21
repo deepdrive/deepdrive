@@ -108,8 +108,8 @@ PPO_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'ppo_baseline_agent_weights
 PPO_BASELINE_WEIGHTS_VERSION = '03125'
 
 # Urls
-BASE_URL = 'https://s3-us-west-1.amazonaws.com/deepdrive'
-BASE_WEIGHTS_URL = BASE_URL + '/weights'
+BUCKET_URL = 'https://s3-us-west-1.amazonaws.com/deepdrive'
+BASE_WEIGHTS_URL = BUCKET_URL + '/weights'
 ALEXNET_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/baseline_agent_weights.zip'
 ALEXNET_PRETRAINED_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, ALEXNET_PRETRAINED_NAME)
 MNET2_PRETRAINED_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, MNET2_PRETRAINED_NAME)

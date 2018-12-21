@@ -385,7 +385,7 @@ def download_sim():
         if c.IS_LINUX or c.IS_WINDOWS:
             if os.environ.get('SIM_URL', 'latest') == 'latest':
                 log.info('Downloading latest sim')
-                url = c.BASE_URL + get_latest_sim_file()
+                url = c.BUCKET_URL + get_latest_sim_file()
             else:
                 url = os.environ['SIM_URL']
             download(url, c.SIM_PATH, warn_existing=False, overwrite=False)
@@ -396,7 +396,7 @@ def download_sim():
 
 
 def download_sim_python_binaries():
-    base_url = c.BASE_URL + '/embedded_python_for_unreal/'
+    base_url = c.BUCKET_URL + '/embedded_python_for_unreal/'
     if c.IS_WINDOWS:
         lib_url = base_url + 'windows/python_bin_with_libs.zip'
         lib_path = os.path.join(get_sim_project_dir(), 'Binaries', 'Win64')
