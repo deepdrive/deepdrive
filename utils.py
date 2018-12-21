@@ -378,8 +378,10 @@ def get_latest_sim_file():
     bucket = conn.get_bucket('deepdrive')
     deepdrive_version = pkg_resources.get_distribution('deepdrive').version
     major_minor = deepdrive_version[:deepdrive_version.rindex('.')]
-    sim_versions = list(bucket.list(sim_prefix + os_name + '-' + major_minor))
-
+    bucket_search_str = sim_prefix + os_name + '-' + major_minor
+    sim_versions = list(bucket.list(bucket_search_str))
+    if not sim_versions:
+        raise RuntimeError('Could not find a sim version matching %s in bucket %s' % (bucket_search_str, c.BUCKET_URL))
     latest_sim_file, path_version = sorted([(x.name, x.name.split('.')[-2]) for x in sim_versions],
                                            key=lambda y: y[1])[-1]
     return '/' + latest_sim_file
