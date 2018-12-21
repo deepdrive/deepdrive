@@ -293,8 +293,8 @@ def ensure_executable(path):
         os.chmod(path, st.st_mode | stat.S_IEXEC)
 
 
-def get_sim_bin_path():
-    path = None
+def get_sim_bin_path(return_expected_path=False):
+    expected_path = None
 
     def get_from_glob(search_path):
         paths = glob.glob(search_path)
@@ -309,16 +309,22 @@ def get_sim_bin_path():
     if c.REUSE_OPEN_SIM:
         return None
     elif c.IS_LINUX:
-        path = get_from_glob(c.SIM_PATH + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive*')
+        expected_path = c.SIM_PATH + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive*'
     elif c.IS_MAC:
         raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
     elif c.IS_WINDOWS:
-        path = get_from_glob(os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries') +
-                             '/Win64/DeepDrive*.exe')
+        expected_path = os.path.join(c.SIM_PATH, 'WindowsNoEditor', 'DeepDrive', 'Binaries', 'Win64', 'DeepDrive*.exe')
 
+    path = get_from_glob(expected_path)
     if path and not os.path.exists(path):
-        path = None
-    return path
+        ret = None
+    else:
+        ret = path
+
+    if return_expected_path:
+        return ret, expected_path
+    else:
+        return ret
 
 def get_sim_project_dir():
     if c.REUSE_OPEN_SIM:
@@ -380,8 +386,9 @@ def get_latest_sim_file():
 
 
 def download_sim():
-    if get_sim_bin_path() is None:
-        print('\n--------- Simulator not found, downloading ----------')
+    actual_path, expected_path = get_sim_bin_path(return_expected_path=True)
+    if actual_path is None:
+        print('\n--------- Simulator not found in %s, downloading ----------' % expected_path)
         if c.IS_LINUX or c.IS_WINDOWS:
             if os.environ.get('SIM_URL', 'latest') == 'latest':
                 log.info('Downloading latest sim')
