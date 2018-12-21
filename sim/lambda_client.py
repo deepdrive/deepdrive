@@ -48,7 +48,7 @@ class LambdaClient(object):
         self.create_socket()
         # self._send(m.START, kwargs=kwargs)
 
-    def eval(self, expression_str, local_vars=None):
+    def eval(self, expression_str, **kwargs):
         """
         Eval expressions against Unreal Python API
         :param expression_str: Expression to eval against embedded Python
@@ -60,12 +60,11 @@ class LambdaClient(object):
 
             worlds = client.eval('[w.get_name() for w in ue.all_worlds()]')
 
-        :param local_vars:
-        :return:
+        :param kwargs will be set to local variables on the server side eval
+        :return: dict of form {'success': <False iff exception thrown>, 'result': <eval(...) return value>}
         """
-        local_vars = local_vars or {}
         try:
-            msg = pyarrow.serialize([expression_str, local_vars]).to_buffer()
+            msg = pyarrow.serialize([expression_str, kwargs]).to_buffer()
             self.socket.send(msg)
             ret = pyarrow.deserialize(self.socket.recv())
         except zmq.error.Again:
@@ -120,16 +119,17 @@ def lambda_to_expr_str(lambda_fn):
 client = None
 
 
-def eval_in_unreal(expression_str, local_vars=None):
+def eval_in_unreal(expression_str, *args, **kwargs):
     global client
     if client is None:
         client = LambdaClient()
-    return client.eval(expression_str, local_vars)
+
+    return client.eval(expression_str, **kwargs)
 
 
 def main():
     client = LambdaClient()
-    answer = client.eval('x**2', {'x': 2})
+    answer = client.eval('x**2', x=2)
     # expr_str = lambda_to_expr_str(lambda x: x**2)
     # client.eval(expr_str, {'x': 2})
     print('UnrealEnginePython evaluated answer to ', answer)
