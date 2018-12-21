@@ -52,7 +52,7 @@ class Server(object):
                     resp = 'No environment started, please send start request'
                     log.error('Client sent request with no environment started')
                 elif method == m.START:
-                    allowed_args = ['experiment_name', 'env', 'cameras', 'combine_box_action_spaces', 'is_discrete',
+                    allowed_args = ['experiment', 'env', 'cameras', 'combine_box_action_spaces', 'is_discrete',
                                     'preprocess_with_tensorflow', 'is_sync']
                     if c.IS_EVAL:
                         allowed_args.remove('env')

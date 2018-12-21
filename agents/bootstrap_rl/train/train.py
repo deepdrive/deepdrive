@@ -103,7 +103,7 @@ def run(env_id, bootstrap_net_path,
         sess_1 = tf.Session(config=tf_config)
 
         with sess_1.as_default():
-            dagger_gym_env = deepdrive.start(experiment_name=experiment, env_id=env_id, cameras=camera_rigs, render=render, fps=fps,
+            dagger_gym_env = deepdrive.start(experiment=experiment, env_id=env_id, cameras=camera_rigs, render=render, fps=fps,
                                              combine_box_action_spaces=True, is_sync=is_sync,
                                              driving_style=driving_style, is_remote_client=is_remote_client)
 

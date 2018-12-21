@@ -53,12 +53,12 @@ If you run into issues, try starting the sim directly as Unreal may need to inst
 
 Run the **baseline** agent
 ```
-python main.py --baseline --experiment-name my-baseline-test
+python main.py --baseline --experiment my-baseline-test
 ```
 
 Run in-game path follower
 ```
-python main.py --path-follower --experiment-name my-path-follower-test
+python main.py --path-follower --experiment my-path-follower-test
 ```
 
 **Record** training data for imitation learning / behavioral cloning

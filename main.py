@@ -78,7 +78,7 @@ def main():
     parser.add_argument('-v', '--verbose', help='Increase output verbosity',
                         action='store_true')
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
-    parser.add_argument('-n', '--experiment-name', nargs='?', default=None, help='Name of your experiment')
+    parser.add_argument('--experiment', nargs='?', default=None, help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
     parser.add_argument('--agent', nargs='?', default=c.DAGGER_MNET2,
                         help='Agent type (%s, %s, %s)' % (c.DAGGER,
@@ -118,7 +118,7 @@ def main():
 
 def run_agent(args, camera_rigs, driving_style):
     from agents.dagger import agent
-    agent.run(args.experiment_name,
+    agent.run(args.experiment,
               should_record=args.record, net_path=args.net_path, env_id=args.env_id,
               run_baseline_agent=args.baseline, run_mnet2_baseline_agent=args.mnet2_baseline,
               run_ppo_baseline_agent=args.ppo_baseline, render=args.render, camera_rigs=camera_rigs,
@@ -138,7 +138,7 @@ def run_path_follower(args, driving_style, camera_rigs):
         cams = camera_rigs
         if isinstance(camera_rigs[0], list):
             cams = cams[0]
-        gym_env = deepdrive.start(experiment_name=args.experiment_name, env_id=args.env_id, fps=args.fps,
+        gym_env = deepdrive.start(experiment=args.experiment, env_id=args.env_id, fps=args.fps,
                                   driving_style=driving_style, is_remote_client=args.is_remote_client,
                                   render=args.render, cameras=cams)
         log.info('Path follower drive mode')

@@ -21,7 +21,7 @@ from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxS
 log = logs.get_log(__name__)
 
 def start(**kwargs):
-    all_kwargs = dict(experiment_name=None, env_id='Deepdrive-v0', sess=None, start_dashboard=True,
+    all_kwargs = dict(experiment=None, env_id='Deepdrive-v0', sess=None, start_dashboard=True,
                       should_benchmark=True, cameras=None, use_sim_start_command=False, render=False,
                       fps=c.DEFAULT_FPS, combine_box_action_spaces=False, is_discrete=False,
                       preprocess_with_tensorflow=False, is_sync=False, driving_style=DrivingStyle.NORMAL,
@@ -46,8 +46,8 @@ def start(**kwargs):
         env = gym.make(kwargs['env_id'])
         env.seed(c.RNG_SEED)
 
-        if kwargs['experiment_name'] is None:
-            kwargs['experiment_name'] = ''
+        if kwargs['experiment'] is None:
+            kwargs['experiment'] = ''
 
         deepdrive_env = env.unwrapped
 
@@ -59,7 +59,7 @@ def start(**kwargs):
         deepdrive_env.reset_returns_zero = kwargs['reset_returns_zero']
         deepdrive_env.init_action_space()
         deepdrive_env.fps = kwargs['fps']
-        deepdrive_env.experiment = kwargs['experiment_name'].replace(' ', '_')
+        deepdrive_env.experiment = kwargs['experiment'].replace(' ', '_')
         deepdrive_env.period = deepdrive_env.sync_step_time = 1. / kwargs['fps']
         deepdrive_env.driving_style = kwargs['driving_style']
         deepdrive_env.should_render = kwargs['render']
