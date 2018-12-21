@@ -25,7 +25,7 @@ def start(**kwargs):
                       should_benchmark=True, cameras=None, use_sim_start_command=False, render=False,
                       fps=c.DEFAULT_FPS, combine_box_action_spaces=False, is_discrete=False,
                       preprocess_with_tensorflow=False, is_sync=False, driving_style=DrivingStyle.NORMAL,
-                      reset_returns_zero=True, is_remote_client=False, enable_traffic=True)
+                      reset_returns_zero=True, is_remote_client=False, enable_traffic=False)
 
     unexpected_args = set(kwargs) - set(all_kwargs)
 
