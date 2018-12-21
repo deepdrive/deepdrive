@@ -140,7 +140,7 @@ def run_path_follower(args, driving_style, camera_rigs):
             cams = cams[0]
         gym_env = deepdrive.start(experiment=args.experiment, env_id=args.env_id, fps=args.fps,
                                   driving_style=driving_style, is_remote_client=args.is_remote_client,
-                                  render=args.render, cameras=cams)
+                                  render=args.render, cameras=cams, enable_traffic=args.enable_traffic)
         log.info('Path follower drive mode')
         for episode in range(episode_count):
             if done:
