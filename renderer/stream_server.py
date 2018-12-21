@@ -21,7 +21,7 @@ import logs
 import config as c
 import utils
 
-log = logs.get_log(__name__)
+log = logs.get_log(__name__, 'renderer_log.txt')
 
 class StreamServer(object):
     def __init__(self, app):
@@ -56,9 +56,9 @@ class StreamServer(object):
     def start_server(self):
         # To see various options explored, go here: https://github.com/crizCraig/mjpg_server_test
         log.info("""
-*************************************
-Web renderer at http://localhost:5000
-*************************************
+************************************************
+Web renderer available at  http://localhost:5000
+************************************************
 """)
         use_cherrypy_wsgi = True
         if use_cherrypy_wsgi:

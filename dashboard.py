@@ -20,7 +20,7 @@ import logs
 ZMQ_PREFIX = 'deepdrive-dashboard'
 ZMQ_CONN_STRING = "tcp://127.0.0.1:5681"
 
-log = logs.get_log(__name__)
+log = logs.get_log(__name__, 'dashboard_log.txt')
 
 
 def dashboard_fn():

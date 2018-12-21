@@ -8,12 +8,16 @@ import config as c
 
 os.makedirs(c.LOG_DIR, exist_ok=True)
 log_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-log_rotator = RotatingFileHandler(os.path.join(c.LOG_DIR, 'log.txt'), maxBytes=(1048576 * 5), backupCount=7)
-log_rotator.setFormatter(log_format)
 log_level = logging.INFO
 all_loggers = []
+rotators = {}
 
-def get_log(namespace, rotator=log_rotator):
+def get_log(namespace, filename='log.txt'):
+    """
+    Use separate filenames for separate processes to avoid rollover errors on Windows
+    https://stackoverflow.com/questions/16712638
+    """
+    rotator = get_log_rotator(filename)
     ret = logging.getLogger(namespace)
     if ret.parent != ret.root:
         # Avoid duplicate log messages in multiprocessing scenarios
@@ -29,11 +33,21 @@ def get_log(namespace, rotator=log_rotator):
     return ret
 
 
+def get_log_rotator(filename):
+    if filename in rotators:
+        return rotators[filename]
+    rotator = RotatingFileHandler(os.path.join(c.LOG_DIR, filename), maxBytes=(1048576 * 5), backupCount=7)
+    rotator.setFormatter(log_format)
+    rotators[filename] = rotator
+    return rotator
+
+
 def set_level(level):
     global log_level
     log_level = level
     for l in all_loggers:
         l.setLevel(level)
+
 
 def log_manual():
     test_log_rotator = RotatingFileHandler(os.path.join(c.LOG_DIR, 'test.txt'), maxBytes=3, backupCount=7)
