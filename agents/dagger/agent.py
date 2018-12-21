@@ -7,7 +7,7 @@ import glob
 
 import tensorflow as tf
 import numpy as np
-from simple_pid import PID
+from control.pid import PID
 
 import config as c
 import deepdrive
@@ -84,7 +84,7 @@ class Agent(object):
             self.net = None
             self.sess = None
 
-        self.throttle_pid = PID(Kp=0.2, Ki=0.05, Kd=0.05)
+        self.throttle_pid = PID(0.2, 0.05, 0.05)
 
 
     def act(self, obz, reward, done, episode_time=None):
@@ -187,14 +187,15 @@ class Agent(object):
             # TODO: Support different driving styles
 
             # desired_throttle = get_throttle(actual_speed, desired_speed * 0.48)
-            desired_throttle = get_throttle(actual_speed, TARGET_MPS_TEST)
+            desired_throttle = self.get_target_throttle(obz)
 
-            desired_throttle = min(max(desired_throttle, 0.), 1.)
+            # desired_throttle = min(max(desired_throttle, 0.), 1.)
+            #
+            # if self.previous_net_out:
+            #     desired_throttle = 0.2 * self.previous_action.throttle + 0.5 * desired_throttle
+            # else:
+            #     desired_throttle = desired_throttle * 0.95
 
-            if self.previous_net_out:
-                desired_throttle = 0.2 * self.previous_action.throttle + 0.5 * desired_throttle
-            else:
-                desired_throttle = desired_throttle * 0.95
             # desired_throttle = 0.4
         else:
             # AlexNet
@@ -221,7 +222,16 @@ class Agent(object):
             smoothed_steering = desired_steering * 0.7
 
         # desired_throttle = desired_throttle * 1.1
-        action = Action(smoothed_steering, desired_throttle)
+
+        if desired_steering < 0:
+            log.info('STEERING NEGATIVE %f', desired_throttle)
+        else:
+            log.info('STEERING POSITIVE %f', desired_steering)
+
+        if self.previous_action.steering == desired_steering:
+            log.info('STEERING NOT CHANGED')
+
+        action = Action(desired_steering, desired_throttle)
         return action
 
     def maybe_save(self):
@@ -261,12 +271,12 @@ class Agent(object):
         else:
             self.semirandom_sequence_step += 1
 
-    def toggle_random_action(self, episode_time):
+    def toggle_random_action(self, obz):
         """Reduce sampling error by randomly exploring space around non-random agent's trajectory"""
 
         if self.performing_random_actions:
             if self.sequence_action_count < self.sequence_random_action_count and self.previous_action is not None:
-                action = self.previous_action
+                action = Action(self.previous_action.steering, self.get_target_throttle(obz))
             else:
                 # switch to non-random
                 log.debug('Switching to non-random action. action_count %d random_action_count %d '
@@ -277,7 +287,8 @@ class Agent(object):
                 self.performing_random_actions = False
         else:
             if self.sequence_action_count < self.sequence_non_random_action_count and self.previous_action is not None:
-                action = self.previous_action  # Where has_control can be False, meaning no change, i.e. Game AI is driving
+                action = Action(has_control=False)
+                world.set_ego_mph(25, 25)
             else:
                 # switch to random
                 log.debug('Switching to random action. action_count %d random_action_count %d '
@@ -287,7 +298,9 @@ class Agent(object):
                 log.debug('random steering %f', steering)
 
                 # TODO: Make throttle random as well
-                throttle = 0.65
+                # throttle = 0.65
+                # TODO: Find out why we actually slow down when setting the cm/s to what should be the same rate as world.set_ego_speed(mpH)
+                throttle = self.get_target_throttle(obz) * 0.5  # Slow down a bit so we don't crash before recovering
                 action = Action(steering, throttle)
                 self.sequence_action_count = 0
                 self.performing_random_actions = True
@@ -301,9 +314,10 @@ class Agent(object):
 
         pid = self.throttle_pid
         target_cmps = TARGET_MPS * 100
-        if pid.setpoint != target_cmps:
-            pid.setpoint = target_cmps
-        throttle = pid(actual_speed)
+        if pid.SetPoint != target_cmps:
+            pid.SetPoint = target_cmps
+        pid.update(actual_speed)
+        throttle = pid.output
         throttle = min(max(throttle, 0.), 1.)
         return throttle
 
@@ -472,14 +486,15 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
 
 def domain_randomization(env, randomize_month, randomize_shadow_level, randomize_sun_speed, randomize_view_mode):
-    if randomize_view_mode:
-        env.unwrapped.set_view_mode(c.rng.choice(list(ViewMode.__members__.values())))
-    if randomize_sun_speed:
-        world.randomize_sun_speed()
-    if randomize_shadow_level:
-        graphics.randomize_shadow_level()
-    if randomize_month:
-        world.randomize_sun_month()
+    # if randomize_view_mode:
+    #     env.unwrapped.set_view_mode(c.rng.choice(list(ViewMode.__members__.values())))
+    # if randomize_sun_speed:
+    #     world.randomize_sun_speed()
+    # if randomize_shadow_level:
+    #     graphics.randomize_shadow_level()
+    # if randomize_month:
+    #     world.randomize_sun_month()
+    pass
 
 
 def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir, run_baseline_agent,
@@ -519,7 +534,7 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follo
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
 
     def start_env():
-        return deepdrive.start(experiment_name=experiment, env_id=env_id, should_benchmark=should_benchmark,
+        return deepdrive.start(experiment=experiment, env_id=env_id, should_benchmark=should_benchmark,
                                cameras=cameras,
                                use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
                                driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False,
