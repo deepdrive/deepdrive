@@ -19,7 +19,7 @@ def set_capture_graphics(shadow_level):
         Note: We can set texture level, ambient occlusion, etc... but it only affects
         the display window, not the captured cameras.
     """
-    if not np.issubdtype(shadow_level, int):
+    if not isinstance(shadow_level, int) and np.issubdtype(shadow_level, int):
         raise ValueError('Shadow level should be an integer')
     shadow_level = int(shadow_level)
     if shadow_level not in SHADOW_RANGE:
