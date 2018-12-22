@@ -2,20 +2,17 @@ import argparse
 import glob
 import logging
 import os
-import sys
 import traceback
-
-import six
 
 import camera_config
 import config as c
 import deepdrive
-import logs
 from agents.dagger import net
 from agents.dagger.agent import ensure_mnet2_baseline_weights
 from sim.driving_style import DrivingStyle
-
+import logs
 log = logs.get_log(__name__)
+
 
 def main():
     parser = argparse.ArgumentParser(description=None)
@@ -42,7 +39,7 @@ def main():
                         help='Use synchronous stepping mode where the simulation advances only when calling step')
     parser.add_argument('--enable-traffic', action='store_true', default=False,
                         help='Enable traffic within the simulator')
-    parser.add_argument('--record-recovery-from-random-actions', action='store_true', default=False,
+    parser.add_argument('--jitter-actions', action='store_true', default=False,
                         help='Whether to occasionally perform random actions and record recovery from them')
     parser.add_argument('--randomize-sun-speed', action='store_true', default=False,
                         help='Whether to randomize the virtual speed of the earth\'s orbit around the sun')
@@ -122,7 +119,7 @@ def run_agent(args, camera_rigs, driving_style):
               should_record=args.record, net_path=args.net_path, env_id=args.env_id,
               run_baseline_agent=args.baseline, run_mnet2_baseline_agent=args.mnet2_baseline,
               run_ppo_baseline_agent=args.ppo_baseline, render=args.render, camera_rigs=camera_rigs,
-              should_record_recovery_from_random_actions=args.record_recovery_from_random_actions, fps=args.fps,
+              should_jitter_actions=args.jitter_actions, fps=args.fps,
               net_name=args.net_type, is_sync=args.sync, driving_style=driving_style,
               is_remote=args.is_remote_client, recording_dir=args.recording_dir,
               randomize_view_mode=args.randomize_view_mode, randomize_sun_speed=args.randomize_sun_speed,

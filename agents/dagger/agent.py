@@ -7,13 +7,14 @@ import glob
 
 import tensorflow as tf
 import numpy as np
-from control.pid import PID
+from simple_pid import PID
 
 import config as c
 import deepdrive
 import utils
 from agents.common import get_throttle
 from agents.dagger import net
+from agents.dagger.action_jitterer import ActionJitterer, JitterState
 from sim import world, graphics
 from sim.driving_style import DrivingStyle
 from sim.action import Action
@@ -33,7 +34,7 @@ TARGET_MPS = TARGET_MPH / 2.237
 TARGET_MPS_TEST = 75 * TARGET_MPS
 
 class Agent(object):
-    def __init__(self, tf_session, should_record_recovery_from_random_actions=True,
+    def __init__(self, tf_session, should_jitter_actions=True,
                  should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
                  non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR,
                  output_last_hidden=False,
@@ -46,15 +47,10 @@ class Agent(object):
         self.driving_style = driving_style
 
         # State for toggling random actions
-        self.should_record_recovery_from_random_actions = should_record_recovery_from_random_actions
-        self.sequence_random_action_count = random_action_count
-        self.sequence_non_random_action_count = non_random_action_count
-        self.semirandom_sequence_step = 0
-        self.sequence_action_count = 0
+        self.should_jitter_actions = should_jitter_actions
         self.episode_action_count = 0
         self.recorded_obz_count = 0
         self.num_saved_observations = 0
-        self.performing_random_actions = False
         self.path_follower_mode = path_follower
         self.recording_dir = recording_dir
         self.output_last_hidden = output_last_hidden
@@ -63,8 +59,9 @@ class Agent(object):
         self.should_record = should_record
         self.sess_dir = os.path.join(recording_dir, datetime.now().strftime(c.DIR_DATE_FORMAT))
         self.obz_recording = []
+        self.skipped_first_corrective_action = False
 
-        if should_record_recovery_from_random_actions:
+        if should_jitter_actions:
             log.info('Mixing in random actions to increase data diversity (these are not recorded).')
         if should_record:
             log.info('Recording driving data to %s', self.sess_dir)
@@ -84,8 +81,10 @@ class Agent(object):
             self.net = None
             self.sess = None
 
-        self.throttle_pid = PID(0.2, 0.05, 0.05)
+        self.throttle_pid = PID(0.3, 0.05, 0.4)
+        self.throttle_pid.output_limits = (-1, 1)
 
+        self.jitterer = ActionJitterer()
 
     def act(self, obz, reward, done, episode_time=None):
         net_out = None
@@ -98,17 +97,16 @@ class Agent(object):
                 raise
             obz = self.preprocess_obz(obz)
 
-        if self.should_record_recovery_from_random_actions:
+        if self.should_jitter_actions:
             if episode_time is None or episode_time < 10:
+                # Hold off a bit at start of episode
                 action = Action(has_control=False)
-                self.sequence_action_count = 0
-                self.performing_random_actions = False
             else:
-                if not okay_to_act_randomly(obz):
-                    action = Action(has_control=False)
+                if okay_to_jitter_actions(obz):
+                    action = self.jitter_action(obz)
                 else:
-                    action = self.toggle_random_action(obz)
-            self.sequence_action_count += 1
+                    action = Action(has_control=False)
+
         elif self.net is not None:
             if not obz or not obz['cameras']:
                 net_out = None
@@ -122,14 +120,10 @@ class Agent(object):
             action = self.get_next_action(obz, y_hat)
         else:
             action = Action(has_control=(not self.path_follower_mode))
-
         self.previous_action = action
         self.step += 1
-
-        log.debug('obz_exists? %r performing_random_actions? %r should_record? %r',
-                  obz is not None, self.performing_random_actions, self.should_record)
-
-        if obz and not self.performing_random_actions and self.should_record and obz['is_game_driving'] == 1:
+        log.debug('obz_exists? %r should_record? %r', obz is not None, self.should_record)
+        if self.should_record_obz(obz):
             log.debug('Recording frame')
             self.obz_recording.append(obz)
             if TEST_SAVE_IMAGE:
@@ -139,13 +133,36 @@ class Agent(object):
             self.recorded_obz_count += 1
             if self.recorded_obz_count % 100 == 0:
                 log.info('%d recorded observations', self.recorded_obz_count)
+
         else:
             log.debug('Not recording frame.')
 
         self.maybe_save()
-
         action = action.as_gym()
         return action, net_out
+
+    def should_record_obz(self, obz):
+        if not self.should_record:
+            return False
+        is_game_driving = self.get_is_game_driving(obz)
+        safe_action = is_game_driving and not self.jitterer.perf_rand_actions
+        if safe_action:
+            # TODO: Fix race condition in sim and remove skipped_first_corrective_action guard
+            if self.skipped_first_corrective_action:
+                return True
+            else:
+                self.skipped_first_corrective_action = True
+                return False
+        else:
+            self.skipped_first_corrective_action = False
+            return False
+
+
+    def get_is_game_driving(self, obz):
+        if not obz:
+            log.warn('Observation not set, assuming game not driving to prevent recording bad actions')
+            return False
+        return obz['is_game_driving'] == 1
 
     def get_next_action(self, obz, net_out):
         log.debug('getting next action')
@@ -224,9 +241,11 @@ class Agent(object):
         # desired_throttle = desired_throttle * 1.1
 
         if desired_steering < 0:
-            log.info('STEERING NEGATIVE %f', desired_throttle)
+            log.info('STEERING NEGATIVE %f', desired_steering)
+            # desired_steering *= 3  # WTF
         else:
             log.info('STEERING POSITIVE %f', desired_steering)
+            # desired_steering *= 0.25  # WTF
 
         if self.previous_action.steering == desired_steering:
             log.info('STEERING NOT CHANGED')
@@ -247,63 +266,33 @@ class Agent(object):
             self.obz_recording = []
             self.num_saved_observations = self.recorded_obz_count
 
-    def set_random_action_repeat_count(self):
-        if self.semirandom_sequence_step == (self.sequence_random_action_count + self.sequence_non_random_action_count):
-            self.semirandom_sequence_step = 0
-            rand = c.rng.rand()
-            if rand < 0.50:
-                self.sequence_random_action_count = 0
-                self.sequence_non_random_action_count = 10
-            elif rand < 0.67:
-                self.sequence_random_action_count = 4
-                self.sequence_non_random_action_count = 5
-            elif rand < 0.85:
-                self.sequence_random_action_count = 8
-                self.sequence_non_random_action_count = 10
-            elif rand < 0.95:
-                self.sequence_random_action_count = 12
-                self.sequence_non_random_action_count = 15
+    def jitter_action(self, obz):
+        """Reduce sampling error by randomly exploring space around non-random agent's trajectory with occasional
+            random actions"""
+        state = self.jitterer.advance()
+        if state is JitterState.SWITCH_TO_RAND:
+            steering = np.random.uniform(-0.5, 0.5, 1)[0]  # Going too large here gets us stuck
+            throttle = self.get_target_throttle(obz) * 0.5  # Slow down a bit so we don't crash before recovering
+            has_control = True
+            log.debug('random steering %f', steering)
+        elif state is JitterState.SWITCH_TO_NONRAND:
+            has_control = False
+            steering = throttle = 0  # Has no effect
+        elif state is JitterState.MAINTAIN:
+            if self.previous_action is None:
+                has_control = False
+                steering = throttle = 0  # Has no effect
+                log.warning('Previous action none')
             else:
-                self.sequence_random_action_count = 24
-                self.sequence_non_random_action_count = 30
-            log.debug('random actions at %r, non-random %r', self.sequence_random_action_count, self.sequence_non_random_action_count)
-
+                steering = self.previous_action.steering
+                throttle = self.get_target_throttle(obz)
+                has_control = self.previous_action.has_control
         else:
-            self.semirandom_sequence_step += 1
-
-    def toggle_random_action(self, obz):
-        """Reduce sampling error by randomly exploring space around non-random agent's trajectory"""
-
-        if self.performing_random_actions:
-            if self.sequence_action_count < self.sequence_random_action_count and self.previous_action is not None:
-                action = Action(self.previous_action.steering, self.get_target_throttle(obz))
-            else:
-                # switch to non-random
-                log.debug('Switching to non-random action. action_count %d random_action_count %d '
-                          'non_random_action_count %d', self.sequence_action_count, self.sequence_random_action_count,
-                          self.sequence_non_random_action_count)
-                action = Action(has_control=False)
-                self.sequence_action_count = 0
-                self.performing_random_actions = False
-        else:
-            if self.sequence_action_count < self.sequence_non_random_action_count and self.previous_action is not None:
-                action = Action(has_control=False)
-                world.set_ego_mph(25, 25)
-            else:
-                # switch to random
-                log.debug('Switching to random action. action_count %d random_action_count %d '
-                          'non_random_action_count %d', self.sequence_action_count, self.sequence_random_action_count,
-                          self.sequence_non_random_action_count)
-                steering = np.random.uniform(-0.5, 0.5, 1)[0]  # Going too large here gets us stuck
-                log.debug('random steering %f', steering)
-
-                # TODO: Make throttle random as well
-                # throttle = 0.65
-                # TODO: Find out why we actually slow down when setting the cm/s to what should be the same rate as world.set_ego_speed(mpH)
-                throttle = self.get_target_throttle(obz) * 0.5  # Slow down a bit so we don't crash before recovering
-                action = Action(steering, throttle)
-                self.sequence_action_count = 0
-                self.performing_random_actions = True
+            raise ValueError('Unexpected action jitter state')
+        action = Action(steering, throttle, has_control=has_control)
+        if not has_control:
+            # TODO: Move setpoint to env
+            world.set_ego_mph(TARGET_MPH, TARGET_MPH)
         return action
 
     def get_target_throttle(self, obz):
@@ -314,10 +303,11 @@ class Agent(object):
 
         pid = self.throttle_pid
         target_cmps = TARGET_MPS * 100
-        if pid.SetPoint != target_cmps:
-            pid.SetPoint = target_cmps
-        pid.update(actual_speed)
-        throttle = pid.output
+        if pid.setpoint != target_cmps:
+            pid.setpoint = target_cmps
+        throttle = pid(actual_speed)
+        if not pid.auto_mode:
+            pid.auto_mode = True
         throttle = min(max(throttle, 0.), 1.)
         return throttle
 
@@ -376,7 +366,7 @@ class Agent(object):
 
         image = image.reshape(1, *self.net.input_image_shape)
         net_out = self.sess.run(out_var, feed_dict={
-            self.net.input: image,})
+            self.net.input: image, })
 
         # print(net_out)
         end = time.time()
@@ -398,10 +388,14 @@ class Agent(object):
             log.debug('prepro took %fs',  time.time() - prepro_start)
         return obz
 
+    def reset(self):
+        self.jitterer.reset()
+        self.throttle_pid.auto_mode = False
+
 
 def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False, run_mnet2_baseline_agent=False, run_ppo_baseline_agent=False, camera_rigs=None,
-        should_rotate_sim_types=False, should_record_recovery_from_random_actions=False, render=False,
+        should_rotate_sim_types=False, should_jitter_actions=False, render=False,
         path_follower=False, fps=c.DEFAULT_FPS, net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL,
         is_sync=False, is_remote=False, recording_dir=c.RECORDING_DIR, randomize_view_mode=False,
         randomize_sun_speed=False, randomize_shadow_level=False, randomize_month=False, enable_traffic=True):
@@ -415,7 +409,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir,
               run_baseline_agent,
               run_mnet2_baseline_agent, run_ppo_baseline_agent, should_record,
-              should_record_recovery_from_random_actions, env_id, render, fps, should_benchmark, is_remote, is_sync,
+              should_jitter_actions, env_id, render, fps, should_benchmark, is_remote, is_sync,
               enable_traffic)
 
     reward = 0
@@ -462,8 +456,6 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                 obz, reward, episode_done, _ = env.step(action)
                 log.debug('env step took %fs', time.time() - env_step_start)
 
-                if should_record_recovery_from_random_actions:
-                    agent.set_random_action_repeat_count()
                 if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:
                     session_done = True
 
@@ -472,6 +464,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
             else:
                 log.info('Episode done')
                 episode += 1
+
+                agent.reset()
                 if should_rotate_camera_rigs:
                     # TODO: Allow changing viewpoint as remote client
                     # TODO: Add this to domain_randomization()
@@ -498,7 +492,7 @@ def domain_randomization(env, randomize_month, randomize_shadow_level, randomize
 
 
 def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir, run_baseline_agent,
-          run_mnet2_baseline_agent, run_ppo_baseline_agent, should_record, should_record_recovery_from_random_actions,
+          run_mnet2_baseline_agent, run_ppo_baseline_agent, should_record, should_jitter_actions,
           env_id, render, fps, should_benchmark, is_remote, is_sync, enable_traffic):
     if run_baseline_agent:
         net_path = ensure_mnet2_baseline_weights(net_path)
@@ -542,7 +536,7 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follo
 
     env = start_env()
     agent = Agent(sess,
-                  should_record_recovery_from_random_actions=should_record_recovery_from_random_actions,
+                  should_jitter_actions=should_jitter_actions,
                   should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,
                   path_follower=path_follower, net_name=net_name, driving_style=driving_style,
                   recording_dir=recording_dir)
@@ -551,7 +545,7 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follo
     return agent, env, should_rotate_camera_rigs, start_env
 
 
-def okay_to_act_randomly(obz):
+def okay_to_jitter_actions(obz):
     if obz is None:
         return False
     else:

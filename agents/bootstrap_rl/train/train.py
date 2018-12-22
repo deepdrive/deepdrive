@@ -107,7 +107,7 @@ def run(env_id, bootstrap_net_path,
                                              combine_box_action_spaces=True, is_sync=is_sync,
                                              driving_style=driving_style, is_remote_client=is_remote_client)
 
-            dagger_agent = Agent(sess_1, should_record_recovery_from_random_actions=False, should_record=should_record,
+            dagger_agent = Agent(sess_1, should_jitter_actions=False, should_record=should_record,
                                  net_path=bootstrap_net_path, output_last_hidden=True, net_name=MOBILENET_V2_NAME)
 
     g_2 = tf.Graph()
