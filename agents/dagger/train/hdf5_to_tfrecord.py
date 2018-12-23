@@ -188,6 +188,7 @@ def test_decode():
 
 
 if __name__ == '__main__':
+    log.info('Converting HDF5 to tf record')
     if '--decode' in sys.argv:
         test_decode()
     elif '--rename-only' in sys.argv:
