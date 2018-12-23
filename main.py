@@ -105,6 +105,9 @@ def main():
             args.resume_train = get_latest_model()
         else:
             args.net_path = get_latest_model()
+    elif args.net_path and os.path.isdir(args.net_path):
+        args.net_path = get_latest_model_from_path(args.net_path)
+
 
     if args.mnet2_baseline:
         args.net_type = net.MOBILENET_V2_NAME
@@ -203,14 +206,18 @@ def train_agent(args, driving_style):
 
 def get_latest_model():
     # TODO: Get best performing model from n latest
-    latest_model = max(glob.glob(
-        '%s/*/model.ckpt-*.meta' % c.TENSORFLOW_OUT_DIR),
+    return get_latest_model_from_path('%s/*' % c.TENSORFLOW_OUT_DIR)
+
+
+def get_latest_model_from_path(model_dir):
+    model = max(glob.glob(
+        '%s/model.ckpt-*.meta' % model_dir),
         key=os.path.getmtime)
-    if not latest_model:
-        raise RuntimeError('Can not get latest model, no models found in %s' % c.TENSORFLOW_OUT_DIR)
-    latest_prefix = latest_model[:-len('.meta')]
-    log.info('Latest model is %s', latest_prefix)
-    return latest_prefix
+    if not model:
+        raise RuntimeError('No tensorflow models found in %s' % model_dir)
+    prefix = model[:-len('.meta')]
+    log.info('Latest model is %s', prefix)
+    return prefix
 
 
 if __name__ == '__main__':
