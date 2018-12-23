@@ -9,6 +9,7 @@ import config as c
 import deepdrive
 from agents.dagger import net
 from agents.dagger.agent import ensure_mnet2_baseline_weights
+from agents.dagger.train import hdf5_to_tfrecord
 from sim.driving_style import DrivingStyle
 import logs
 log = logs.get_log(__name__)
@@ -27,6 +28,8 @@ def main():
                         help='Runs pretrained ppo-based imitation learning based agent')
     parser.add_argument('-t', '--train', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
+    parser.add_argument('--hdf5-2-tfrecord', action='store_true', default=False,
+                        help='Converts all recorded hdf5 files to a tfrecord dataset')
     parser.add_argument('--discrete-actions', action='store_true', default=False,
                         help='Trains tensorflow agent on stored driving data')
     parser.add_argument('--use-latest-model', action='store_true', default=False,
@@ -86,6 +89,9 @@ def main():
     args = c.PY_ARGS = parser.parse_args()
     if args.verbose:
         logs.set_level(logging.DEBUG)
+
+    if args.hdf5_2_tfrecord:
+        hdf5_to_tfrecord.encode()
 
     if args.camera_rigs:
         camera_rigs = camera_config.rigs[args.camera_rigs]
