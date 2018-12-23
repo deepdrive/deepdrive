@@ -29,6 +29,7 @@ import deepdrive_simulation
 import config as c
 import logs
 import utils
+from sim import world
 from sim.action import Action, DiscreteActions
 from sim.graphics import set_capture_graphics
 from sim.reward_calculator import RewardCalculator
@@ -90,6 +91,8 @@ class DeepDriveEnv(gym.Env):
         self.np_random = None  # type: tuple
         self.last_obz = None  # type: dict
         self.view_mode = ViewMode.NORMAL  # type: ViewMode
+        self.enable_traffic = False  # type: bool
+        self.ego_mph = None  # type: float
 
         if not c.REUSE_OPEN_SIM:
             utils.download_sim()
@@ -741,15 +744,9 @@ class DeepDriveEnv(gym.Env):
         return ret
 
     def reset_agent(self):
-        from sim import world
-        # TODO Add enable_traffic as an env prop and make ego speed a path follower prop
-
-        # The lambda server in the game is unfortunately on the game thread, so we have to
-        # advance the game tick one time to be able to send commands
-        # deepdrive_client.deactivate_synchronous_stepping(self.client_id)
-        world.reset(enable_traffic=False)
-        world.set_ego_mph(25, 25)
-        # deepdrive_client.activate_synchronous_stepping(self.client_id)
+        world.reset(enable_traffic=self.enable_traffic)
+        if self.ego_mph is not None:
+            world.set_ego_mph(self.ego_mph, self.ego_mph)
 
     def send_control(self, action):
         if self.has_control != action.has_control:

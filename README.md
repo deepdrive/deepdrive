@@ -63,7 +63,15 @@ python main.py --path-follower --experiment my-path-follower-test
 
 **Record** training data for imitation learning / behavioral cloning
 ```
-python main.py --record --record-recovery-from-random-actions
+python main.py --record --record-recovery-from-random-actions --sync
+```
+
+Note that we recorded the baseline dataset in sync mode which is much slower than async mode. 
+Async mode _probably_ is fine to record in, we just haven't got around to trying it out for v2.1.
+
+Optional: Convert to HDF5 files to tfrecords (for training MNET2)
+```
+python main.py --hdf5-2-tfrecord
 ```
 
 

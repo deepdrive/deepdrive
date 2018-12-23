@@ -25,7 +25,7 @@ def start(**kwargs):
                       should_benchmark=True, cameras=None, use_sim_start_command=False, render=False,
                       fps=c.DEFAULT_FPS, combine_box_action_spaces=False, is_discrete=False,
                       preprocess_with_tensorflow=False, is_sync=False, driving_style=DrivingStyle.NORMAL,
-                      reset_returns_zero=True, is_remote_client=False, enable_traffic=False)
+                      reset_returns_zero=True, is_remote_client=False, enable_traffic=False, ego_mph=None)
 
     unexpected_args = set(kwargs) - set(all_kwargs)
 
@@ -63,6 +63,8 @@ def start(**kwargs):
         deepdrive_env.period = deepdrive_env.sync_step_time = 1. / kwargs['fps']
         deepdrive_env.driving_style = kwargs['driving_style']
         deepdrive_env.should_render = kwargs['render']
+        deepdrive_env.enable_traffic = kwargs['enable_traffic']
+        deepdrive_env.ego_mph = kwargs['ego_mph']
         deepdrive_env.set_use_sim_start_command(kwargs['use_sim_start_command'])
         deepdrive_env.open_sim()
         if kwargs['use_sim_start_command']:
@@ -80,11 +82,6 @@ def start(**kwargs):
         if kwargs['should_benchmark']:
             log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
             deepdrive_env.init_benchmarking()
-
-        if kwargs['enable_traffic']:
-            world.enable_traffic_next_reset()
-        else:
-            world.disable_traffic_next_reset()
 
         env.reset()
     return env
