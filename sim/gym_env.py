@@ -30,6 +30,7 @@ import config as c
 import logs
 import utils
 from sim.action import Action, DiscreteActions
+from sim.graphics import set_capture_graphics
 from sim.reward_calculator import RewardCalculator
 from sim.score import Score
 from sim.view_mode import ViewMode
@@ -630,6 +631,7 @@ class DeepDriveEnv(gym.Env):
         self.score = Score()
         self.start_time = time.time()
         self.started_driving_wrong_way_time = None
+        set_capture_graphics(shadow_level=0)
         log.info('Reset complete')
         if self.reset_returns_zero:
             # TODO: Always return zero after testing that everything works with dagger agents
@@ -739,7 +741,15 @@ class DeepDriveEnv(gym.Env):
         return ret
 
     def reset_agent(self):
-        deepdrive_client.reset_agent(self.client_id)
+        from sim import world
+        # TODO Add enable_traffic as an env prop and make ego speed a path follower prop
+
+        # The lambda server in the game is unfortunately on the game thread, so we have to
+        # advance the game tick one time to be able to send commands
+        # deepdrive_client.deactivate_synchronous_stepping(self.client_id)
+        world.reset(enable_traffic=False)
+        world.set_ego_mph(25, 25)
+        # deepdrive_client.activate_synchronous_stepping(self.client_id)
 
     def send_control(self, action):
         if self.has_control != action.has_control:
