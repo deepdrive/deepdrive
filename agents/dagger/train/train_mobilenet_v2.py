@@ -109,7 +109,7 @@ def fine_tune_all_layers(data_dir, train_dir):
         dataset_dir=data_dir,
         model_name=MOBILENET_V2_SLIM_NAME,
         train_image_size=IMG_SIZE,
-        max_number_of_steps=10**5,
+        max_number_of_steps=9707,  # Performance degrades by 20e3 despite eval still dropping. TODO: Find out why
         batch_size=16,
         learning_rate=0.00004,
         learning_rate_decay_type='fixed',
