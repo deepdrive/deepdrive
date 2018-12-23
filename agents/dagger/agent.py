@@ -240,16 +240,6 @@ class Agent(object):
 
         # desired_throttle = desired_throttle * 1.1
 
-        if desired_steering < 0:
-            log.info('STEERING NEGATIVE %f', desired_steering)
-            # desired_steering *= 3  # WTF
-        else:
-            log.info('STEERING POSITIVE %f', desired_steering)
-            # desired_steering *= 0.25  # WTF
-
-        if self.previous_action.steering == desired_steering:
-            log.info('STEERING NOT CHANGED')
-
         action = Action(desired_steering, desired_throttle)
         return action
 
