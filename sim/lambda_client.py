@@ -99,6 +99,7 @@ class LambdaClient(object):
 
 def lambda_to_expr_str(lambda_fn):
     """c.f. https://stackoverflow.com/a/52615415/134077"""
+    # TODO: Looks like cloudpickle can do a much better job of this
     if not lambda_fn.__name__ == "<lambda>":
         raise ValueError('Tried to convert non-lambda expression to string')
     else:
