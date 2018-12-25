@@ -92,6 +92,7 @@ def main():
 
     if args.hdf5_2_tfrecord:
         hdf5_to_tfrecord.encode()
+        return
 
     if args.camera_rigs:
         camera_rigs = camera_config.rigs[args.camera_rigs]
