@@ -10,7 +10,6 @@ requests
 clint
 pillow
 boto
-mpi4py
 future
 pyzmq
 enum34
@@ -23,3 +22,4 @@ six
 flask
 cherrypy
 paste
+simple-pid
