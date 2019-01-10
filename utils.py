@@ -435,14 +435,19 @@ def is_docker():
 
 def get_free_space_mb(filename):
     """Return folder/drive free space (in megabytes)."""
-    drive, _path = os.path.splitdrive(filename)
     if platform.system() == 'Windows':
+        drive, _path = os.path.splitdrive(filename)
         free_bytes = ctypes.c_ulonglong(0)
         ctypes.windll.kernel32.GetDiskFreeSpaceExW(
             ctypes.c_wchar_p(drive), None, None, ctypes.pointer(free_bytes))
         return free_bytes.value / 1024 / 1024
     else:
-        st = os.statvfs(drive)
+        path = filename
+        while not os.path.exists(path):
+            if not path or path == '/':
+                raise ValueError('Drive does not exist for filename %s' % filename)
+            path = os.path.dirname(path)
+        st = os.statvfs(path)
         return st.f_bavail * st.f_frsize / 1024 / 1024
 
 
@@ -454,8 +459,12 @@ def remotable(f):
 
 
 def assert_disk_space(filename, mb=2000):
-    if get_free_space_mb(filename) < mb:
-        raise Exception('Less than %dMB left on device, aborting save of %s' % (mb, filename))
+    try:
+        if get_free_space_mb(filename) < mb:
+            raise Exception('Less than %dMB left on device, aborting save of %s' % (mb, filename))
+    except Exception as e:
+        log.error('Could not get free space on the drive containing %s' % filename)
+        raise e
 
 
 def resize_images(input_image_shape, images, always=False):
