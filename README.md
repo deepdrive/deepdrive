@@ -63,7 +63,7 @@ python main.py --path-follower --experiment my-path-follower-test
 
 **Record** training data for imitation learning / behavioral cloning
 ```
-python main.py --record --record-recovery-from-random-actions --sync
+python main.py --record --jitter-actions --sync
 ```
 
 Note that we recorded the baseline dataset in sync mode which is much slower than async mode. 
@@ -198,9 +198,4 @@ You may need to disable secure boot in your BIOS in order for NVIDIA’s OpenGL 
 
 To run tests in PyCharm, go to File | Settings | Tools | Python Integrated Tools and change the default test runner 
 to py.test.
-
-
-## Thanks
-
-Special thanks to [Rafał Józefowicz](https://scholar.google.com/citations?user=C7zfAI4AAAAJ) for contributing the original [training](#tensorflow_agent/train) code used for the baseline agent
 
