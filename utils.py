@@ -407,17 +407,20 @@ def download_sim():
 def download_sim_python_binaries():
     base_url = c.BUCKET_URL + '/embedded_python_for_unreal/'
     if c.IS_WINDOWS:
+        # These include Python and our requirements
         lib_url = base_url + 'windows/python_bin_with_libs.zip'
         lib_path = os.path.join(get_sim_project_dir(), 'Binaries', 'Win64')
         if not os.path.exists(lib_path) or not os.path.exists(os.path.join(lib_path, 'python3.dll')):
             print('Unreal embedded Python not found. Downloading...')
             download(lib_url, lib_path, overwrite=True, warn_existing=False)
     elif c.IS_LINUX:
-        lib_url = base_url + 'python_libs.zip'
-        lib_path = os.path.join(get_sim_project_dir(), 'python_libs')
-        if not os.path.exists(lib_path) or not has_stuff(lib_path):
-            print('Downloading Python libs (75MB) for Unreal embedded Python from', lib_url, '...')
-            download(lib_url, lib_path)
+        # Now handled by ensure_requirements.py in the sim
+        pass
+        # lib_url = base_url + 'python_libs.zip'
+        # lib_path = os.path.join(get_sim_project_dir(), 'python_libs')
+        # if not os.path.exists(lib_path) or not has_stuff(lib_path):
+        #     print('Downloading Python libs (75MB) for Unreal embedded Python from', lib_url, '...')
+        #     download(lib_url, lib_path)
     elif c.IS_MAC:
         raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
 
