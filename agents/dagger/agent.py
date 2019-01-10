@@ -298,6 +298,9 @@ class Agent(object):
         throttle = pid(actual_speed)
         if not pid.auto_mode:
             pid.auto_mode = True
+        if throttle is None:
+            log.warn('Throttle was None, setting to 0.6')
+            throttle = 0.6
         throttle = min(max(throttle, 0.), 1.)
         return throttle
 
