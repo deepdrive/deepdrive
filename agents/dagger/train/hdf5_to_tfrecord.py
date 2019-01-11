@@ -62,7 +62,7 @@ def add_total_to_tfrecord_files(directory, filename_prefix):
         os.rename(file, os.path.join(directory, fname[:16] + str(i).zfill(5) + mid_fix + '.tfrecord'))
 
 
-def save_dataset(dataset, buffer_size, filename, parallelize=True):
+def save_dataset(dataset, buffer_size, filename, out_path, parallelize=True):
     if parallelize:
         def get_callback(_file_idx):
             log.debug('getting callback for %d', _file_idx)
@@ -81,7 +81,7 @@ def save_dataset(dataset, buffer_size, filename, parallelize=True):
             save_tfrecord_file(file_idx, filename, images, targets)
             file_idx += 1
 
-    add_total_to_tfrecord_files(c.RECORDING_DIR, filename)
+    add_total_to_tfrecord_files(out_path, filename)
 
 
 def save_tfrecord_file(file_idx, filename, images, targets):
@@ -128,17 +128,18 @@ def save_tfrecord_file(file_idx, filename, images, targets):
 
 
 # TODO: See whether HDF5 images have negative, mean subtracted values. If so, it must be the tf record process that gets rid of those
-def encode(parallelize=True):
+def encode(parallelize=True, hdf5_path=c.RECORDING_DIR):
     # TODO: Get a couple separate hdf5 files from different situations / view modes for eval
-    hdf5_path = c.RECORDING_DIR
     train_dataset = get_dataset(hdf5_path, train=True)
     eval_dataset = get_dataset(hdf5_path, train=False)
     buffer_size = 1000
     utils.assert_disk_space(hdf5_path)
-    save_dataset(train_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_train'),
-                 parallelize=parallelize)
-    save_dataset(eval_dataset, buffer_size, filename=os.path.join(c.RECORDING_DIR, 'deepdrive_eval'),
-                 parallelize=parallelize)
+    out_path = os.path.join(hdf5_path, 'tfrecords')
+    os.makedirs(out_path, exist_ok=True)
+    save_dataset(train_dataset, buffer_size, filename=os.path.join(out_path, 'deepdrive_train'),
+                 parallelize=parallelize, out_path=out_path)
+    save_dataset(eval_dataset, buffer_size, filename=os.path.join(out_path, 'deepdrive_eval'),
+                 parallelize=parallelize, out_path=out_path)
 
 
 def test_decode():
