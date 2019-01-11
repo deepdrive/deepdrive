@@ -91,7 +91,7 @@ def main():
         logs.set_level(logging.DEBUG)
 
     if args.hdf5_2_tfrecord:
-        hdf5_to_tfrecord.encode()
+        hdf5_to_tfrecord.encode(hdf5_path=args.recording_dir)
         return
 
     if args.camera_rigs:
@@ -108,7 +108,6 @@ def main():
             args.net_path = get_latest_model()
     elif args.net_path and os.path.isdir(args.net_path):
         args.net_path = get_latest_model_from_path(args.net_path)
-
 
     if args.mnet2_baseline:
         args.net_type = net.MOBILENET_V2_NAME
@@ -169,7 +168,6 @@ def run_path_follower(args, driving_style, camera_rigs):
     finally:
         if gym_env:
             gym_env.close()
-
 
 
 def train_agent(args, driving_style):
