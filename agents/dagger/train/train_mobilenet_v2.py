@@ -32,13 +32,15 @@ def train_mobile_net(data_dir, resume_dir=None):
     """# Should see eval steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, 
     train steering error: ~0.08"""
 
-
     if not os.path.exists(c.MNET2_PRETRAINED_PATH + '.meta'):
         utils.download(c.MNET2_PRETRAINED_URL + '?cache_bust=1', c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
 
-    if not glob.glob(data_dir + '/*.tfrecord') and glob.glob(data_dir + '/*/*.hdf5'):
-        log.warn('Performing one time translation of HDF5 to TFRecord')
-        hdf5_to_tfrecord.encode()
+    if not glob.glob(data_dir + '/*.tfrecord'):
+        if glob.glob(data_dir + '/*/*.hdf5'):
+            log.warn('No tfrecords in %s - Run main.py --hdf5-2-tfrecord --data-dir="%s" to convert hdf5 records' %
+                     (data_dir, data_dir))
+        else:
+            raise RuntimeError('No tfrecords found in %s - aborting' % data_dir)
 
 
     # Execute sessions in separate processes to ensure Tensorflow cleans up nicely
