@@ -7,7 +7,7 @@ import config as c
 
 
 os.makedirs(c.LOG_DIR, exist_ok=True)
-log_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log_level = logging.INFO
 all_loggers = []
 rotators = {}
