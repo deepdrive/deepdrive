@@ -157,7 +157,6 @@ class Agent(object):
             self.skipped_first_corrective_action = False
             return False
 
-
     def get_is_game_driving(self, obz):
         if not obz:
             log.warn('Observation not set, assuming game not driving to prevent recording bad actions')
@@ -204,16 +203,17 @@ class Agent(object):
             # TODO: Support different driving styles
 
             # desired_throttle = get_throttle(actual_speed, desired_speed * 0.48)
-            desired_throttle = self.get_target_throttle(obz)
 
-            # desired_throttle = min(max(desired_throttle, 0.), 1.)
-            #
-            # if self.previous_net_out:
-            #     desired_throttle = 0.2 * self.previous_action.throttle + 0.5 * desired_throttle
-            # else:
-            #     desired_throttle = desired_throttle * 0.95
+            pid_throttle = self.get_target_throttle(obz)
 
-            # desired_throttle = 0.4
+            desired_throttle = min(max(desired_throttle, 0.), pid_throttle)
+
+            if self.previous_net_out:
+                desired_throttle = 0.2 * self.previous_action.throttle + 0.5 * desired_throttle
+            else:
+                desired_throttle = desired_throttle * 0.95
+
+            desired_throttle *= 0.95
         else:
             # AlexNet
 
@@ -299,8 +299,8 @@ class Agent(object):
         if not pid.auto_mode:
             pid.auto_mode = True
         if throttle is None:
-            log.warn('Throttle was None, setting to 0.6')
-            throttle = 0.6
+            log.warn('PID output None, setting throttle to 0.')
+            throttle = 0.
         throttle = min(max(throttle, 0.), 1.)
         return throttle
 
