@@ -341,13 +341,11 @@ class DeepDriveEnv(gym.Env):
         if obz:
             lap_number = obz.get('lap_number')
             have_lap_numbers = lap_number is not None and self.lap_number is not None
-            lap_via_number = have_lap_numbers and self.lap_number < lap_number
-            progress_wrapped = self.score.progress < self.score.prev_progress * 0.1
-            lap_via_progress = self.score.progress > 99.9 or progress_wrapped
-            if lap_via_progress or lap_via_number:
-                average_meters_per_sec = self.score.speed_sampler.mean() / 100
-                est_travel_distance = average_meters_per_sec * self.score.episode_time
-                took_shortcut = est_travel_distance < obz['route_length'] * 0.9
+            lap_via_progress = self.score.progress > 99.9
+            if lap_via_progress:
+                median_meters_per_sec = self.score.speed_sampler.mean() / 100
+                est_travel_cm = median_meters_per_sec * self.score.episode_time * 100  # cm travelled
+                took_shortcut = est_travel_cm < (obz['route_length'] * 0.9)
                 if took_shortcut:
                     log.warn('Shortcut detected, not scoring lap')
                 else:
@@ -461,6 +459,8 @@ class DeepDriveEnv(gym.Env):
                 self.previous_distance_along_route = self.distance_along_route
             self.distance_along_route = dist
             progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress, time_passed)
+            self.score.prev_progress = self.score.progress
+            self.score.progress = 100 * self.distance_along_route / obz['route_length']
 
         progress_reward *= self.driving_style.value.progress_weight
         speed_reward *= self.driving_style.value.speed_weight
@@ -479,10 +479,7 @@ class DeepDriveEnv(gym.Env):
         self.score.progress_reward += progress_reward
         self.score.speed_reward += speed_reward
 
-        self.score.prev_progress = self.score.progress
-        self.score.progress = self.distance_along_route / (obz['route_length'] * .01)
-
-        self.display_stats['lap progress']['total'] = self.score.progress
+        self.display_stats['lap progress']['total'] = self.score.progress or 0
         self.display_stats['lap progress']['value'] = self.display_stats['lap progress']['total']
         self.display_stats['episode #']['total'] = self.total_laps
         self.display_stats['episode #']['value'] = self.total_laps
