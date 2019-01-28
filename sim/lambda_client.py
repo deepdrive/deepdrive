@@ -120,7 +120,7 @@ def eval_in_unreal(expression_str, *args, **kwargs):
     if client is None:
         client = LambdaClient()
 
-    return client.eval(expression_str, **kwargs)
+    return client.eval(expression_str, *args, **kwargs)
 
 
 def main():
