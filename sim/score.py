@@ -25,3 +25,4 @@ class Score(object):
         self.end_time = None
         self.episode_time = 0
         self.speed_sampler = Sampler()
+        self.gforce_sampler = Sampler()
