@@ -81,7 +81,7 @@ class LambdaClient(object):
         socket = context.socket(zmq.PAIR)
 
         # Creating a new socket on timeout is not working when other ZMQ connections are present in the process.
-        # socket.RCVTIMEO = c.API_TIMEOUT_MS
+        socket.RCVTIMEO = 5000
         # socket.SNDTIMEO = c.API_TIMEOUT_MS
 
         socket.connect("tcp://localhost:%s" % API_PORT)
