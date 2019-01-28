@@ -984,7 +984,7 @@ class DeepDriveEnv(gym.Env):
             now = time.time()
             s = self.started_driving_wrong_way_time
             if s is not None:
-                if (now - s) > 2:
+                if (now - s) > 5:
                     return True
             else:
                 self.started_driving_wrong_way_time = now
