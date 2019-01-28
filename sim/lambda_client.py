@@ -48,35 +48,30 @@ class LambdaClient(object):
         self.create_socket()
         # self._send(m.START, kwargs=kwargs)
 
-    def eval(self, expression_str, **kwargs):
+    def eval(self, method, *args, **kwargs):
         """
         Eval expressions against Unreal Python API
-        :param expression_str: Expression to eval against embedded Python
-            Hint: To write expressions in Python, you can use lambda_to_expr_str, i.e.
-            expression_str = lambda_to_expr_str(lambda: [w.get_name() for w in ue.all_worlds()])
-            worlds = client.eval(expression_str)
-
-            which would be the same as:
-
-            worlds = client.eval('[w.get_name() for w in ue.all_worlds()]')
-
-        :param kwargs will be set to local variables on the server side eval
+        :param method API method to execute
+        :param args - tuple or list of args to pass
+        :param kwargs - dict of kwargs to pass
         :return: dict of form {'success': <False iff exception thrown>, 'result': <eval(...) return value>}
         """
+        ret = None
         try:
-            msg = pyarrow.serialize([expression_str, kwargs]).to_buffer()
+            msg = pyarrow.serialize([method, args, kwargs]).to_buffer()
             self.socket.send(msg)
             ret = pyarrow.deserialize(self.socket.recv())
         except zmq.error.Again:
             print('Waiting for server')
             self.create_socket()
             return None
-        else:
+        finally:
+            if ret is None:
+                raise RuntimeError('Could not get response from lambda server. Try restarting sim or Unreal Editor.')
             if not ret['success']:
                 log.error(ret['result'])
                 raise RuntimeError(
-                    'Error executing %s(%s) in Unreal - Traceback above' % (expression_str, str(local_vars)))
-        finally:
+                    'Error executing %s(%s, %s) in Unreal - Traceback above' % (method, str(args), str(kwargs)))
             return ret
 
     def create_socket(self):
@@ -129,10 +124,10 @@ def eval_in_unreal(expression_str, *args, **kwargs):
 
 
 def main():
-    client = LambdaClient()
-    answer = client.eval('x**2', x=2)
-    # expr_str = lambda_to_expr_str(lambda x: x**2)
-    # client.eval(expr_str, {'x': 2})
+    answer = eval_in_unreal('get_42')
+    print('UnrealEnginePython evaluated answer to ', answer)
+
+    answer = eval_in_unreal('get_world')
     print('UnrealEnginePython evaluated answer to ', answer)
 
 
