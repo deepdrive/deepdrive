@@ -91,27 +91,7 @@ class LambdaClient(object):
     def close(self):
         self.socket.close()
 
-
-def lambda_to_expr_str(lambda_fn):
-    """c.f. https://stackoverflow.com/a/52615415/134077"""
-    # TODO: Looks like cloudpickle can do a much better job of this
-    if not lambda_fn.__name__ == "<lambda>":
-        raise ValueError('Tried to convert non-lambda expression to string')
-    else:
-        lambda_str = inspect.getsource(lambda_fn).strip()
-        curr_fn_name = inspect.stack()[0][3]
-        lambda_no_vars = ''.join(lambda_str.split()).startswith('lambda:')
-        if not (lambda_no_vars or lambda_str.startswith(('lambda ', curr_fn_name))):
-            raise ValueError('lambda_fn was not declared on its own line '
-                             '- getsource() returned\n\t' + lambda_str)
-        expression_start = lambda_str.index(':') + 1
-        expression_str = lambda_str[expression_start:].strip()
-        if expression_str.endswith(')') and '(' not in expression_str:
-            # i.e. l = lambda2str(lambda x: x + 1) => x + 1)
-            expression_str = expression_str[:-1]
-        return expression_str
-
-
+# TODO: Don't use a global singleton client
 client = None
 
 
