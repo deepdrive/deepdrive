@@ -364,6 +364,7 @@ class DeepDriveEnv(gym.Env):
         done = False
         lap_done, lap_bonus = self.compute_lap_statistics(obz)
         reward = 0
+        gforce_done = False
         if obz:
             if self.is_sync:
                 step_time = self.sync_step_time
@@ -378,7 +379,7 @@ class DeepDriveEnv(gym.Env):
                 # Give time to get on track after spawn
                 reward = 0
             else:
-                gforce_penalty = self.get_gforce_penalty(obz, step_time)
+                gforce_penalty, gforce_done = self.get_gforce_penalty(obz, step_time)
                 lane_deviation_penalty = self.get_lane_deviation_penalty(obz, step_time)
                 time_penalty = self.get_time_penalty(obz, step_time)
                 progress_reward, speed = self.get_progress_and_speed_reward(obz, step_time,
@@ -389,6 +390,7 @@ class DeepDriveEnv(gym.Env):
             self.score.wrong_way = self.driving_wrong_way()
             if self.score.wrong_way:
                 log.warn('episode finished, going the wrong way')
+
             if self.is_stuck(obz) or self.score.wrong_way:  # TODO: Collision or near collision
                 done = True
                 reward -= 10
@@ -413,7 +415,7 @@ class DeepDriveEnv(gym.Env):
 
         log.debug('get reward took %fs', time.time() - start_get_reward)
 
-        done = done or lap_done
+        done = done or lap_done or gforce_done
 
         return reward, done
 
@@ -435,20 +437,31 @@ class DeepDriveEnv(gym.Env):
 
     def get_gforce_penalty(self, obz, time_passed):
         gforce_penalty = 0
+        done = False
+
         if 'acceleration' in obz:
             if time_passed is not None:
                 a = obz['acceleration']
-                gforces = np.sqrt(a.dot(a)) / 980  # g = 980 cm/s**2
-                self.display_stats['g-forces']['value'] = gforces
-                self.display_stats['g-forces']['total'] = gforces
-                gforce_penalty = RewardCalculator.get_gforce_penalty(gforces, time_passed)
+                gs = np.sqrt(a.dot(a)) / 980  # g = 980 cm/s**2
+                sampler = self.score.gforce_sampler
+                sampler.sample(gs)
+                three_second_avg = self.average_gs(sampler, secs=3)
+                if gs > 5 or three_second_avg > 4:
+                    # Game over
+                    log.warn('G-force limit exceeded, game over. Recent g\'s were: %r',
+                             list(reversed(list(sampler.q)[-10:])))
+                    done = True
+
+                self.display_stats['g-forces']['value'] = gs
+                self.display_stats['g-forces']['total'] = gs
+                gforce_penalty = RewardCalculator.get_gforce_penalty(gs, time_passed)
 
         gforce_penalty *= self.driving_style.value.gforce_weight
         self.score.gforce_penalty += gforce_penalty
 
         self.display_stats['gforce penalty']['value'] = -self.score.gforce_penalty
         self.display_stats['gforce penalty']['total'] = -self.score.gforce_penalty
-        return gforce_penalty
+        return gforce_penalty, done
 
     def get_progress_and_speed_reward(self, obz, time_passed, gforce_penalty, lane_deviation_penalty):
         progress_reward = speed_reward = 0
@@ -993,5 +1006,16 @@ class DeepDriveEnv(gym.Env):
         if not deepdrive_client.unregister_camera(self.client_id, 0):  # 0 => Unregister all
             raise RuntimeError('Not able to unregister cameras')
         self.cameras = None
+
+    def average_gs(self, gforce_sampler, secs):
+        total = 0
+        steps = secs * self.fps
+        if len(gforce_sampler.q) < steps:
+            return 0
+        for i in range(steps):
+            total += gforce_sampler.q[-i]
+        avg = total / steps
+        return avg
+
 
 
