@@ -270,18 +270,20 @@ class DeepDriveEnv(gym.Env):
         self.step_num += 1
         log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
 
-        info = self.get_step_info(done)
+        info = self.init_step_info(done)
+
+        if done:
+            self.report_score(info)
 
         self.regulate_fps()
 
         return obz, reward, done, info
 
-    def get_step_info(self, done):
+    def init_step_info(self, done):
         info = {}
         info['score'] = info.get('episode', {})
         info['score']['episode_time'] = self.score.episode_time
-        if done:
-            info = self.report_score(info)
+
         return info
 
     def report_score(self, info):
