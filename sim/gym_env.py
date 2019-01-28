@@ -41,7 +41,7 @@ from dashboard import dashboard_fn, DashboardPub
 
 log = logs.get_log(__name__)
 SPEED_LIMIT_KPH = 64.
-HEAD_START_TIME = 0
+HEAD_START_TIME = 3
 LAP_LENGTH = 2736.7
 
 
