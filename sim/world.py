@@ -43,8 +43,8 @@ def randomize_sun_month():
 
 
 def reset(enable_traffic=False):
-    return eval_in_unreal('reset(enable_traffic)', enable_traffic=enable_traffic)
+    return eval_in_unreal('reset', enable_traffic=enable_traffic)
 
 
 def set_ego_mph(min_mph, max_mph):
-    return eval_in_unreal('set_ego_mph(min_mph, max_mph)', min_mph=min_mph, max_mph=max_mph)
+    return eval_in_unreal('set_ego_mph', min_mph=min_mph, max_mph=max_mph)
