@@ -504,5 +504,6 @@ if __name__ == '__main__':
     # read_hdf5_manual()
     # download_sim()
     # download_sim_python()
-    save_random_hdf5_to_png()
+    # save_random_hdf5_to_png()
     # assert_disk_space(r'C:\Users\a\DeepDrive\recordings\2018-11-03__12-29-33PM\0000000143.hdf5')
+    assert_disk_space('/media/a/data-ext4/deepdrive-data/v2.1/asdf.hd5f')

@@ -143,6 +143,6 @@ def is_docker():
 
 if __name__ == '__main__':
     if 'TEST_RUN_CMD' in os.environ:
-        run_command_async('pip install sarge')
+        run_command_no_deps('pip install sarge')
     else:
         main()

@@ -103,8 +103,9 @@ class DeepDriveEnv(gym.Env):
         # collision detection  # TODO: Remove in favor of in-game detection
         self.set_forward_progress()
 
-        self.distance_along_route = 0
-        self.start_distance_along_route = 0
+        self.distance_along_route = 0  # type: float
+        self.start_distance_along_route = 0  # type: float
+        self.previous_distance_along_route = 0  # type: float
 
         # reward
         self.score = Score()
@@ -641,6 +642,7 @@ class DeepDriveEnv(gym.Env):
         self.reset_agent()
         self.step_num = 0
         self.distance_along_route = 0
+        self.previous_distance_along_route = 0
         self.start_distance_along_route = 0
         self.prev_step_time = None
         self.score = Score()
