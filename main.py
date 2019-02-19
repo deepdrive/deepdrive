@@ -4,6 +4,30 @@ import logging
 import os
 import traceback
 
+# Check Python binding version
+import pkg_resources
+from distutils.version import LooseVersion as semvar
+BINDINGS_VERSION = semvar(pkg_resources.get_distribution('deepdrive').version).version[:2]
+CLIENT_VERSION = semvar(open('VERSION').read()).version[:2]
+if BINDINGS_VERSION != CLIENT_VERSION:
+    print("""ERROR: Python bindings version mismatch. 
+    
+Expected {client_version_str}, got {bindings_version_str}
+
+HINT:
+
+For binary sim distributions, try:
+pip install package=={client_version_str}.*
+
+For source sim distributions, try:
+cd <your-sim-sources>/Plugins/DeepDrivePlugin/Source/DeepDrivePython
+python build/build.py --type dev
+
+""".format(client_version=CLIENT_VERSION, bindings_version=BINDINGS_VERSION,
+           client_version_str='.'.join(str(vx) for vx in CLIENT_VERSION),
+           bindings_version_str='.'.join(str(vx) for vx in BINDINGS_VERSION),))
+    exit(1)
+
 import camera_config
 import config as c
 import deepdrive

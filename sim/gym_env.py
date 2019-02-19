@@ -97,8 +97,7 @@ class DeepDriveEnv(gym.Env):
         if not c.REUSE_OPEN_SIM:
             utils.download_sim()
 
-        self.client_version = pkg_resources.get_distribution("deepdrive").version
-        # TODO: Check with connection version
+        self.client_version = pkg_resources.get_distribution('deepdrive').version
 
         # collision detection  # TODO: Remove in favor of in-game detection
         self.set_forward_progress()
