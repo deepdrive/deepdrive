@@ -66,7 +66,7 @@ class DrivingStyle(Enum):
     especially if we can get dimensions for all the components of the reward. Also a novelty bonus on
     (observation,action) or (game-state,action) would be helpful most likely to avoid local minima.
     """
-    __order__ = 'CRUISING NORMAL LATE EMERGENCY CHASE STEER_ONLY'
+    __order__ = 'CRUISING NORMAL RL_1 LATE EMERGENCY CHASE STEER_ONLY'
     # TODO: Possibly assign function rather than just weights
     CRUISING   = RewardWeighting(speed=0.5, progress=0.0, gforce=2.00, lane_deviation=1.50, total_time=0.0)
     NORMAL     = RewardWeighting(speed=1.0, progress=0.0, gforce=1.00, lane_deviation=0.10, total_time=0.0)
