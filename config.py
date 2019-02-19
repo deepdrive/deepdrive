@@ -46,17 +46,18 @@ def _get_deepdrive_dir():
     else:
         default_dir = os.path.join(os.path.expanduser('~'), 'Deepdrive')
         ret = input('Where would you like to store Deepdrive files '
-                    '(i.e. sim binaries (1GB), checkpoints (200MB), recordings, and logs)? [Default - %s] ' % default_dir)
+                    '(i.e. sim binaries (1GB), checkpoints (200MB), recordings, and logs)? [Press Enter for %s] '
+                    % default_dir)
         deepdrive_dir_set = False
         while not deepdrive_dir_set:
             ret = ret or default_dir
             if 'deepdrive' not in ret.lower():
                 ret = os.path.join(ret, 'Deepdrive')
             if not os.path.isabs(ret):
-                ret = input('Path: %s is not absolute, please specify a different path [Default - %s] ' %
+                ret = input('Path: %s is not absolute, please specify a different path [Press Enter for %s] ' %
                             (ret, default_dir))
             if os.path.isfile(ret):
-                ret = input('Path: %s is already a file, please specify a different path [Default - %s] ' %
+                ret = input('Path: %s is already a file, please specify a different path [Press Enter for %s] ' %
                             (ret, default_dir))
             else:
                 deepdrive_dir_set = True
