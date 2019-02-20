@@ -95,7 +95,7 @@ class DeepDriveEnv(gym.Env):
         self.ego_mph = None  # type: float
 
         if not c.REUSE_OPEN_SIM:
-            utils.download_sim()
+            utils.ensure_sim()
 
         self.client_version = pkg_resources.get_distribution('deepdrive').version
 

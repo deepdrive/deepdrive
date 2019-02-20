@@ -297,7 +297,7 @@ def get_sim_bin_path(return_expected_path=False):
     expected_path = None
 
     def get_from_glob(search_path):
-        paths = glob.glob(search_path)
+        paths = glob.glob(search_path) or [search_path]
         if len(paths) > 1:
             log.warn('Found multiple sim binaries in search directory - picking the first from %r', paths)
         if not paths:
@@ -309,7 +309,7 @@ def get_sim_bin_path(return_expected_path=False):
     if c.REUSE_OPEN_SIM:
         return None
     elif c.IS_LINUX:
-        expected_path = c.SIM_PATH + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive*'
+        expected_path = c.SIM_PATH + '/DeepDrive/Binaries/Linux/DeepDrive'
     elif c.IS_MAC:
         raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
     elif c.IS_WINDOWS:
@@ -326,6 +326,7 @@ def get_sim_bin_path(return_expected_path=False):
     else:
         return ret
 
+
 def get_sim_project_dir():
     if c.REUSE_OPEN_SIM:
         path = input('What is the path to your simulator project directory?'
@@ -341,6 +342,7 @@ def get_sim_project_dir():
         raise RuntimeError('OS not recognized')
 
     return path
+
 
 def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors=True):
     def say(*args):
@@ -387,7 +389,7 @@ def get_latest_sim_file():
     return '/' + latest_sim_file
 
 
-def download_sim():
+def ensure_sim():
     actual_path, expected_path = get_sim_bin_path(return_expected_path=True)
     if actual_path is None:
         print('\n--------- Simulator not found in %s, downloading ----------' % expected_path)
@@ -401,10 +403,10 @@ def download_sim():
         else:
             raise NotImplementedError('Sim download not yet implemented for this OS')
     ensure_executable(get_sim_bin_path())
-    download_sim_python_binaries()
+    ensure_sim_python_binaries()
 
 
-def download_sim_python_binaries():
+def ensure_sim_python_binaries():
     base_url = c.BUCKET_URL + '/embedded_python_for_unreal/'
     if c.IS_WINDOWS:
         # These include Python and our requirements
