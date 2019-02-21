@@ -821,6 +821,8 @@ class DeepDriveEnv(gym.Env):
                 raise RuntimeError('Could not connect to Deepdrive simulation server')
             self._init_observation_space()
         else:
+            log.error('Invalid client_id of "%s". Expected a value greater than zero. Aborting connection',
+                      str(self.client_id))
             self.raise_connect_fail()
 
         if self.should_render:
@@ -904,7 +906,7 @@ class DeepDriveEnv(gym.Env):
     @staticmethod
     def raise_connect_fail():
         log.error('Environment connection failed')
-        if c.SIM_START_COMMAND:
+        if c.SIM_START_COMMAND or c.REUSE_OPEN_SIM:
             raise Exception('Could not connect to environment. You may need to close the Unreal Editor and/or turn off '
                             'saving CPU in background in the Editor preferences (search for CPU).')
         else:
