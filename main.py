@@ -4,37 +4,13 @@ import logging
 import os
 import traceback
 
-# Check Python binding version
-import pkg_resources
-from distutils.version import LooseVersion as semvar
-BINDINGS_VERSION = semvar(pkg_resources.get_distribution('deepdrive').version).version[:2]
-CLIENT_VERSION = semvar(open('VERSION').read()).version[:2]
-if BINDINGS_VERSION != CLIENT_VERSION:
-    print("""ERROR: Python bindings version mismatch. 
-    
-Expected {client_version_str}, got {bindings_version_str}
-
-HINT:
-
-For binary sim distributions, try:
-pip install package=={client_version_str}.*
-
-For source sim distributions, try:
-cd <your-sim-sources>/Plugins/DeepDrivePlugin/Source/DeepDrivePython
-python build/build.py --type dev
-
-""".format(client_version=CLIENT_VERSION, bindings_version=BINDINGS_VERSION,
-           client_version_str='.'.join(str(vx) for vx in CLIENT_VERSION),
-           bindings_version_str='.'.join(str(vx) for vx in BINDINGS_VERSION),))
-    exit(1)
-
 import camera_config
 import config as c
-import deepdrive
 from agents.dagger import net
 from agents.dagger.agent import ensure_mnet2_baseline_weights
 from agents.dagger.train import hdf5_to_tfrecord
 from sim.driving_style import DrivingStyle
+import sim
 import logs
 log = logs.get_log(__name__)
 
@@ -169,7 +145,7 @@ def run_path_follower(args, driving_style, camera_rigs):
         cams = camera_rigs
         if isinstance(camera_rigs[0], list):
             cams = cams[0]
-        gym_env = deepdrive.start(experiment=args.experiment, env_id=args.env_id, fps=args.fps,
+        gym_env = sim.start(experiment=args.experiment, env_id=args.env_id, fps=args.fps,
                                   driving_style=driving_style, is_remote_client=args.is_remote_client,
                                   render=args.render, cameras=cams, enable_traffic=args.enable_traffic,
                                   ego_mph=args.ego_mph)
@@ -178,7 +154,7 @@ def run_path_follower(args, driving_style, camera_rigs):
             if done:
                 gym_env.reset()
             while True:
-                action = deepdrive.action(has_control=False)
+                action = sim.action(has_control=False)
                 obz, reward, done, _ = gym_env.step(action)
                 if done:
                     gym_env.reset()

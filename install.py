@@ -31,6 +31,7 @@ def run_command_async(cmd, throw=True):
         if throw:
             raise RuntimeError('Command failed, see above')
 
+
 def run_command_no_deps(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors=True):
     def say(*args):
         if verbose:
@@ -73,7 +74,6 @@ def main():
 
     # Install sarge to nicely stream commands
     run_command_no_deps(py + ' -m pip install sarge', verbose=True)
-
 
     if 'ubuntu' in platform.platform().lower() and not is_docker():
         # Install tk for dashboard

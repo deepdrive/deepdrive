@@ -8,8 +8,8 @@ import tensorflow as tf
 import numpy as np
 from gym import spaces
 
-import deepdrive
 import config as c
+import sim
 from agents.common import get_throttle
 from agents.dagger.agent import Agent
 from agents.dagger.net import MOBILENET_V2_NAME
@@ -103,9 +103,9 @@ def run(env_id, bootstrap_net_path,
         sess_1 = tf.Session(config=tf_config)
 
         with sess_1.as_default():
-            dagger_gym_env = deepdrive.start(experiment=experiment, env_id=env_id, cameras=camera_rigs, render=render, fps=fps,
-                                             combine_box_action_spaces=True, is_sync=is_sync,
-                                             driving_style=driving_style, is_remote_client=is_remote_client)
+            dagger_gym_env = sim.start(experiment=experiment, env_id=env_id, cameras=camera_rigs, render=render,
+                                       fps=fps, combine_box_action_spaces=True, is_sync=is_sync,
+                                       driving_style=driving_style, is_remote_client=is_remote_client)
 
             dagger_agent = Agent(sess_1, should_jitter_actions=False, should_record=should_record,
                                  net_path=bootstrap_net_path, output_last_hidden=True, net_name=MOBILENET_V2_NAME)

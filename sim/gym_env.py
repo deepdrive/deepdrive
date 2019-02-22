@@ -1,6 +1,10 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+
+from sim.check_bindings_version import check_bindings_version
+check_bindings_version()
+
 import traceback
 
 from future.builtins import (int, open, round,

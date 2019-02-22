@@ -8,9 +8,9 @@ from gym import spaces
 
 import logs
 
-import deepdrive
 import config as c
 import api.methods as m
+import sim
 
 log = logs.get_log(__name__)
 
@@ -60,7 +60,7 @@ class Server(object):
                     for key in list(kwargs):
                         if key not in allowed_args:
                             del kwargs[key]
-                    self.env = deepdrive.start(**kwargs)
+                    self.env = sim.start(**kwargs)
                 elif method == m.STEP:
                     resp = self.env.step(args[0])
                 elif method == m.RESET:

@@ -10,7 +10,7 @@ import numpy as np
 from simple_pid import PID
 
 import config as c
-import deepdrive
+import sim
 import utils
 from agents.common import get_throttle
 from agents.dagger import net
@@ -521,7 +521,7 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follo
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
 
     def start_env():
-        return deepdrive.start(experiment=experiment, env_id=env_id, should_benchmark=should_benchmark,
+        return sim.start(experiment=experiment, env_id=env_id, should_benchmark=should_benchmark,
                                cameras=cameras,
                                use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
                                driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False,
