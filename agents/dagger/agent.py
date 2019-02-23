@@ -240,7 +240,7 @@ class Agent(object):
 
         # desired_throttle = desired_throttle * 1.1
 
-        action = Action(desired_steering, desired_throttle)
+        action = Action(smoothed_steering, desired_throttle)
         return action
 
     def maybe_save(self):
