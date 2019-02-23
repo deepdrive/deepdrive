@@ -16,7 +16,7 @@ enum34
 gputil
 joblib
 cloudpickle
-pyarrow
+pyarrow>=0.12.0
 pyglet
 six
 flask
