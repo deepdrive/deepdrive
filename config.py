@@ -144,13 +144,13 @@ else:
     SIM_START_COMMAND = None
 
 def get_sim_path():
-    sim_path = os.path.join(DEEPDRIVE_DIR, 'sim')
-    paths = glob(os.path.join(
-        sim_path + 'deepdrive-sim-*-%s.*' % MAJOR_MINOR_VERSION))
-    if paths:
-        return list(sorted(paths))[-1]
+    orig_path = os.path.join(DEEPDRIVE_DIR, 'sim')
+    version_paths = glob(os.path.join(DEEPDRIVE_DIR, 'deepdrive-sim-*-%s.*' % MAJOR_MINOR_VERSION))
+    if version_paths:
+        return list(sorted(version_paths))[-1]
     else:
-        return sim_path
+        return orig_path
+
 REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
 SIM_PATH = get_sim_path()
 
