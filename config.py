@@ -1,11 +1,14 @@
 import random
 import os
 import sys
-import glob
+from glob import glob
+from distutils.version import LooseVersion as semvar
+
 
 from datetime import datetime
 import numpy as np
 from gym.utils import seeding
+
 
 # General
 CONTROL_NAMES = ['spin', 'direction', 'speed', 'speed_change', 'steering', 'throttle']
@@ -30,6 +33,12 @@ IS_LINUX = sys.platform == 'linux' or sys.platform == 'linux2'
 IS_MAC = sys.platform == 'darwin'
 IS_UNIX = IS_LINUX or IS_MAC or 'bsd' in sys.platform.lower()
 IS_WINDOWS = sys.platform == 'win32'
+if IS_WINDOWS:
+    OS_NAME = 'windows'
+elif IS_LINUX:
+    OS_NAME = 'linux'
+else:
+    raise RuntimeError('Unexpected OS')
 
 # AGENTS
 DAGGER = 'dagger'
@@ -74,7 +83,7 @@ def _ensure_python_bin_config():
     with open(py_bin, 'w') as _dpbf:
         _dpbf.write(sys.executable)
 
-
+# Directories
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 DEEPDRIVE_DIR = os.environ.get('DEEPDRIVE_DIR')
 DEEPDRIVE_CONFIG_DIR = os.path.expanduser('~') + '/.deepdrive'
@@ -82,6 +91,11 @@ os.makedirs(DEEPDRIVE_CONFIG_DIR, exist_ok=True)
 if DEEPDRIVE_DIR is None:
     DEEPDRIVE_DIR = _get_deepdrive_dir()
 _ensure_python_bin_config()
+
+# Version
+VERSION_STR = open(os.path.join(ROOT_DIR, 'VERSION')).read()
+MAJOR_MINOR_VERSION = semvar(VERSION_STR).version[:2]
+MAJOR_MINOR_VERSION_STR = '.'.join(str(vx) for vx in MAJOR_MINOR_VERSION)
 
 # Data and log directories
 DIR_DATE_FORMAT = '%Y-%m-%d__%I-%M-%S%p'
@@ -116,6 +130,7 @@ ALEXNET_PRETRAINED_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, ALEXNET_PRETRAINED_NAM
 MNET2_PRETRAINED_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, MNET2_PRETRAINED_NAME)
 MNET2_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/mnet2_baseline_weights.zip'
 PPO_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/ppo_baseline_agent_weights.zip'
+SIM_PREFIX = 'deepdrive-sim-' + OS_NAME
 
 # Seeded random number generator for reproducibility
 RNG_SEED = 0
@@ -128,8 +143,16 @@ if 'DEEPDRIVE_SIM_START_COMMAND' in os.environ:
 else:
     SIM_START_COMMAND = None
 
+def get_sim_path():
+    sim_path = os.path.join(DEEPDRIVE_DIR, 'sim')
+    paths = glob(os.path.join(
+        sim_path + 'deepdrive-sim-*-%s.*' % MAJOR_MINOR_VERSION))
+    if paths:
+        return list(sorted(paths))[-1]
+    else:
+        return sim_path
 REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
-SIM_PATH = os.path.join(DEEPDRIVE_DIR, 'sim')
+SIM_PATH = get_sim_path()
 
 DEFAULT_CAM = dict(name='forward cam 227x227 60 FOV', field_of_view=60, capture_width=227, capture_height=227,
                    relative_position=[150, 1.0, 200],

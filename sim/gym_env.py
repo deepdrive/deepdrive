@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import shutil
 
 from sim.check_bindings_version import check_bindings_version
 check_bindings_version()
@@ -191,6 +192,7 @@ class DeepDriveEnv(gym.Env):
 
     def close_sim(self):
         log.info('Closing sim')
+        self.connection_props = None
         process_to_kill = self.sim_process
         if process_to_kill is not None:
             utils.kill_process(process_to_kill)
@@ -795,21 +797,38 @@ class DeepDriveEnv(gym.Env):
 
     def check_version(self):
         self.client_id = self.connection_props['client_id']
-        server_version = self.connection_props['server_protocol_version']
-        if not server_version:
+        server_version_str = self.connection_props['server_protocol_version']
+        if not server_version_str:
             log.warn('Server version not reported. Can not check version compatibility.')
         else:
-            server_version = semvar(server_version).version
+            server_version = semvar(server_version_str).version
             # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
             #   connecting, compute same hash and compare. (Need to figure out what to do on dev packaged version as
             #   files may change - maybe ignore as it's uncommon).
             #   Currently, we timestamp the build, and set that as the version in the extension. This is fine unless
             #   you change shared code and build the extension only, then the versions won't change, and you could
             #   see incompatibilities.
-            if semvar(self.client_version).version[:2] != server_version[:2]:
-                raise RuntimeError(
-                    'Server and client major/minor version do not match - server is %s and client is %s' %
-                    (server_version, self.client_version))
+            if c.MAJOR_MINOR_VERSION != server_version[:2]:
+                self.deal_with_server_version_mismatch(server_version_str)
+                return False
+        return True
+
+    def deal_with_server_version_mismatch(self, server_version_str):
+        self.close_sim()
+        log.error(
+            'Server client version mismatch server@%s client@%s - closed sim' %
+            (server_version_str, self.client_version))
+        sim_url = utils.get_sim_url()
+        if sim_url:
+            answer = input('We\'ve found a version of the sim which matches your client. Would you like'
+                           ' to download it now? [y/n] ')
+            if answer.lower().strip() == 'y':
+                backup_dir = os.path.join(
+                    c.DEEPDRIVE_DIR, '%s-%s' % (c.SIM_PREFIX, server_version_str))
+                log.warn('Backing up old sim to %s', backup_dir)
+                shutil.move(c.SIM_PATH, backup_dir)
+                utils.ensure_sim()
+                self.open_sim()
 
     def connect(self, cameras=None):
         self._connect_with_retries()

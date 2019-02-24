@@ -298,18 +298,22 @@ def get_sim_bin_path(return_expected_path=False):
 
     def get_from_glob(search_path):
         paths = glob.glob(search_path) or [search_path]
+        paths = [p for p in paths if not (p.endswith('.debug') or p.endswith('.sym'))]
         if len(paths) > 1:
             log.warn('Found multiple sim binaries in search directory - picking the first from %r', paths)
         if not paths:
-            ret = None
+            ret_path = None
         else:
-            ret = paths[0]
-        return ret
+            ret_path = paths[0]
+        return ret_path
 
     if c.REUSE_OPEN_SIM:
         return None
     elif c.IS_LINUX:
-        expected_path = c.SIM_PATH + '/DeepDrive/Binaries/Linux/DeepDrive'
+        if os.path.exists(c.SIM_PATH + '/LinuxNoEditor'):
+            expected_path = c.SIM_PATH + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive*'
+        else:
+            expected_path = c.SIM_PATH + '/DeepDrive/Binaries/Linux/DeepDrive'
     elif c.IS_MAC:
         raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
     elif c.IS_WINDOWS:
@@ -368,19 +372,11 @@ def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors
     return result, process.returncode
 
 
-def get_latest_sim_file():
-    if c.IS_WINDOWS:
-        os_name = 'windows'
-    elif c.IS_LINUX:
-        os_name = 'linux'
-    else:
-        raise RuntimeError('Unexpected OS')
-    sim_prefix = 'sim/deepdrive-sim-'
+def get_sim_url():
+    sim_prefix = 'sim/' + c.SIM_PREFIX
     conn = S3Connection(anon=True)
     bucket = conn.get_bucket('deepdrive')
-    deepdrive_version = pkg_resources.get_distribution('deepdrive').version
-    major_minor = deepdrive_version[:deepdrive_version.rindex('.')]
-    bucket_search_str = sim_prefix + os_name + '-' + major_minor
+    bucket_search_str = sim_prefix + '-' + c.MAJOR_MINOR_VERSION_STR
     sim_versions = list(bucket.list(bucket_search_str))
     if not sim_versions:
         raise RuntimeError('Could not find a sim version matching %s in bucket %s' % (bucket_search_str, c.BUCKET_URL))
@@ -396,9 +392,10 @@ def ensure_sim():
         if c.IS_LINUX or c.IS_WINDOWS:
             if os.environ.get('SIM_URL', 'latest') == 'latest':
                 log.info('Downloading latest sim')
-                url = c.BUCKET_URL + get_latest_sim_file()
+                url = c.BUCKET_URL + get_sim_url()
             else:
                 url = os.environ['SIM_URL']
+            c.SIM_PATH = os.path.join(c.DEEPDRIVE_DIR, url.split('/')[-1][:-4])
             download(url, c.SIM_PATH, warn_existing=False, overwrite=False)
         else:
             raise NotImplementedError('Sim download not yet implemented for this OS')
@@ -504,9 +501,8 @@ def kill_process(process_to_kill):
 if __name__ == '__main__':
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
     # read_hdf5_manual()
-    # download_sim()
-    # download_sim_python()
+    # ensure_sim()
     # save_random_hdf5_to_png()
     # assert_disk_space(r'C:\Users\a\DeepDrive\recordings\2018-11-03__12-29-33PM\0000000143.hdf5')
     # assert_disk_space('/media/a/data-ext4/deepdrive-data/v2.1/asdf.hd5f')
-    print(get_latest_sim_file())
+    print(get_sim_url())
