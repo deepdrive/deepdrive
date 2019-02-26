@@ -4,7 +4,10 @@ import logging
 import os
 import traceback
 
-import camera_config
+# noinspection PyUnresolvedReferences
+import config.check_bindings
+
+from config import camera_config
 import config as c
 from agents.dagger import net
 from agents.dagger.agent import ensure_mnet2_baseline_weights

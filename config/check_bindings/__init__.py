@@ -1,12 +1,7 @@
-import os
-
 import pkg_resources
 from distutils.version import LooseVersion as semvar
 
 import config as c
-
-
-DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 def check_bindings_version():
@@ -30,6 +25,10 @@ python build/build.py --type dev
            client_version_str='.'.join(str(vx) for vx in client_version),
            bindings_version_str='.'.join(str(vx) for vx in bindings_version), ))
         exit(1)
+
+
+check_bindings_version()
+
 
 if __name__ == '__main__':
     print(c.MAJOR_MINOR_VERSION)

@@ -1,14 +1,20 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
+from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
+                             int, map, next, oct, open, pow, range, round,
+                             str, super, zip)
 import random
 import os
 import sys
 from glob import glob
-from distutils.version import LooseVersion as semvar
 
+from config.directories import *
 
-from datetime import datetime
 import numpy as np
 from gym.utils import seeding
 
+import config.version
 
 # General
 CONTROL_NAMES = ['spin', 'direction', 'speed', 'speed_change', 'steering', 'throttle']
@@ -46,68 +52,6 @@ DAGGER_MNET2 = 'dagger_mobilenet_v2'
 BOOTSTRAPPED_PPO2 = 'bootstrapped_ppo2'
 
 
-# DEEPDRIVE_DIR
-def _get_deepdrive_dir():
-    dir_config_file = os.path.join(DEEPDRIVE_CONFIG_DIR, 'deepdrive_dir')
-    if os.path.exists(dir_config_file):
-        with open(dir_config_file) as dcf:
-            ret = dcf.read()
-    else:
-        default_dir = os.path.join(os.path.expanduser('~'), 'Deepdrive')
-        ret = input('Where would you like to store Deepdrive files '
-                    '(i.e. sim binaries (1GB), checkpoints (200MB), recordings, and logs)? [Press Enter for %s] '
-                    % default_dir)
-        deepdrive_dir_set = False
-        while not deepdrive_dir_set:
-            ret = ret or default_dir
-            if 'deepdrive' not in ret.lower():
-                ret = os.path.join(ret, 'Deepdrive')
-            if not os.path.isabs(ret):
-                ret = input('Path: %s is not absolute, please specify a different path [Press Enter for %s] ' %
-                            (ret, default_dir))
-            if os.path.isfile(ret):
-                ret = input('Path: %s is already a file, please specify a different path [Press Enter for %s] ' %
-                            (ret, default_dir))
-            else:
-                deepdrive_dir_set = True
-        with open(dir_config_file, 'w') as dcf:
-            dcf.write(ret)
-            print('%s written to %s' % (ret, dir_config_file))
-    ret = ret.replace('\r', '').replace('\n', '')
-    os.makedirs(ret, exist_ok=True)
-    return ret
-
-
-def _ensure_python_bin_config():
-    py_bin = os.path.join(DEEPDRIVE_CONFIG_DIR, 'python_bin')
-    with open(py_bin, 'w') as _dpbf:
-        _dpbf.write(sys.executable)
-
-# Directories
-ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
-DEEPDRIVE_DIR = os.environ.get('DEEPDRIVE_DIR')
-DEEPDRIVE_CONFIG_DIR = os.path.expanduser('~') + '/.deepdrive'
-os.makedirs(DEEPDRIVE_CONFIG_DIR, exist_ok=True)
-if DEEPDRIVE_DIR is None:
-    DEEPDRIVE_DIR = _get_deepdrive_dir()
-_ensure_python_bin_config()
-
-# Version
-VERSION_STR = open(os.path.join(ROOT_DIR, 'VERSION')).read()
-MAJOR_MINOR_VERSION = semvar(VERSION_STR).version[:2]
-MAJOR_MINOR_VERSION_STR = '.'.join(str(vx) for vx in MAJOR_MINOR_VERSION)
-
-# Data and log directories
-DIR_DATE_FORMAT = '%Y-%m-%d__%I-%M-%S%p'
-DATE_STR = datetime.now().strftime(DIR_DATE_FORMAT)
-RECORDING_DIR = os.environ.get('DEEPDRIVE_RECORDING_DIR') or os.path.join(DEEPDRIVE_DIR, 'recordings')
-GYM_DIR = os.path.join(DEEPDRIVE_DIR, 'gym')
-LOG_DIR = os.path.join(DEEPDRIVE_DIR, 'log')
-RESULTS_DIR = os.path.join(ROOT_DIR, 'results')
-TENSORFLOW_OUT_DIR = os.path.join(DEEPDRIVE_DIR, 'tensorflow')
-WEIGHTS_DIR = os.path.join(DEEPDRIVE_DIR, 'weights')
-BASELINES_DIR = os.path.join(DEEPDRIVE_DIR, 'baselines_results')
-
 # Weights
 ALEXNET_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'baseline_agent_weights')
 ALEXNET_BASELINE_WEIGHTS_VERSION = 'model.ckpt-143361'
@@ -143,9 +87,11 @@ if 'DEEPDRIVE_SIM_START_COMMAND' in os.environ:
 else:
     SIM_START_COMMAND = None
 
+
 def get_sim_path():
     orig_path = os.path.join(DEEPDRIVE_DIR, 'sim')
-    version_paths = glob(os.path.join(DEEPDRIVE_DIR, 'deepdrive-sim-*-%s.*' % MAJOR_MINOR_VERSION))
+    version_paths = glob(os.path.join(DEEPDRIVE_DIR, 'deepdrive-sim-*-%s.*' % config.version.MAJOR_MINOR_VERSION_STR))
+    version_paths = [vp for vp in version_paths if not vp.endswith('.zip')]
     if version_paths:
         return list(sorted(version_paths))[-1]
     else:
