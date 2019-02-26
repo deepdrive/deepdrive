@@ -81,6 +81,16 @@ def main():
 
     run_command_async(py + ' -m pip install -r requirements.txt')
 
+    # Create deepdrive directory
+    import config as c
+
+    # Install correct version of the python bindings
+    run_command_async(py + ' -m pip install "deepdrive > {major_minor_version}.*dev0"'.format(
+        major_minor_version=c.MAJOR_MINOR_VERSION_STR))
+
+    # noinspection PyUnresolvedReferences
+    import config.check_bindings
+
     print("""
    ___                  __    _            
   / _ \___ ___ ___  ___/ /___(_)  _____    
@@ -90,12 +100,14 @@ def main():
  / __/ -_) _ `/ _  / // /                  
 /_/  \__/\_,_/\_,_/\_, /                   
                   /___/            
-    """)  #  http://patorjk.com/software/taag/#p=display&f=Small%20Slant&t=Deepdrive%0AInstall%0AComplete
+    """)
+    # Gen: https://bit.ly/2SrCVFO
 
 
 def get_tf_valid():
     error_msg = '\n\n*** Warning: %s, baseline imitation learning agent will not be available. ' \
-                'HINT: Install Tensorflow or use the python / virtualenv you have it already installed to. If you install, check out our Tensorflow install tips on the README ' \
+                'HINT: Install Tensorflow or use the python / virtualenv you have it already installed to. ' \
+                'If you install, check out our Tensorflow install tips on the README ' \
                 '\n\n'
 
     print('Checking for valid Tensorflow installation')
