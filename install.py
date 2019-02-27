@@ -85,6 +85,7 @@ def main():
     import config as c
 
     # Install correct version of the python bindings
+    # TODO: Remove dev0 once 3.0 is stable
     run_command_async(py + ' -m pip install "deepdrive > {major_minor_version}.*dev0"'.format(
         major_minor_version=c.MAJOR_MINOR_VERSION_STR))
 
