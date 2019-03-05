@@ -1,5 +1,5 @@
 scipy
-numpy>=1.14.0
+numpy>=1.16.1
 h5py
 gym==0.10.0
 arrow
@@ -22,3 +22,5 @@ flask
 cherrypy
 paste
 simple-pid
+
+# The deepdrive bindings are installed via install.py according to the VERSION file in this repo
