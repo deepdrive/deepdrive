@@ -66,3 +66,4 @@ RESULTS_DIR = os.path.join(ROOT_DIR, 'results')
 TENSORFLOW_OUT_DIR = os.path.join(DEEPDRIVE_DIR, 'tensorflow')
 WEIGHTS_DIR = os.path.join(DEEPDRIVE_DIR, 'weights')
 BASELINES_DIR = os.path.join(DEEPDRIVE_DIR, 'baselines_results')
+TFRECORD_DIR_SUFFIX = '_tfrecords'
