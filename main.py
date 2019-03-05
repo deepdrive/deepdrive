@@ -96,7 +96,7 @@ def main():
         logs.set_level(logging.DEBUG)
 
     if args.hdf5_2_tfrecord:
-        hdf5_to_tfrecord.encode(hdf5_path=args.recording_dir)
+        hdf5_to_tfrecord.encode(hdf5_path=args.recording_dir, experiment=args.experiment)
         return
 
     if args.camera_rigs:
