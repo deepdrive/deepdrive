@@ -128,14 +128,20 @@ def save_tfrecord_file(file_idx, filename, images, targets):
 
 
 # TODO: See whether HDF5 images have negative, mean subtracted values. If so, it must be the tf record process that gets rid of those
-def encode(parallelize=True, hdf5_path=c.RECORDING_DIR):
+def encode(parallelize=True, hdf5_path=c.RECORDING_DIR, experiment=None):
     # TODO: Get a couple separate hdf5 files from different situations / view modes for eval
     train_dataset = get_dataset(hdf5_path, train=True)
     eval_dataset = get_dataset(hdf5_path, train=False)
     buffer_size = 1000
     utils.assert_disk_space(hdf5_path)
-    out_path = os.path.join(hdf5_path, 'tfrecords')
-    os.makedirs(out_path, exist_ok=True)
+    while experiment is None:
+        experiment = utils.get_valid_filename(input('Enter a name for your dataset: '))
+        out_path = os.path.join(hdf5_path, experiment + c.TFRECORD_DIR_SUFFIX)
+        if os.path.exists(out_path):
+            print('The path %s exists, please choose a new name.' % out_path)
+            experiment = None
+
+    os.makedirs(out_path)
     save_dataset(train_dataset, buffer_size, filename=os.path.join(out_path, 'deepdrive_train'),
                  parallelize=parallelize, out_path=out_path)
     save_dataset(eval_dataset, buffer_size, filename=os.path.join(out_path, 'deepdrive_eval'),
