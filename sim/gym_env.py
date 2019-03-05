@@ -619,7 +619,7 @@ class DeepDriveEnv(gym.Env):
             writer.writerow(['low score', low])
             writer.writerow(['env', self.spec.id])
             writer.writerow(['cmd args', ', '.join(sys.argv[1:])])
-            writer.writerow(['py args', str(vars(c.PY_ARGS))])
+            writer.writerow(['py args', str(vars(c.PY_ARGS) if c.PY_ARGS else '')])
             writer.writerow(['git commit', '@' + self.git_commit])
             writer.writerow(['git diff', diff_filename])
             writer.writerow(['experiment name', self.experiment or 'n/a'])
