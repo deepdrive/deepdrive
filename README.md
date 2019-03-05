@@ -199,3 +199,4 @@ You may need to disable secure boot in your BIOS in order for NVIDIA’s OpenGL 
 To run tests in PyCharm, go to File | Settings | Tools | Python Integrated Tools and change the default test runner 
 to py.test.
 
+Also, disable SciView per [this answer](https://stackoverflow.com/a/48421532/134077).
