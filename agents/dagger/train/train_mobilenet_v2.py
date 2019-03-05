@@ -25,23 +25,35 @@ log = logs.get_log(__name__)
 
 IMG_SIZE = 224
 
-def train_mobile_net(data_dir, resume_dir=None):
+
+TRAIN_ARG_COLLECTIONS = dict(
+    viewmode_simple=dict(
+        fine_tune_all_layers=dict(
+            max_number_of_steps=10**5,
+        )
+    )
+)
+
+
+def train_mobile_net(data_dir, resume_dir=None, train_args_collection_name=None):
+    """# Should see eval steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2,
+    train steering error: ~0.08"""
+
     if not get_tf_valid():
         raise RuntimeError('Invalid Tensorflow version detected. See above for details.')
 
-    """# Should see eval steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2, 
-    train steering error: ~0.08"""
+    train_args = TRAIN_ARG_COLLECTIONS.get(train_args_collection_name, {})
 
     if not os.path.exists(c.MNET2_PRETRAINED_PATH + '.meta'):
         utils.download(c.MNET2_PRETRAINED_URL + '?cache_bust=1', c.WEIGHTS_DIR, warn_existing=False, overwrite=True)
 
     if not glob.glob(data_dir + '/*.tfrecord'):
         if glob.glob(data_dir + '/*/*.hdf5'):
-            log.warn('No tfrecords in %s - Run main.py --hdf5-2-tfrecord --data-dir="%s" to convert hdf5 records' %
-                     (data_dir, data_dir))
+            raise RuntimeError(
+                'No tfrecords in %s - Run main.py --hdf5-2-tfrecord --recording-dir="%s" to convert hdf5 records' %
+                (data_dir, data_dir))
         else:
             raise RuntimeError('No tfrecords found in %s - aborting' % data_dir)
-
 
     # Execute sessions in separate processes to ensure Tensorflow cleans up nicely
     # Without this, fine_tune_all_layers would crash towards the end with
@@ -50,13 +62,14 @@ def train_mobile_net(data_dir, resume_dir=None):
     if resume_dir is None:
         train_dir = datetime.now().strftime(os.path.join(c.TENSORFLOW_OUT_DIR, '%Y-%m-%d__%I-%M-%S%p'))
         print('train_dir is ', train_dir)
-        isolate_in_process(fine_tune_new_layers, args=(data_dir, train_dir))
+        isolate_in_process(fine_tune_new_layers, args=(data_dir, train_dir,
+                                                       train_args.get('fine_tune_new_layers', None)))
         isolate_in_process(eval_mobile_net, args=(data_dir,))
     else:
         train_dir = resume_dir  # TODO: Fix MNET2/tf-slim issue resuming with train_dir
         print('resume_dir is ', resume_dir)
 
-    isolate_in_process(fine_tune_all_layers, args=(data_dir, train_dir))
+    isolate_in_process(fine_tune_all_layers, args=(data_dir, train_dir, train_args.get('fine_tune_all_layers', None)))
     isolate_in_process(eval_mobile_net, args=(data_dir,))
     log.info('Finished training')
 
@@ -81,8 +94,8 @@ def isolate_in_process(target, args):
         """)
 
 
-def fine_tune_new_layers(data_dir, train_dir):
-    slim_train_image_nn(
+def fine_tune_new_layers(data_dir, train_dir, train_args=None):
+    args = dict(
         dataset_name='deepdrive',
         dataset_split_name='train',
         train_dir=train_dir,
@@ -101,10 +114,13 @@ def fine_tune_new_layers(data_dir, train_dir):
         log_every_n_steps=20,
         optimizer='rmsprop',
         weight_decay=0.00004)
+    if train_args is not None:
+        args.update(train_args)
+    slim_train_image_nn(**args)
 
 
-def fine_tune_all_layers(data_dir, train_dir):
-    slim_train_image_nn(
+def fine_tune_all_layers(data_dir, train_dir, train_args=None):
+    args = dict(
         dataset_name='deepdrive',
         checkpoint_path=train_dir,
         dataset_split_name='train',
@@ -120,6 +136,9 @@ def fine_tune_all_layers(data_dir, train_dir):
         log_every_n_steps=20,
         optimizer='rmsprop',
         weight_decay=0.00004)
+    if train_args is not None:
+        args.update(train_args)
+    slim_train_image_nn(**args)
 
 
 def eval_mobile_net(data_dir):

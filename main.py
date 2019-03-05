@@ -81,6 +81,8 @@ def main():
     parser.add_argument('-v', '--verbose', help='Increase output verbosity',
                         action='store_true')
     parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
+    parser.add_argument('--train-args-collection', nargs='?', default=None, help='Name of the set of training args to '
+                                                                                'use')
     parser.add_argument('--experiment', nargs='?', default=None, help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
     parser.add_argument('--ego-mph', type=float, default=25, help='Ego (i.e. main) agent vehicle miles per hour')
@@ -187,7 +189,7 @@ def train_agent(args, driving_style):
         from agents.dagger.train import train
         train.run(resume_dir=args.resume_train, data_dir=args.recording_dir, agent_name=args.agent,
                   overfit=args.overfit, eval_only=args.eval_only, tf_debug=args.tf_debug,
-                  freeze_pretrained=args.freeze_pretrained)
+                  freeze_pretrained=args.freeze_pretrained, train_args_collection_name=args.train_args_collection)
     elif args.agent == 'bootstrapped_ppo2':
         from agents.bootstrap_rl.train import train
         net_path = args.net_path

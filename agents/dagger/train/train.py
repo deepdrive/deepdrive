@@ -51,7 +51,7 @@ def visualize_gradients(grads_and_vars):
 
 
 def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=False, eval_only=False, tf_debug=False,
-        freeze_pretrained=False):
+        freeze_pretrained=False, train_args_collection_name=None):
     show_tfboard_hint()
     if agent_name == c.DAGGER_MNET2:
         tfrecord_dirs = glob.glob(data_dir + '/*' + c.TFRECORD_DIR_SUFFIX)
@@ -72,7 +72,7 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
         if eval_only:
             eval_mobile_net(data_dir)
         else:
-            train_mobile_net(data_dir, resume_dir)
+            train_mobile_net(data_dir, resume_dir, train_args_collection_name)
     else:
         custom_train_loop(agent_name, data_dir, eval_only, freeze_pretrained, overfit, resume_dir, tf_debug)
 
