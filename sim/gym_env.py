@@ -107,7 +107,7 @@ class DeepDriveEnv(gym.Env):
         self.set_forward_progress()
 
         self.distance_along_route = 0  # type: float
-        self.start_distance_along_route = 0  # type: float
+        self.start_distance_along_route = None  # type: float
         self.previous_distance_along_route = 0  # type: float
 
         # reward
@@ -471,7 +471,12 @@ class DeepDriveEnv(gym.Env):
     def get_progress_and_speed_reward(self, obz, time_passed, gforce_penalty, lane_deviation_penalty):
         progress_reward = speed_reward = 0
         if 'distance_along_route' in obz:
-            dist = obz['distance_along_route'] - self.start_distance_along_route
+            if self.start_distance_along_route is None:
+                self.start_distance_along_route = obz['distance_along_route']
+            if obz['distance_along_route'] < self.start_distance_along_route:
+                dist = (obz['route_length'] - self.start_distance_along_route) + obz['distance_along_route']
+            else:
+                dist = obz['distance_along_route'] - self.start_distance_along_route
             progress = dist - self.distance_along_route
             if self.distance_along_route:
                 self.previous_distance_along_route = self.distance_along_route
@@ -647,7 +652,7 @@ class DeepDriveEnv(gym.Env):
         self.step_num = 0
         self.distance_along_route = 0
         self.previous_distance_along_route = 0
-        self.start_distance_along_route = 0
+        self.start_distance_along_route = None
         self.prev_step_time = None
         self.score = Score()
         self.start_time = time.time()
