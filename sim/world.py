@@ -9,7 +9,7 @@ import deepdrive_simulation
 
 import logs
 import config as c
-from sim.lambda_client import eval_in_unreal
+from sim.lambda_client import rpc
 
 log = logs.get_log(__name__)
 
@@ -43,8 +43,8 @@ def randomize_sun_month():
 
 
 def reset(enable_traffic=False):
-    return eval_in_unreal('reset', enable_traffic=enable_traffic)
+    return rpc('reset', enable_traffic=enable_traffic)
 
 
 def set_ego_mph(min_mph, max_mph):
-    return eval_in_unreal('set_ego_mph', min_mph=min_mph, max_mph=max_mph)
+    return rpc('set_ego_mph', min_mph=min_mph, max_mph=max_mph)

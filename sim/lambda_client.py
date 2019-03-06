@@ -48,7 +48,7 @@ class LambdaClient(object):
         self.create_socket()
         # self._send(m.START, kwargs=kwargs)
 
-    def eval(self, method, *args, **kwargs):
+    def call(self, method, *args, **kwargs):
         """
         Eval expressions against Unreal Python API
         :param method API method to execute
@@ -92,22 +92,24 @@ class LambdaClient(object):
         self.socket.close()
 
 # TODO: Don't use a global singleton client
-client = None
+CLIENT = None
 
 
-def eval_in_unreal(expression_str, *args, **kwargs):
-    global client
-    if client is None:
-        client = LambdaClient()
+def rpc(method_name, *args, **kwargs):
+    """Calls a method defined via api_methods.py in deepdrive-sim and run via the UnrealEnginePython
+    embedded python interpreter"""
+    global CLIENT
+    if CLIENT is None:
+        CLIENT = LambdaClient()
 
-    return client.eval(expression_str, *args, **kwargs)
+    return CLIENT.call(method_name, *args, **kwargs)
 
 
 def main():
-    answer = eval_in_unreal('get_42')
+    answer = rpc('get_42')
     print('UnrealEnginePython evaluated answer to ', answer)
 
-    answer = eval_in_unreal('get_world')
+    answer = rpc('get_world')
     print('UnrealEnginePython evaluated answer to ', answer)
 
 
