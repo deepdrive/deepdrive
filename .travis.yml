@@ -10,4 +10,4 @@ install:
   - pip install --verbose -r requirements.txt
   - python install.py
 script:
-  - DEEPDRIVE_DIR=/tmp/testdeepdrive pytest tests/test_sanity.py
+  - DEEPDRIVE_DIR=/tmp/testdeepdrive pytest tests/unit_tests/test_sanity.py
