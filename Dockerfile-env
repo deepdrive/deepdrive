@@ -1,12 +1,17 @@
 # Requires NVIDIA drivers 390+
 #
 # Build (automated on dockerhub, so just use for local testing, don't push):
-# docker build -t deepdriveio/deepdrive:env-2.1 -f Dockerfile-env .
+#
+# VERSION=`cat VERSION | sed 's/ //g'`
+# docker build --build-arg version=$VERSION -t deepdriveio/deepdrive:env-$VERSION -f Dockerfile-env .
 #
 # Usage:
-# docker run -it --net=host --runtime=nvidia deepdriveio/deepdrive:env-2.1
+# VERSION=`cat VERSION | sed 's/ //g'`
+# docker run -it --net=host --runtime=nvidia deepdriveio/deepdrive:env-$VERSION
 
 FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04
+
+ARG version=3.0
 
 RUN apt-get update;
 
@@ -18,7 +23,7 @@ RUN apt-get update; apt-get install -y libsdl2-2.0 software-properties-common py
       && pip3 install --upgrade pip
 
 # Python dependencies
-RUN pip install "https://s3-us-west-1.amazonaws.com/deepdrive/wheels/deepdrive/deepdrive-sim/140/140.1/Plugins/DeepDrivePlugin/Source/wheelhouse/deepdrive-2.0.20180812221209-cp35-cp35m-manylinux1_x86_64.whl"
+RUN pip install "deepdrive > $version.*dev0"
 COPY docker/env-requirements.txt .
 RUN pip install --no-cache-dir -r env-requirements.txt
 
@@ -39,10 +44,9 @@ WORKDIR /home/a/src/deepdrive
 # Download sim
 ENV PYTHONPATH=/home/a/src/deepdrive
 ENV DEEPDRIVE_DIR=/home/a/Deepdrive
-COPY config.py logs.py utils.py ./
+COPY config/ ./config/
+COPY VERSION logs.py utils.py ./
 
-#ARG SIM_URL="latest"
-ARG SIM_URL="https://s3-us-west-1.amazonaws.com/deepdrive/sim/dev/sim-stepping.zip"
 RUN python -c "import utils; utils.ensure_sim();"
 
 
