@@ -97,6 +97,10 @@ tensorboard --logdir="<your-deepdrive-home>/tensorflow"
 
 Where `<your-deepdrive-home>` below is by default in `$HOME/Deepdrive` and can be configured in `$HOME/.deepdrive/deepdrive_dir`
 
+#### Unit Tests
+
+pytest tests/test_sanity.py
+
 ### Key binds 
 
 * <kbd>Esc</kbd> - Pause (Quit in Unreal Editor)
@@ -197,6 +201,6 @@ You may need to disable secure boot in your BIOS in order for NVIDIA’s OpenGL 
 ## Development
 
 To run tests in PyCharm, go to File | Settings | Tools | Python Integrated Tools and change the default test runner 
-to py.test.
+to `pytest`.
 
 Also, disable SciView per [this answer](https://stackoverflow.com/a/48421532/134077).
