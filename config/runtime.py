@@ -1,9 +1,11 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
-                             int, map, next, oct, open, pow, range, round,
-                             str, super, zip)
+# TODO: Bootstrap future module to enable Python 2 support of install which depends on this file to do below
+# from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
+#                              int, map, next, oct, open, pow, range, round,
+#                              str, super, zip)
+
 import random
 import os
 import sys
@@ -12,7 +14,19 @@ from glob import glob
 from config.directories import *
 
 import numpy as np
-from gym.utils import seeding
+
+try:
+    from gym.utils import seeding
+    # Seeded random number generator for reproducibility
+    RNG_SEED = 0
+    rng = seeding.np_random(RNG_SEED)[0]
+except Exception as e:
+    import __main__
+    if __main__.__file__ != 'install.py':
+        raise e
+    else:
+        print('Skipping rng seed - not needed for install')
+
 
 import config.version
 
@@ -76,9 +90,6 @@ MNET2_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/mnet2_baseline_weights.zip'
 PPO_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/ppo_baseline_agent_weights.zip'
 SIM_PREFIX = 'deepdrive-sim-' + OS_NAME
 
-# Seeded random number generator for reproducibility
-RNG_SEED = 0
-rng = seeding.np_random(RNG_SEED)[0]
 
 # Sim
 if 'DEEPDRIVE_SIM_START_COMMAND' in os.environ:

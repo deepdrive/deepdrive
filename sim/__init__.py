@@ -76,7 +76,6 @@ def start(**kwargs):
         deepdrive_env.enable_traffic = kwargs['enable_traffic']
         deepdrive_env.ego_mph = kwargs['ego_mph']
         deepdrive_env.set_use_sim_start_command(kwargs['use_sim_start_command'])
-        deepdrive_env.open_sim()
         if kwargs['use_sim_start_command']:
             # TODO: Find a better way to do this. Waiting for the hwnd and focusing does not work in windows.
             input('Press any key when the game has loaded')

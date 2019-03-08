@@ -1,8 +1,8 @@
 deepdrive
 scipy
-numpy>=1.14.0
+numpy>=1.16.1
 h5py
-gym==0.10.5
+gym==0.10.0
 arrow
 matplotlib
 pytest-xdist
@@ -14,7 +14,14 @@ future
 pyzmq
 enum34
 gputil
-pyarrow
+joblib
+cloudpickle
+pyarrow>=0.12.0
+pyglet
 six
+flask
 cherrypy
 paste
+simple-pid
+
+# The deepdrive bindings are installed via install.py according to the VERSION file in this repo

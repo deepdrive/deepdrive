@@ -79,15 +79,24 @@ def main():
         # Install tk for dashboard
         run_command_async('sudo apt-get install -y python3-tk', throw=False)
 
+    # os.system('pip install -r requirements.txt')
+
+    # print('Installed requirements.txt')
+
     run_command_async(py + ' -m pip install -r requirements.txt')
 
     # Create deepdrive directory
     import config as c
 
+    if is_docker():
+        pip_args = '--no-cache-dir'
+    else:
+        pip_args = ''
+
     # Install correct version of the python bindings
     # TODO: Remove dev0 once 3.0 is stable
-    run_command_async(py + ' -m pip install "deepdrive > {major_minor_version}.*dev0"'.format(
-        major_minor_version=c.MAJOR_MINOR_VERSION_STR))
+    run_command_async(py + ' -m pip install {pip_args} "deepdrive > {major_minor_version}.*dev0"'.format(
+        major_minor_version=c.MAJOR_MINOR_VERSION_STR, pip_args=pip_args))
 
     # noinspection PyUnresolvedReferences
     import config.check_bindings

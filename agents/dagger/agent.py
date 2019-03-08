@@ -206,14 +206,14 @@ class Agent(object):
 
             pid_throttle = self.get_target_throttle(obz)
 
-            desired_throttle = min(max(desired_throttle, 0.), pid_throttle)
+            desired_throttle = pid_throttle  # min(max(desired_throttle, 0.), pid_throttle)
 
-            if self.previous_net_out:
-                desired_throttle = 0.2 * self.previous_action.throttle + 0.5 * desired_throttle
-            else:
-                desired_throttle = desired_throttle * 0.95
-
-            desired_throttle *= 0.95
+            # if self.previous_net_out:
+            #     desired_throttle = 0.2 * self.previous_action.throttle + 0.8 * desired_throttle
+            # else:
+            #     desired_throttle = desired_throttle * 0.95
+            #
+            # desired_throttle *= 0.95
         else:
             # AlexNet
 
@@ -439,6 +439,9 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
             if episode >= max_episodes:
                 session_done = True
 
+            last_view_mode_switch_time = time.time()
+            view_modes = list(ViewMode.__members__.values())
+            view_mode_index = 0
             while not episode_done:
 
                 act_start = time.time()
@@ -451,6 +454,12 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
                 if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:
                     session_done = True
+
+                now = time.time()
+                if now - last_view_mode_switch_time > 2:
+                    view_mode_index += 1
+                    env.unwrapped.set_view_mode(view_modes[view_mode_index % len(view_modes)])
+                    last_view_mode_switch_time = now
 
             if session_done:
                 log.info('Session done')
@@ -474,7 +483,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
 def domain_randomization(env, randomize_month, randomize_shadow_level, randomize_sun_speed, randomize_view_mode):
     if randomize_view_mode:
-        env.unwrapped.set_view_mode(c.rng.choice(list(ViewMode.__members__.values())))
+        set_random_view_mode(env)
     # if randomize_sun_speed:
     #     world.randomize_sun_speed()
     # if randomize_shadow_level:
@@ -482,6 +491,10 @@ def domain_randomization(env, randomize_month, randomize_shadow_level, randomize
     # if randomize_month:
     #     world.randomize_sun_month()
     pass
+
+
+def set_random_view_mode(env):
+    env.unwrapped.set_view_mode(c.rng.choice(list(ViewMode.__members__.values())))
 
 
 def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir, run_baseline_agent,
