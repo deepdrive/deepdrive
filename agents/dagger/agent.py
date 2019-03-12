@@ -206,14 +206,14 @@ class Agent(object):
 
             pid_throttle = self.get_target_throttle(obz)
 
-            desired_throttle = min(max(desired_throttle, 0.), pid_throttle)
+            desired_throttle = pid_throttle  # min(max(desired_throttle, 0.), pid_throttle)
 
-            if self.previous_net_out:
-                desired_throttle = 0.2 * self.previous_action.throttle + 0.5 * desired_throttle
-            else:
-                desired_throttle = desired_throttle * 0.95
-
-            desired_throttle *= 0.95
+            # if self.previous_net_out:
+            #     desired_throttle = 0.2 * self.previous_action.throttle + 0.8 * desired_throttle
+            # else:
+            #     desired_throttle = desired_throttle * 0.95
+            #
+            # desired_throttle *= 0.95
         else:
             # AlexNet
 
