@@ -50,7 +50,7 @@ def main():
     parser.add_argument('--randomize-sun-speed', action='store_true', default=False,
                         help='Whether to randomize the virtual speed of the earth\'s orbit around the sun')
     parser.add_argument('--randomize-view-mode', action='store_true', default=False,
-                        help='Whether to randomize view mode')
+                        help='Whether to randomize view mode on episode reset')
     parser.add_argument('--randomize-shadow-level', action='store_true', default=False,
                         help='Whether to randomize virtual position of Earth around Sun via month')
     parser.add_argument('--randomize-month', action='store_true', default=False,
@@ -90,6 +90,8 @@ def main():
                         help='Agent type (%s, %s, %s)' % (c.DAGGER,
                                                           c.DAGGER_MNET2,
                                                           c.BOOTSTRAPPED_PPO2))
+    parser.add_argument('--view-mode-period', type=int, default=None, help='Number of steps between view mode '
+                                                                                 'switches')
 
     args = c.PY_ARGS = parser.parse_args()
     if args.verbose:
@@ -139,7 +141,7 @@ def run_agent(args, camera_rigs, driving_style):
               is_remote=args.is_remote_client, recording_dir=args.recording_dir,
               randomize_view_mode=args.randomize_view_mode, randomize_sun_speed=args.randomize_sun_speed,
               randomize_shadow_level=args.randomize_shadow_level, randomize_month=args.randomize_month,
-              enable_traffic=args.enable_traffic)
+              enable_traffic=args.enable_traffic, view_mode_period=args.view_mode_period)
 
 
 def run_path_follower(args, driving_style, camera_rigs):
@@ -151,9 +153,9 @@ def run_path_follower(args, driving_style, camera_rigs):
         if isinstance(camera_rigs[0], list):
             cams = cams[0]
         gym_env = sim.start(experiment=args.experiment, env_id=args.env_id, fps=args.fps,
-                                  driving_style=driving_style, is_remote_client=args.is_remote_client,
-                                  render=args.render, cameras=cams, enable_traffic=args.enable_traffic,
-                                  ego_mph=args.ego_mph)
+                            driving_style=driving_style, is_remote_client=args.is_remote_client,
+                            render=args.render, cameras=cams, enable_traffic=args.enable_traffic,
+                            ego_mph=args.ego_mph)
         log.info('Path follower drive mode')
         for episode in range(episode_count):
             if done:

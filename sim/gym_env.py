@@ -38,7 +38,7 @@ from sim.action import Action, DiscreteActions
 from sim.graphics import set_capture_graphics
 from sim.reward_calculator import RewardCalculator
 from sim.score import Score
-from sim.view_mode import ViewMode
+from sim.view_mode import ViewModeController
 from renderer import renderer_factory, base_renderer
 from utils import obj2dict
 from dashboard import dashboard_fn, DashboardPub
@@ -94,7 +94,7 @@ class DeepDriveEnv(gym.Env):
         self.renderer = None  # type: base_renderer.Renderer
         self.np_random = None  # type: tuple
         self.last_obz = None  # type: dict
-        self.view_mode = ViewMode.NORMAL  # type: ViewMode
+        self.view_mode_controller = None  # type: ViewModeController
         self.enable_traffic = False  # type: bool
         self.ego_mph = None  # type: float
 
@@ -281,6 +281,7 @@ class DeepDriveEnv(gym.Env):
             self.report_score(info)
 
         self.regulate_fps()
+        self.view_mode_controller.step(self.client_id)
 
         return obz, reward, done, info
 
@@ -658,6 +659,7 @@ class DeepDriveEnv(gym.Env):
         self.start_time = time.time()
         self.started_driving_wrong_way_time = None
         set_capture_graphics(shadow_level=0)
+        self.view_mode_controller.reset()
         log.info('Reset complete')
         if self.reset_returns_zero:
             # TODO: Always return zero after testing that everything works with dagger agents
@@ -688,6 +690,8 @@ class DeepDriveEnv(gym.Env):
         log.info('Closed dashboard')
         if self.dashboard_process is not None:
             self.dashboard_process.join(timeout=.25)
+        if self.is_sync:
+            deepdrive_client.deactivate_synchronous_stepping(self.client_id)
         deepdrive_capture.close()
         deepdrive_client.release_agent_control(self.client_id)
         deepdrive_client.close(self.client_id)
@@ -716,7 +720,7 @@ class DeepDriveEnv(gym.Env):
                 ret['cameras'] = self.preprocess_cameras(cameras)
             else:
                 ret['cameras'] = []
-            ret['view_mode'] = self.view_mode.name.lower()
+            ret['view_mode'] = self.view_mode_controller.current_mode_name()
         else:
             ret = None
         return ret
@@ -867,7 +871,7 @@ class DeepDriveEnv(gym.Env):
                                                              cam['name'])
 
             if 'view_mode' in cam:
-                deepdrive_client.set_view_mode(self.client_id, cam['cxn_id'], cam['view_mode'])
+                self.view_mode_controller.set_view_mode(cam['view_mode'], cam_id=cam['cxn_id'])
 
             self.cameras = cameras
 
@@ -887,15 +891,27 @@ class DeepDriveEnv(gym.Env):
                 connect()
 
         connect()
+        if self.connection_props:
+            log.info('Connecting to an already open sim')
+            self.unregister_cameras()
+            for _client_id in range(1, self.connection_props['client_id']):
+                try:
+                    deepdrive_client.deactivate_synchronous_stepping(_client_id)
+                except deepdrive_client.client_doesnt_exist:
+                    pass
         cxn_attempts = 0
         max_cxn_attempts = 10
         while not self.connection_props:
             cxn_attempts += 1
-            sleep = cxn_attempts + random.random() * 2  # splay to avoid thundering herd
-            log.warning('Connection to environment failed, retry (%d/%d) in %d seconds',
-                        cxn_attempts, max_cxn_attempts, round(sleep, 0))
-            time.sleep(sleep)
-            connect()
+            if cxn_attempts == 1:
+                log.info('No open sim detected')
+                self.open_sim()
+            else:
+                sleep = cxn_attempts + random.random() * 2  # splay to avoid thundering herd
+                log.warning('Connection to environment failed, retry (%d/%d) in %d seconds',
+                            cxn_attempts, max_cxn_attempts, round(sleep, 0))
+                time.sleep(sleep)
+                connect()
             if cxn_attempts >= max_cxn_attempts:
                 raise RuntimeError('Could not connect to the environment')
 
@@ -1022,11 +1038,6 @@ class DeepDriveEnv(gym.Env):
         else:
             self.started_driving_wrong_way_time = None
         return False
-
-    def set_view_mode(self, view_mode):
-        # Passing a cam id of -1 sets all cameras with the same view mode
-        deepdrive_client.set_view_mode(self.client_id, -1, view_mode.value)
-        self.view_mode = view_mode
 
     def change_cameras(self, cameras):
         self.unregister_cameras()

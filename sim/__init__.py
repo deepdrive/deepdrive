@@ -15,7 +15,7 @@ from api.client import Client
 # noinspection PyUnresolvedReferences
 from sim.action import gym_action as action
 from sim.driving_style import DrivingStyle
-from sim.view_mode import ViewMode
+from sim.view_mode import ViewMode, ViewModeController
 from sim import world
 from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxSpaceWrapper
 
@@ -35,7 +35,8 @@ def start(**kwargs):
                       should_benchmark=True, cameras=None, use_sim_start_command=False, render=False,
                       fps=c.DEFAULT_FPS, combine_box_action_spaces=False, is_discrete=False,
                       preprocess_with_tensorflow=False, is_sync=False, driving_style=DrivingStyle.NORMAL,
-                      reset_returns_zero=True, is_remote_client=False, enable_traffic=False, ego_mph=None)
+                      reset_returns_zero=True, is_remote_client=False, enable_traffic=False, ego_mph=None,
+                      view_mode_period=None)
 
     unexpected_args = set(kwargs) - set(all_kwargs)
 
@@ -59,39 +60,39 @@ def start(**kwargs):
         if kwargs['experiment'] is None:
             kwargs['experiment'] = ''
 
-        deepdrive_env = env.unwrapped
+        _env = env.unwrapped
 
         # This becomes our constructor - to facilitate using Gym API without registering combinations of params for the
         # wide variety of configurations we want.
-        deepdrive_env.is_discrete = kwargs['is_discrete']
-        deepdrive_env.preprocess_with_tensorflow = kwargs['preprocess_with_tensorflow']
-        deepdrive_env.is_sync = kwargs['is_sync']
-        deepdrive_env.reset_returns_zero = kwargs['reset_returns_zero']
-        deepdrive_env.init_action_space()
-        deepdrive_env.fps = kwargs['fps']
-        deepdrive_env.experiment = kwargs['experiment'].replace(' ', '_')
-        deepdrive_env.period = deepdrive_env.sync_step_time = 1. / kwargs['fps']
-        deepdrive_env.driving_style = kwargs['driving_style']
-        deepdrive_env.should_render = kwargs['render']
-        deepdrive_env.enable_traffic = kwargs['enable_traffic']
-        deepdrive_env.ego_mph = kwargs['ego_mph']
-        deepdrive_env.set_use_sim_start_command(kwargs['use_sim_start_command'])
-        deepdrive_env.open_sim()
+        _env.is_discrete = kwargs['is_discrete']
+        _env.preprocess_with_tensorflow = kwargs['preprocess_with_tensorflow']
+        _env.is_sync = kwargs['is_sync']
+        _env.reset_returns_zero = kwargs['reset_returns_zero']
+        _env.init_action_space()
+        _env.fps = kwargs['fps']
+        _env.experiment = kwargs['experiment'].replace(' ', '_')
+        _env.period = _env.sync_step_time = 1. / kwargs['fps']
+        _env.driving_style = kwargs['driving_style']
+        _env.should_render = kwargs['render']
+        _env.enable_traffic = kwargs['enable_traffic']
+        _env.ego_mph = kwargs['ego_mph']
+        _env.view_mode_controller = ViewModeController(period=kwargs['view_mode_period'])
+        _env.set_use_sim_start_command(kwargs['use_sim_start_command'])
         if kwargs['use_sim_start_command']:
             # TODO: Find a better way to do this. Waiting for the hwnd and focusing does not work in windows.
             input('Press any key when the game has loaded')
-        deepdrive_env.connect(kwargs['cameras'])
-        deepdrive_env.set_step_mode()
+        _env.connect(kwargs['cameras'])
+        _env.set_step_mode()
 
         if kwargs['combine_box_action_spaces']:
             env = CombineBoxSpaceWrapper(env)
         if kwargs['sess']:
-            deepdrive_env.set_tf_session(kwargs['sess'])
+            _env.set_tf_session(kwargs['sess'])
         if kwargs['start_dashboard']:
-            deepdrive_env.start_dashboard()
+            _env.start_dashboard()
         if kwargs['should_benchmark']:
             log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
-            deepdrive_env.init_benchmarking()
+            _env.init_benchmarking()
 
         env.reset()
     return env

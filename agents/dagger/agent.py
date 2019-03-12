@@ -15,10 +15,8 @@ import utils
 from agents.common import get_throttle
 from agents.dagger import net
 from agents.dagger.action_jitterer import ActionJitterer, JitterState
-from sim import world, graphics
 from sim.driving_style import DrivingStyle
 from sim.action import Action
-from sim.view_mode import ViewMode
 from sim import world
 from agents.dagger.net import AlexNet, MobileNetV2
 from utils import save_hdf5, download
@@ -32,6 +30,7 @@ TEST_SAVE_IMAGE = False
 TARGET_MPH = 25
 TARGET_MPS = TARGET_MPH / 2.237
 TARGET_MPS_TEST = 75 * TARGET_MPS
+
 
 class Agent(object):
     def __init__(self, tf_session, should_jitter_actions=True,
@@ -391,7 +390,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         should_rotate_sim_types=False, should_jitter_actions=False, render=False,
         path_follower=False, fps=c.DEFAULT_FPS, net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL,
         is_sync=False, is_remote=False, recording_dir=c.RECORDING_DIR, randomize_view_mode=False,
-        randomize_sun_speed=False, randomize_shadow_level=False, randomize_month=False, enable_traffic=True):
+        randomize_sun_speed=False, randomize_shadow_level=False, randomize_month=False, enable_traffic=True,
+        view_mode_period=None):
 
     if should_record:
         path_follower = True
@@ -403,7 +403,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
               run_baseline_agent,
               run_mnet2_baseline_agent, run_ppo_baseline_agent, should_record,
               should_jitter_actions, env_id, render, fps, should_benchmark, is_remote, is_sync,
-              enable_traffic)
+              enable_traffic, view_mode_period)
 
     reward = 0
     episode_done = False
@@ -474,7 +474,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
 def domain_randomization(env, randomize_month, randomize_shadow_level, randomize_sun_speed, randomize_view_mode):
     if randomize_view_mode:
-        env.unwrapped.set_view_mode(c.rng.choice(list(ViewMode.__members__.values())))
+        set_random_view_mode(env)
     # if randomize_sun_speed:
     #     world.randomize_sun_speed()
     # if randomize_shadow_level:
@@ -484,9 +484,13 @@ def domain_randomization(env, randomize_month, randomize_shadow_level, randomize
     pass
 
 
+def set_random_view_mode(env):
+    env.unwrapped.view_mode_controller.set_random()
+
+
 def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir, run_baseline_agent,
           run_mnet2_baseline_agent, run_ppo_baseline_agent, should_record, should_jitter_actions,
-          env_id, render, fps, should_benchmark, is_remote, is_sync, enable_traffic):
+          env_id, render, fps, should_benchmark, is_remote, is_sync, enable_traffic, view_mode_period):
     if run_baseline_agent:
         net_path = ensure_mnet2_baseline_weights(net_path)
     elif run_mnet2_baseline_agent:
@@ -523,10 +527,10 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follo
 
     def start_env():
         return sim.start(experiment=experiment, env_id=env_id, should_benchmark=should_benchmark,
-                               cameras=cameras,
-                               use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
-                               driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False,
-                               is_remote_client=is_remote, enable_traffic=enable_traffic)
+                         cameras=cameras,
+                         use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
+                         driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False,
+                         is_remote_client=is_remote, enable_traffic=enable_traffic, view_mode_period=view_mode_period)
 
     env = start_env()
     agent = Agent(sess,
