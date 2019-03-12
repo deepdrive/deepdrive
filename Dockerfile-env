@@ -9,43 +9,41 @@
 # VERSION=`cat VERSION | sed 's/ //g'`
 # docker run -it --net=host --runtime=nvidia deepdriveio/deepdrive:env-$VERSION
 
-FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04
+FROM adamrehn/ue4-runtime:tensorflow-virtualgl
 
 ARG version=3.0
 
-RUN apt-get update;
+
+USER root
+RUN apt-get update
 
 # OS dependencies
-RUN apt-get update; apt-get install -y libsdl2-2.0 software-properties-common python-software-properties sudo \
-        python3-pip python3-dev \
-      && cd /usr/local/bin \
-      && ln -s /usr/bin/python3 python \
-      && pip3 install --upgrade pip
-
-# Python dependencies
-RUN pip install "deepdrive > $version.*dev0"
-COPY docker/env-requirements.txt .
-RUN pip install --no-cache-dir -r env-requirements.txt
-
-# Cleanup
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update; apt-get install -y libsdl2-2.0 software-properties-common software-properties-common sudo \
+#         python3-pip python3-dev \
+#       && cd /usr/local/bin \
+#       && ln -s /usr/bin/python3 python \
+#       && pip3 install --upgrade pip
 
 # Non-root user for Unreal
-RUN useradd -m a
-USER a
-ENV HOME /home/a
+ARG user=dd
+RUN useradd -m $user
+USER $user
+ENV HOME /home/$user
 USER root
-RUN chown -R a:a /home/a
-RUN apt-get -y install sudo
-RUN echo "a:a" | chpasswd && adduser a sudo
-USER a
-WORKDIR /home/a/src/deepdrive
+RUN chown -R $user:$user /home/$user
+RUN echo "$user:$user" | chpasswd && adduser $user sudo
+WORKDIR /home/$user/src/deepdrive
 
-# Download sim
-ENV PYTHONPATH=/home/a/src/deepdrive
-ENV DEEPDRIVE_DIR=/home/a/Deepdrive
+# Cleanup
+RUN sudo apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install deepdrive
+# USER $user
+ENV PYTHONPATH=/home/$user/src/deepdrive
+ENV DEEPDRIVE_DIR=/home/$user/Deepdrive
 COPY config/ ./config/
-COPY VERSION logs.py utils.py ./
+COPY VERSION logs.py utils.py install.py requirements.txt ./
+RUN python install.py
 
 RUN python -c "import utils; utils.ensure_sim();"
 
