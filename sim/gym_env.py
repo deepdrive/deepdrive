@@ -97,6 +97,7 @@ class DeepDriveEnv(gym.Env):
         self.view_mode_controller = None  # type: ViewModeController
         self.enable_traffic = False  # type: bool
         self.ego_mph = None  # type: float
+        self.max_steps = None  # type: int
 
         if not c.REUSE_OPEN_SIM:
             utils.ensure_sim()
@@ -255,10 +256,6 @@ class DeepDriveEnv(gym.Env):
         self.last_obz = obz
         if self.should_render:
             self.render()
-
-        # TODO: Fix is_game_driving by hooking shared mem up to new agent in sim C++ (For now assuming RPC works)
-        # if obz and 'is_game_driving' in obz:
-        #     self.has_control = not obz['is_game_driving']
 
         now = time.time()
 
@@ -421,7 +418,12 @@ class DeepDriveEnv(gym.Env):
 
         log.debug('get reward took %fs', time.time() - start_get_reward)
 
-        done = done or lap_done or gforce_done
+        steps_done = self.step_num == self.max_steps
+
+        if steps_done:
+            log.info('Ending episode due to max steps (%r)' % self.max_steps)
+
+        done = done or lap_done or gforce_done or steps_done
 
         return reward, done
 

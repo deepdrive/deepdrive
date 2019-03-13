@@ -60,8 +60,8 @@ def main():
     parser.add_argument('--overfit', action='store_true', default=False,
                         help='Whether or not to overfit to a small test set during training to sanity check '
                              'convergability')
-    parser.add_argument('--eval-only', help='Whether to just run evaluation phase of training', action='store_true',
-                        default=False)
+    parser.add_argument('--eval-only', help='Whether to just run evaluation, i.e. disable gradient updates',
+                        action='store_true', default=False)
     parser.add_argument('--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
@@ -92,6 +92,8 @@ def main():
                                                           c.BOOTSTRAPPED_PPO2))
     parser.add_argument('--view-mode-period', type=int, default=None, help='Number of steps between view mode '
                                                                                  'switches')
+    parser.add_argument('--max-steps', type=int, default=None, help='Max number of steps to run per episode')
+    parser.add_argument('--max-episodes', type=int, default=None, help='Maximum number of episodes')
 
     args = c.PY_ARGS = parser.parse_args()
     if args.verbose:
@@ -141,7 +143,8 @@ def run_agent(args, camera_rigs, driving_style):
               is_remote=args.is_remote_client, recording_dir=args.recording_dir,
               randomize_view_mode=args.randomize_view_mode, randomize_sun_speed=args.randomize_sun_speed,
               randomize_shadow_level=args.randomize_shadow_level, randomize_month=args.randomize_month,
-              enable_traffic=args.enable_traffic, view_mode_period=args.view_mode_period)
+              enable_traffic=args.enable_traffic, view_mode_period=args.view_mode_period, max_steps=args.max_steps,
+              max_episodes=args.max_episodes)
 
 
 def run_path_follower(args, driving_style, camera_rigs):

@@ -36,7 +36,7 @@ def start(**kwargs):
                       fps=c.DEFAULT_FPS, combine_box_action_spaces=False, is_discrete=False,
                       preprocess_with_tensorflow=False, is_sync=False, driving_style=DrivingStyle.NORMAL,
                       reset_returns_zero=True, is_remote_client=False, enable_traffic=False, ego_mph=None,
-                      view_mode_period=None)
+                      view_mode_period=None, max_steps=None)
 
     unexpected_args = set(kwargs) - set(all_kwargs)
 
@@ -77,6 +77,7 @@ def start(**kwargs):
         _env.enable_traffic = kwargs['enable_traffic']
         _env.ego_mph = kwargs['ego_mph']
         _env.view_mode_controller = ViewModeController(period=kwargs['view_mode_period'])
+        _env.max_steps = kwargs['max_steps']
         _env.set_use_sim_start_command(kwargs['use_sim_start_command'])
         if kwargs['use_sim_start_command']:
             # TODO: Find a better way to do this. Waiting for the hwnd and focusing does not work in windows.
