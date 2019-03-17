@@ -15,7 +15,7 @@ import config as c
 import utils
 from agents.dagger.net import MOBILENET_V2_SLIM_NAME
 from agents.dagger.train import hdf5_to_tfrecord
-from install import get_tf_valid
+from install import check_tensorflow_gpu
 from vendor.tensorflow.models.research.slim.eval_image_nn import slim_eval_image_nn
 from vendor.tensorflow.models.research.slim.train_image_nn import slim_train_image_nn
 import logs
@@ -39,7 +39,7 @@ def train_mobile_net(data_dir, resume_dir=None, train_args_collection_name=None)
     """# Should see eval steering error of about 0.1135 / Original Deepdrive 2.0 baseline steering error eval was ~0.2,
     train steering error: ~0.08"""
 
-    if not get_tf_valid():
+    if not check_tensorflow_gpu():
         raise RuntimeError('Invalid Tensorflow version detected. See above for details.')
 
     train_args = TRAIN_ARG_COLLECTIONS.get(train_args_collection_name, {})

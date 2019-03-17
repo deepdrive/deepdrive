@@ -435,7 +435,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
             domain_randomization(env, randomize_month, randomize_shadow_level,
                                  randomize_sun_speed, randomize_view_mode)
 
-            if episode >= (max_episodes - 1):
+            if max_episodes is not None and episode >= (max_episodes - 1):
                 session_done = True
 
             while not episode_done:

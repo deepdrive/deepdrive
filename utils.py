@@ -131,8 +131,9 @@ def add_cams_to_hdf5(frame, frame_grp, opts):
 
 
 def add_collision_to_hdf5(frame, frame_grp):
+    from box import Box
     clsn_grp = frame_grp.create_group('last_collision')
-    clsn = frame['last_collision']
+    clsn = Box(frame['last_collision'], box_it_up=True)
     clsn_grp.attrs['collidee_velocity'] = tuple(clsn.collidee_velocity)
     collidee_location = getattr(clsn, 'collidee_location', None)
     clsn_grp.attrs['collidee_location'] = collidee_location if (clsn.time_utc and collidee_location) else ''
@@ -203,6 +204,25 @@ def show_camera(image, depth):
     toimage(image).show()
     toimage(depth).show()
     input('Enter any key to continue')
+
+
+def upload_hdf5_to_youtube():
+    temppngdir = save_hdf5_recordings_to_png()
+    log.info(temppngdir)
+    # ffmpeg -r 8 -f image2 -s 224x224 -i /tmp/i_%010d.png -vcodec libx264 -crf 25 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" test.mp4
+    # TODO: Mount client_secret.json and credentials into a container somehow
+    # PYTHONPATH=. python vendor/youtube-upload/bin/youtube-upload --title=test --privacy=unlisted test.mp4
+
+
+def save_hdf5_recordings_to_png():
+    hdf5_filenames = sorted(glob.glob(c.RECORDING_DIR + '/**/*.hdf5', recursive=True))
+    tempdir = tempfile.gettempdir()
+    for f in hdf5_filenames:
+        try:
+            read_hdf5(f, save_png_dir=os.path.join(tempdir, f))
+        except OSError as e:
+            log.error(e)
+    return tempdir
 
 
 def save_random_hdf5_to_png(recording_dir=c.RECORDING_DIR):
@@ -417,13 +437,12 @@ def ensure_sim_python_binaries():
             print('Unreal embedded Python not found. Downloading...')
             download(lib_url, lib_path, overwrite=True, warn_existing=False)
     elif c.IS_LINUX:
-        # Now handled by ensure_requirements.py in the sim
-        pass
-        # lib_url = base_url + 'python_libs.zip'
-        # lib_path = os.path.join(get_sim_project_dir(), 'python_libs')
-        # if not os.path.exists(lib_path) or not has_stuff(lib_path):
-        #     print('Downloading Python libs (75MB) for Unreal embedded Python from', lib_url, '...')
-        #     download(lib_url, lib_path)
+        # Python is already embedded, however in docker ensure_requirements fails with pip-req-tracker errors
+        uepy = os.path.join(c.SIM_PATH, 'Engine/Plugins/UnrealEnginePython/EmbeddedPython/Linux/bin/python3')
+        st = os.stat(uepy)
+        os.chmod(uepy, st.st_mode | stat.S_IEXEC)
+        os.system('{uepy} -m pip install pyzmq pyarrow requests'.format(uepy=uepy))
+        log.info('Installed UEPy python depdendencies')
     elif c.IS_MAC:
         raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
 
@@ -514,4 +533,5 @@ if __name__ == '__main__':
     # save_random_hdf5_to_png()
     # assert_disk_space(r'C:\Users\a\DeepDrive\recordings\2018-11-03__12-29-33PM\0000000143.hdf5')
     # assert_disk_space('/media/a/data-ext4/deepdrive-data/v2.1/asdf.hd5f')
-    print(get_sim_url())
+    # print(get_sim_url())
+    print(upload_hdf5_to_youtube())

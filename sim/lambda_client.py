@@ -62,7 +62,7 @@ class LambdaClient(object):
             self.socket.send(msg)
             ret = pyarrow.deserialize(self.socket.recv())
         except zmq.error.Again:
-            print('Waiting for server')
+            print('Waiting for lambda uepy server')
             self.create_socket()
             return None
         finally:

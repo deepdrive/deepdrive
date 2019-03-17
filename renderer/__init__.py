@@ -8,6 +8,7 @@ import logs
 
 log = logs.get_log(__name__)
 
+
 class RendererType(Enum):
     WEB = 1
     PYGLET = 2

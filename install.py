@@ -70,18 +70,14 @@ def main():
     py = check_py_version()
     print('check!')
 
-    tf_valid = get_tf_valid()
+    check_tensorflow_gpu()
 
-    # Install sarge to nicely stream commands
-    run_command_no_deps(py + ' -m pip install sarge', verbose=True)
+    # Install sarge to nicely stream commands and wheel for precompiled packages
+    run_command_no_deps(py + ' -m pip install sarge wheel', verbose=True)
 
     if 'ubuntu' in platform.platform().lower() and not is_docker():
         # Install tk for dashboard
         run_command_async('sudo apt-get install -y python3-tk', throw=False)
-
-    # os.system('pip install -r requirements.txt')
-
-    # print('Installed requirements.txt')
 
     run_command_async(py + ' -m pip install -r requirements.txt')
 
@@ -97,6 +93,9 @@ def main():
     # TODO: Remove dev0 once 3.0 is stable
     run_command_async(py + ' -m pip install {pip_args} "deepdrive > {major_minor_version}.*dev0"'.format(
         major_minor_version=c.MAJOR_MINOR_VERSION_STR, pip_args=pip_args))
+
+    import utils
+    utils.ensure_sim()
 
     # noinspection PyUnresolvedReferences
     import config.check_bindings
@@ -114,8 +113,8 @@ def main():
     # Gen: https://bit.ly/2SrCVFO
 
 
-def get_tf_valid():
-    error_msg = '\n\n*** Warning: %s, baseline imitation learning agent will not be available. ' \
+def check_tensorflow_gpu():
+    error_msg = '\n\n*** Warning: %s, Tensorflow agents will not be available. ' \
                 'HINT: Install Tensorflow or use the python / virtualenv you have it already installed to. ' \
                 'If you install, check out our Tensorflow install tips on the README ' \
                 '\n\n'

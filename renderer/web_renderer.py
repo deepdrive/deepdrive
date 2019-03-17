@@ -33,6 +33,7 @@ def get_web_renderer():
         web_renderer = WebRenderer()
     return web_renderer
 
+
 class WebRenderer(Renderer):
 
     def __init__(self):

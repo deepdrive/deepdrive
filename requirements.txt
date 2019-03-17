@@ -23,5 +23,6 @@ cherrypy
 paste
 simple-pid
 requests
+python-box
 
 # The deepdrive bindings are installed via install.py according to the VERSION file in this repo

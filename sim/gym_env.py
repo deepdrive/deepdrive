@@ -723,7 +723,11 @@ class DeepDriveEnv(gym.Env):
             else:
                 ret['cameras'] = []
             ret['view_mode'] = self.view_mode_controller.current_mode_name()
+            if ret['last_collision']:
+                ret['last_collision'] = obj2dict(ret['last_collision'])
         else:
+            if observation and len(observation.cameras[0].image_data) == 0:
+                log.warn('No camera data received - nulling observation')
             ret = None
         return ret
 

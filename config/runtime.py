@@ -22,7 +22,7 @@ try:
     rng = seeding.np_random(RNG_SEED)[0]
 except Exception as e:
     import __main__
-    if __main__.__file__ != 'install.py':
+    if getattr(__main__, '__file__', None) != 'install.py':
         raise e
     else:
         print('Skipping rng seed - not needed for install')

@@ -23,6 +23,7 @@ import utils
 
 log = logs.get_log(__name__, 'renderer_log.txt')
 
+
 class StreamServer(object):
     def __init__(self, app):
         self.app = app
@@ -91,7 +92,6 @@ Web renderer available at  http://localhost:5000
             cherrypy.engine.block()
         else:
             self.app.run(host='0.0.0.0', port=5000)
-
 
     def gen(self):
         jpeg_bytes = None
