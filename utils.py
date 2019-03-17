@@ -212,7 +212,6 @@ def show_camera(image, depth):
 def upload_hdf5_to_youtube():
     temppngdir = save_hdf5_recordings_to_png()
     log.info(temppngdir)
-    all_images = sorted(glob.glob(temppngdir + '/dd_hdf5_*_i_*.png'))
     # ffmpeg -r 8 -f image2 -s 224x224 -i /tmp/tmpw4u8sw4_/i_hdf5_%017d.png -vcodec libx264 -crf 25 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" test2.mp4
     # TODO: Mount client_secret.json and credentials into a container somehow
     # PYTHONPATH=. python vendor/youtube-upload/bin/youtube-upload --title=test --privacy=unlisted test.mp4
