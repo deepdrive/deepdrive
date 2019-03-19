@@ -582,7 +582,6 @@ class DeepDriveEnv(gym.Env):
         std = np.std(totals)
         log.info('benchmark lap #%d score: %f - average: %f', len(self.trial_scores), self.score.total, average)
         file_prefix = self.experiment + '_' if self.experiment else ''
-        filename = os.path.join(c.RESULTS_DIR, '%s%s.csv' % (file_prefix, c.DATE_STR))
         diff_filename = '%s%s.diff' % (file_prefix, c.DATE_STR)
         diff_filepath = os.path.join(c.RESULTS_DIR, diff_filename)
 
@@ -591,7 +590,7 @@ class DeepDriveEnv(gym.Env):
                 diff_file.write(self.git_diff)
 
         if not utils.is_docker():
-            self.write_result_csv(average, diff_filename, filename, high, low, median, std)
+            self.write_result_csvs(average, diff_filename, high, low, median, std)
 
         log.info('median score %r', median)
         log.info('avg score %r', average)
@@ -604,11 +603,12 @@ class DeepDriveEnv(gym.Env):
         log.info('time_penalty %r', self.score.time_penalty)
         log.info('gforce_penalty %r', self.score.gforce_penalty)
         log.info('episode_time %r', self.score.episode_time)
-        log.info('wrote results to %s', os.path.normpath(filename))
+        log.info('wrote results to %s and %s', os.path.normpath(c.EPISODES_CSV_FILENAME),
+                 os.path.normpath(c.SUMMARY_CSV_FILENAME))
 
-    def write_result_csv(self, average, diff_filename, filename, high, low, median, std):
-        with open(filename, 'w', newline='') as csv_file:
-            writer = csv.writer(csv_file)
+    def write_result_csvs(self, average, diff_filename, high, low, median, std):
+        with open(c.EPISODES_CSV_FILENAME, 'w', newline='') as csv_file1:
+            writer = csv.writer(csv_file1)
             for i, score in enumerate(self.trial_scores):
                 if i == 0:
                     writer.writerow(['episode #', 'score', 'speed reward', 'lane deviation penalty',
@@ -619,7 +619,8 @@ class DeepDriveEnv(gym.Env):
                                  str(arrow.get(score.start_time).to('local')),
                                  str(arrow.get(score.end_time).to('local')),
                                  score.episode_time])
-            writer.writerow([])
+        with open(c.SUMMARY_CSV_FILENAME, 'w', newline='') as csv_file2:
+            writer = csv.writer(csv_file2)
             writer.writerow(['median score', median])
             writer.writerow(['avg score', average])
             writer.writerow(['std', std])

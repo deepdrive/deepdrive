@@ -56,7 +56,7 @@ class Agent(object):
 
         # Recording state
         self.should_record = should_record
-        self.sess_dir = os.path.join(recording_dir, datetime.now().strftime(c.DIR_DATE_FORMAT))
+        self.sess_dir = c.HDF5_SESSION_DIR
         self.obz_recording = []
         self.skipped_first_corrective_action = False
 
@@ -141,20 +141,25 @@ class Agent(object):
         return action, net_out
 
     def should_record_obz(self, obz):
+        if not obz:
+            return False
         if not self.should_record:
             return False
-        is_game_driving = self.get_is_game_driving(obz)
-        safe_action = is_game_driving and not self.jitterer.perf_rand_actions
-        if safe_action:
-            # TODO: Fix race condition in sim and remove skipped_first_corrective_action guard
-            if self.skipped_first_corrective_action:
-                return True
-            else:
-                self.skipped_first_corrective_action = True
-                return False
+        if not self.should_jitter_actions:
+            return self.should_record
         else:
-            self.skipped_first_corrective_action = False
-            return False
+            is_game_driving = self.get_is_game_driving(obz)
+            safe_action = is_game_driving and not self.jitterer.perform_random_actions
+            if safe_action:
+                # TODO: Fix race condition in sim and remove skipped_first_corrective_action guard
+                if self.skipped_first_corrective_action:
+                    return True
+                else:
+                    self.skipped_first_corrective_action = True
+                    return False
+            else:
+                self.skipped_first_corrective_action = False
+                return False
 
     def get_is_game_driving(self, obz):
         if not obz:
@@ -248,12 +253,15 @@ class Agent(object):
             self.should_record and self.recorded_obz_count % c.FRAMES_PER_HDF5_FILE == 0 and
             self.recorded_obz_count != 0 and self.num_saved_observations < self.recorded_obz_count
            ):
-            filename = os.path.join(self.sess_dir, '%s.hdf5' %
-                                    str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10))
-            save_hdf5(self.obz_recording, filename=filename)
-            log.info('Flushing output data')
-            self.obz_recording = []
-            self.num_saved_observations = self.recorded_obz_count
+            self.save_recordings()
+
+    def save_recordings(self):
+        filename = os.path.join(self.sess_dir, '%s.hdf5' %
+                                str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10))
+        save_hdf5(self.obz_recording, filename=filename, background=False)
+        log.info('Flushing output data')
+        self.obz_recording = []
+        self.num_saved_observations = self.recorded_obz_count
 
     def jitter_action(self, obz):
         """Reduce sampling error by randomly exploring space around non-random agent's trajectory with occasional
@@ -346,6 +354,10 @@ class Agent(object):
     def close(self):
         if self.sess is not None:
             self.sess.close()
+
+    def save_unsaved_observations(self):
+        if self.should_record and self.num_saved_observations < self.recorded_obz_count:
+            self.save_recordings()
 
     def get_net_out(self, image):
         begin = time.time()
@@ -453,6 +465,11 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
             if session_done:
                 log.info('Session done')
+                if c.PY_ARGS.eval_only:
+                    # Keep an even number of observations in recorded datasets
+                    agent.save_unsaved_observations()
+                if agent.recorded_obz_count > 0:
+                    utils.hdf5_to_mp4()
             else:
                 log.info('Episode done')
                 episode += 1
