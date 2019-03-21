@@ -146,18 +146,21 @@ class Agent(object):
             return False
         if not self.should_record:
             return False
-        is_game_driving = self.get_is_game_driving(obz)
-        safe_action = is_game_driving and not self.jitterer.perf_rand_actions
-        if safe_action:
-            # TODO: Fix race condition in sim and remove skipped_first_corrective_action guard
-            if self.skipped_first_corrective_action:
-                return True
-            else:
-                self.skipped_first_corrective_action = True
-                return False
+        if not self.should_jitter_actions:
+            return self.should_record
         else:
-            self.skipped_first_corrective_action = False
-            return False
+            is_game_driving = self.get_is_game_driving(obz)
+            safe_action = is_game_driving and not self.jitterer.perform_random_actions
+            if safe_action:
+                # TODO: Fix race condition in sim and remove skipped_first_corrective_action guard (might be done)
+                if self.skipped_first_corrective_action:
+                    return True
+                else:
+                    self.skipped_first_corrective_action = True
+                    return False
+            else:
+                self.skipped_first_corrective_action = False
+                return False
 
     def get_is_game_driving(self, obz):
         if not obz:
