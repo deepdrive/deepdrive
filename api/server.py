@@ -23,6 +23,7 @@ class Server(object):
         self.socket = None
         self.context = None
         self.env = None
+        self.serialization_errors = set()
 
     def create_socket(self):
         if self.socket is not None:
@@ -74,11 +75,36 @@ class Server(object):
                 else:
                     log.error('Invalid API method')
 
-                self.socket.send(pyarrow.serialize(resp).to_buffer())
+                serialized = self.serialize(resp)
+
+                if serialized is None:
+                    raise RuntimeError('Could not serialize response. Check above for details')
+                self.socket.send(serialized.to_buffer())
 
             except zmq.error.Again:
                 log.info('Waiting for client')
                 self.create_socket()
+
+    def serialize(self, resp):
+        serialized = None
+        while serialized is None:
+            try:
+                serialized = pyarrow.serialize(resp)
+            except pyarrow.lib.SerializationCallbackError as e:
+                msg = str(e)
+                self.remove_unserializeables(resp, msg)
+        return serialized
+
+    def remove_unserializeables(self, resp, msg):
+        for x in resp:
+            if isinstance(x, dict):
+                for k, v in x.items():
+                    value_type = str(type(v))
+                    if value_type in msg:
+                        if value_type not in self.serialization_errors:
+                            self.serialization_errors.add(value_type)
+                            log.warn('Unserializable type %s Not sending to client!', value_type)
+                        x[k] = '[REMOVED!] %s was not serializable on server' % value_type
 
     def serialize_space(self, resp):
         space = self.env.action_space
