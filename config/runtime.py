@@ -146,3 +146,11 @@ STREAM_PORT = 5558
 
 # Set via main
 PY_ARGS = None
+
+# Upload results to github
+SESS_RESULTS_CSV_FILENAME_TEMPLATE = '{RESULTS_DIR}{os_path_sep}{DATE_STR}_{prefix}_{name}.csv'
+
+SUMMARY_CSV_FILENAME = SESS_RESULTS_CSV_FILENAME_TEMPLATE.format(
+    RESULTS_DIR=RESULTS_DIR, os_path_sep=os.path.sep, prefix='r0', name='summary', DATE_STR=DATE_STR)
+EPISODES_CSV_FILENAME = SESS_RESULTS_CSV_FILENAME_TEMPLATE.format(
+    RESULTS_DIR=RESULTS_DIR, os_path_sep=os.path.sep, prefix='r1', name='episodes', DATE_STR=DATE_STR)
