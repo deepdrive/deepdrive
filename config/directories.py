@@ -59,13 +59,14 @@ if DEEPDRIVE_DIR is None:
 _ensure_python_bin_config()
 
 # Data and log directories
+RUN_ID = uuid.uuid4().hex[:4]
 DIR_DATE_FORMAT = '%Y-%m-%d__%I-%M-%S%p'
 DATE_STR = datetime.now().strftime(DIR_DATE_FORMAT)
 RECORDING_DIR = os.environ.get('DEEPDRIVE_RECORDING_DIR') or os.path.join(DEEPDRIVE_DIR, 'recordings')
 HDF5_SESSION_DIR = os.path.join(RECORDING_DIR, DATE_STR)
 GYM_DIR = os.path.join(DEEPDRIVE_DIR, 'gym')
 LOG_DIR = os.path.join(DEEPDRIVE_DIR, 'log')
-RESULTS_DIR = os.path.join(ROOT_DIR, 'results')
+RESULTS_DIR = os.path.join(DEEPDRIVE_DIR, 'results', DATE_STR + '_' + RUN_ID)
 TENSORFLOW_OUT_DIR = os.path.join(DEEPDRIVE_DIR, 'tensorflow')
 WEIGHTS_DIR = os.path.join(DEEPDRIVE_DIR, 'weights')
 BASELINES_DIR = os.path.join(DEEPDRIVE_DIR, 'baselines_results')

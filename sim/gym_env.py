@@ -631,7 +631,10 @@ class DeepDriveEnv(gym.Env):
             writer.writerow(['git commit', '@' + self.git_commit])
             writer.writerow(['git diff', diff_filename])
             writer.writerow(['experiment name', self.experiment or 'n/a'])
-            writer.writerow(['os', sys.platform])
+            writer.writerow(['run id', c.RUN_ID])
+
+            writer.writerow(['os', self.get_os_version()])
+
             try:
                 gpus = ','.join([gpu.name for gpu in GPUtil.getGPUs()])
             except:
