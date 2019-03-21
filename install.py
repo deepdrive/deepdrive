@@ -70,7 +70,7 @@ def main():
     py = check_py_version()
     print('check!')
 
-    tf_valid = get_tf_valid()
+    check_tensorflow_gpu()
 
     # Install sarge to nicely stream commands
     run_command_no_deps(py + ' -m pip install sarge', verbose=True)
@@ -114,8 +114,8 @@ def main():
     # Gen: https://bit.ly/2SrCVFO
 
 
-def get_tf_valid():
-    error_msg = '\n\n*** Warning: %s, baseline imitation learning agent will not be available. ' \
+def check_tensorflow_gpu():
+    error_msg = '\n\n*** Warning: %s, Tensorflow agents will not be available. ' \
                 'HINT: Install Tensorflow or use the python / virtualenv you have it already installed to. ' \
                 'If you install, check out our Tensorflow install tips on the README ' \
                 '\n\n'
