@@ -35,7 +35,9 @@ class Client(object):
             self.renderer = renderer_factory(cameras=kwargs['cameras'])
         else:
             self.renderer = None
+        log.info('===========> Queuing server start message ===========>')
         self._send(m.START, kwargs=kwargs)
+        log.info('===========> Deepdrive started')
 
     def _send(self, method, args=None, kwargs=None):
         args = args or []
@@ -45,7 +47,7 @@ class Client(object):
             self.socket.send(msg)
             return pyarrow.deserialize(self.socket.recv())
         except zmq.error.Again:
-            log.info('Waiting for server')
+            log.info('Waiting for Deepdrive API server...')
             self.create_socket()
             return None
 
