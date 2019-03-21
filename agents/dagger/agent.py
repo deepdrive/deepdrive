@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import time
 from datetime import datetime
@@ -56,7 +57,7 @@ class Agent(object):
 
         # Recording state
         self.should_record = should_record
-        self.sess_dir = os.path.join(recording_dir, datetime.now().strftime(c.DIR_DATE_FORMAT))
+        self.sess_dir = c.HDF5_SESSION_DIR
         self.obz_recording = []
         self.skipped_first_corrective_action = False
 

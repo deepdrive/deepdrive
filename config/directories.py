@@ -8,7 +8,7 @@ from __future__ import (absolute_import, division,
 
 import os
 import sys
-
+import uuid
 from datetime import datetime
 
 
@@ -62,6 +62,7 @@ _ensure_python_bin_config()
 DIR_DATE_FORMAT = '%Y-%m-%d__%I-%M-%S%p'
 DATE_STR = datetime.now().strftime(DIR_DATE_FORMAT)
 RECORDING_DIR = os.environ.get('DEEPDRIVE_RECORDING_DIR') or os.path.join(DEEPDRIVE_DIR, 'recordings')
+HDF5_SESSION_DIR = os.path.join(RECORDING_DIR, DATE_STR)
 GYM_DIR = os.path.join(DEEPDRIVE_DIR, 'gym')
 LOG_DIR = os.path.join(DEEPDRIVE_DIR, 'log')
 RESULTS_DIR = os.path.join(ROOT_DIR, 'results')
