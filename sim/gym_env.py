@@ -582,7 +582,6 @@ class DeepDriveEnv(gym.Env):
         std = np.std(totals)
         log.info('benchmark lap #%d score: %f - average: %f', len(self.trial_scores), self.score.total, average)
         file_prefix = self.experiment + '_' if self.experiment else ''
-        filename = os.path.join(c.RESULTS_DIR, '%s%s.csv' % (file_prefix, c.DATE_STR))
         diff_filename = '%s%s.diff' % (file_prefix, c.DATE_STR)
         diff_filepath = os.path.join(c.RESULTS_DIR, diff_filename)
 
@@ -590,8 +589,7 @@ class DeepDriveEnv(gym.Env):
             with open(diff_filepath, 'w', encoding='utf-8') as diff_file:
                 diff_file.write(self.git_diff)
 
-        if not utils.is_docker():
-            self.write_result_csv(average, diff_filename, filename, high, low, median, std)
+        self.write_result_csvs(average, diff_filename, high, low, median, std)
 
         log.info('median score %r', median)
         log.info('avg score %r', average)
