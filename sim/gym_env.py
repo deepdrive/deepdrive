@@ -643,6 +643,15 @@ class DeepDriveEnv(gym.Env):
                 gpus = 'n/a'
             writer.writerow(['gpus', gpus])
 
+    def get_os_version(self):
+        os_version = platform.platform()
+        if c.IS_LINUX:
+            try:
+                os_version = ' '.join(utils.run_command('lsb_release -a')[0].split() + [os_version])
+            except:
+                log.debug('Could not get os version from lsb_release')
+        return os_version
+
     def release_agent_control(self):
         self.has_control = deepdrive_client.release_agent_control(self.client_id) is not None
 
