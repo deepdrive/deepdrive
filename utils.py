@@ -143,11 +143,12 @@ def add_collision_to_hdf5(frame, frame_grp):
     del frame['last_collision']
 
 
-def read_hdf5(filename, save_png_dir=None, overfit=False):
+def read_hdf5(filename, save_png_dir=None, overfit=False, save_prefix=''):
     ret = []
     with h5py.File(filename, 'r') as file:
+        # save_prefix = 'dd_imgs_%s_' % str(os.path.dirname(filename).split(os.path.sep)[-1])
         for i, frame_name in enumerate(file):
-            out_frame = read_frame(file, frame_name, i, save_png_dir)
+            out_frame = read_frame(file, frame_name, i, save_png_dir, save_prefix)
             if out_frame is None:
                 log.error('Could not read frame, skipping')
             else:
@@ -159,7 +160,7 @@ def read_hdf5(filename, save_png_dir=None, overfit=False):
     return ret
 
 
-def read_frame(file, frame_name, frame_index, save_png_dir):
+def read_frame(file, frame_name, frame_index, save_png_dir, save_prefix=''):
     try:
         frame = file[frame_name]
         out_frame = dict(frame.attrs)
@@ -167,7 +168,7 @@ def read_frame(file, frame_name, frame_index, save_png_dir):
         for dataset_name in frame:
             if dataset_name.startswith('camera_'):
                 read_camera(dataset_name, frame, frame_index,
-                            out_cameras, save_png_dir)
+                            out_cameras, save_png_dir, save_prefix)
             elif dataset_name == 'last_collision':
                 out_frame['last_collision'] = dict(frame[dataset_name].attrs)
         out_frame['cameras'] = out_cameras
@@ -178,15 +179,17 @@ def read_frame(file, frame_name, frame_index, save_png_dir):
     return out_frame
 
 
-def read_camera(dataset_name, frame, frame_index, out_cameras, save_png_dir):
+def read_camera(dataset_name, frame, frame_index, out_cameras, save_png_dir, save_prefix=''):
     camera = frame[dataset_name]
     out_camera = dict(camera.attrs)
     out_camera['image'] = camera['image'].value
     out_camera['depth'] = camera['depth'].value
     out_cameras.append(out_camera)
     if save_png_dir is not None:
+        if not os.path.exists(save_png_dir):
+            os.makedirs(save_png_dir)
         save_camera(out_camera['image'], out_camera['depth'],
-                    save_dir=save_png_dir, name=str(frame_index).zfill(10))
+                    save_dir=save_png_dir, name=save_prefix + str(frame_index).zfill(c.HDF5_FRAME_ZFILL))
 
 
 def save_camera(image, depth, save_dir, name):
@@ -203,6 +206,106 @@ def show_camera(image, depth):
     toimage(image).show()
     toimage(depth).show()
     input('Enter any key to continue')
+
+
+def hdf5_to_mp4(fps=c.DEFAULT_FPS, png_dir=None, combine_all=False, sess_dir=None):
+    png_dir = save_hdf5_recordings_to_png(combine_all, sess_dir) if png_dir is None else png_dir
+    try:
+        file_path = pngs_to_mp4(combine_all, fps, png_dir)
+    finally:
+        shutil.rmtree(png_dir)
+    return file_path
+
+
+def pngs_to_mp4(combine_all, fps, png_dir):
+    # TODO: Add FPS, frame number, run id, date str, g-forces, episode #, hdf5 #, etc... to this and rendered views for human interprettability
+    log.info('Saved temp png\'s to ' + png_dir)
+    file_path = None
+    import distutils.spawn
+    ffmpeg_path = distutils.spawn.find_executable('ffmpeg')
+    if ffmpeg_path is None:
+        log.error('Could not find ffmpeg. Skipping hdf5=>mp4 conversion')
+    else:
+        zfill_total = c.HDF5_DIR_ZFILL + c.HDF5_FRAME_ZFILL
+        pix_fmt = 'yuv420p'  # The pix_fmt does not define resolution (i.e. this is totally different than 480p)
+        title = 'deepdrive'
+        file_dir = c.RESULTS_DIR
+        if not combine_all:
+            title += '_' + c.DATE_STR
+        file_path = os.path.join(file_dir, '%s.mp4' % title)
+        ffmpeg_cmd = ('ffmpeg'
+                      ' -y '
+                      ' -r {fps}'
+                      ' -f image2'
+                      ' -i {temp_png_dir}/i_hdf5_%0{zfill_total}d.png'
+                      ' -vcodec libx264'
+                      ' -crf 25'
+                      ' -pix_fmt {pix_fmt}'
+                      ' -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2"'
+                      ' {file_path}'.format(fps=fps, pix_fmt=pix_fmt, zfill_total=zfill_total, file_path=file_path,
+                                            temp_png_dir=png_dir))
+        log.info('PNG=>MP4: ' + ffmpeg_cmd)
+        ffmpeg_result = os.system(ffmpeg_cmd)
+        if ffmpeg_result == 0:
+            log.info('Wrote mp4 to: ' + file_path)
+        else:
+            file_path = None
+    return file_path
+
+
+def upload_to_gist(name: str, file_paths: list):
+    gist_env = os.environ.copy()
+    gist_env['YOU_GET_MY_JIST'] = requests.get(c.YOU_GET_MY_JIST_URL).text.strip()
+    if os.path.dirname(sys.executable) not in os.environ['PATH']:
+        gist_env['PATH'] = os.path.dirname(sys.executable) + ':' + gist_env['PATH']
+    output, ret_code = run_command('gist create --public {gist_name} {files}'.format(
+        gist_name=name,
+        files=' '.join('"%s"' % f for f in file_paths),
+    ), env=gist_env, verbose=True)
+    if ret_code != 0:
+        log.warn('Could not upload gist. \n%s' % (output,))
+    url = output if ret_code == 0 else None
+    return url
+
+
+def upload_to_youtube(file_path):
+    # TODO: pip install -e https://github.com/deepdrive/youtube-upload in install.py - could add './vendor/youtube-upload' to requirements but does not update on changes
+
+    # python_path = os.environ['PYTHONPATH']
+    # youtube_upload_dir = os.path.join(c.ROOT_DIR, 'vendor', 'youtube_upload')
+    # os.environ['PYTHONPATH'] = '%s:%s' % (youtube_upload_dir, python_path)
+    import youtube_upload.main
+    options = Box(title=file_path, privacy='unlisted', client_secrets='', credentials_file='',
+                  auth_browser=None, description='Deepdrive results for %s' % c.PY_ARGS)
+    youtube = youtube_upload.main.get_youtube_handler(options)
+    youtube_upload.main.upload_youtube_video(youtube, options, file_path, 1, 0)
+    # TODO: Put link to s3 artifacts in description [hdf5, csv, diff, eventually ue-recording]
+    # cmd = '%s %s --title=test --privacy=unlisted %s' % (
+    #     sys.executable,
+    #     os.path.join(youtube_upload_dir, 'bin', 'youtube_upload'),
+    #     file_path
+    # )
+    # os.environ['PYTHONPATH'] = python_path
+
+
+    # TODO: Mount client_secret.json and credentials into a container somehow
+    # PYTHONPATH=. python vendor/youtube_upload/bin/youtube_upload --title=test --privacy=unlisted test.mp4
+    # TODO: Remove temp_dir if TEMP
+
+
+def save_hdf5_recordings_to_png(combine_all=False, sess_dir=None):
+    if combine_all:
+        hdf5_filenames = sorted(glob.glob(c.RECORDING_DIR + '/**/*.hdf5', recursive=True))
+    else:
+        sess_dir = sess_dir or c.HDF5_SESSION_DIR
+        hdf5_filenames = sorted(glob.glob(sess_dir + '/*.hdf5', recursive=True))
+    save_dir = tempfile.mkdtemp()
+    for i, f in enumerate(hdf5_filenames):
+        try:
+            read_hdf5(f, save_png_dir=save_dir, save_prefix='hdf5_%s' % str(i).zfill(c.HDF5_DIR_ZFILL))
+        except OSError as e:
+            log.error(e)
+    return save_dir
 
 
 def save_random_hdf5_to_png(recording_dir=c.RECORDING_DIR):
