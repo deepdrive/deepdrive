@@ -31,17 +31,17 @@ class ActionJitterer(object):
         self.rand_total = None
         self.nonrand_total = None
         self.seq_total = None
-        self.perf_rand_actions = None
+        self.perform_random_actions = None
         self.reset()
 
     def advance(self):
-        if self.perf_rand_actions:
+        if self.perform_random_actions:
             if self.rand_step < self.rand_total:
                 self.rand_step += 1
                 ret = JitterState.MAINTAIN
             else:
                 # Done with random actions, switch to non-random
-                self.perf_rand_actions = False
+                self.perform_random_actions = False
                 ret = JitterState.SWITCH_TO_NONRAND
         else:
             if self.nonrand_step < self.nonrand_total:
@@ -50,7 +50,7 @@ class ActionJitterer(object):
             else:
                 # We are done with the sequence
                 self.reset()
-                if self.perf_rand_actions:
+                if self.perform_random_actions:
                     ret = JitterState.SWITCH_TO_RAND
                 else:
                     ret = JitterState.MAINTAIN  # Skipping random actions this sequence
@@ -78,6 +78,6 @@ class ActionJitterer(object):
         log.debug('random action total %r, non-random total %r', self.rand_total,
                   self.nonrand_total)
         self.seq_total = self.rand_total + self.nonrand_total
-        self.perf_rand_actions = self.rand_total != 0
+        self.perform_random_actions = self.rand_total != 0
 
 
