@@ -142,6 +142,8 @@ class Agent(object):
         return action, net_out
 
     def should_record_obz(self, obz):
+        if not obz:
+            return False
         if not self.should_record:
             return False
         is_game_driving = self.get_is_game_driving(obz)
@@ -249,12 +251,15 @@ class Agent(object):
             self.should_record and self.recorded_obz_count % c.FRAMES_PER_HDF5_FILE == 0 and
             self.recorded_obz_count != 0 and self.num_saved_observations < self.recorded_obz_count
            ):
-            filename = os.path.join(self.sess_dir, '%s.hdf5' %
-                                    str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10))
-            save_hdf5(self.obz_recording, filename=filename)
-            log.info('Flushing output data')
-            self.obz_recording = []
-            self.num_saved_observations = self.recorded_obz_count
+            self.save_recordings()
+
+    def save_recordings(self):
+        filename = os.path.join(self.sess_dir, '%s.hdf5' %
+                                str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10))
+        save_hdf5(self.obz_recording, filename=filename, background=False)
+        log.info('Flushing output data')
+        self.obz_recording = []
+        self.num_saved_observations = self.recorded_obz_count
 
     def jitter_action(self, obz):
         """Reduce sampling error by randomly exploring space around non-random agent's trajectory with occasional
@@ -348,6 +353,10 @@ class Agent(object):
         if self.sess is not None:
             self.sess.close()
 
+    def save_unsaved_observations(self):
+        if self.should_record and self.num_saved_observations < self.recorded_obz_count:
+            self.save_recordings()
+
     def get_net_out(self, image):
         begin = time.time()
         if self.use_frozen_net:
@@ -384,6 +393,28 @@ class Agent(object):
     def reset(self):
         self.jitterer.reset()
         self.throttle_pid.auto_mode = False
+
+
+def create_artifacts_inventory(gist_url: str, hdf5_dir: str, episodes_file: str, summary_file: str,
+                               mp4_file: str):
+
+    # TODO: Add list of artifacts results file with:
+    filename = os.path.join(c.RESULTS_DIR, 'artifact-inventory.json')
+    with open(filename, 'w') as out_file:
+        observations: list = glob.glob(hdf5_dir + '/*.hdf5')
+        data = {'artifacts': {
+            'mp4': mp4_file,
+            'gist': gist_url,
+            'performance_summary': summary_file,
+            'episodes': episodes_file,
+            'observations': observations,
+        }}
+        json.dump(data, out_file, indent=2)
+    log.info('Wrote artifacts inventory to %s' % filename)
+
+    # TODO: Upload to YouTube on pull request
+
+    # TODO: Save a description file with the episode score summary, gist link, and s3 link
 
 
 def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, should_benchmark=True,
@@ -436,7 +467,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
             domain_randomization(env, randomize_month, randomize_shadow_level,
                                  randomize_sun_speed, randomize_view_mode)
 
-            if episode >= (max_episodes - 1):
+            if max_episodes is not None and episode >= (max_episodes - 1):
                 session_done = True
 
             while not episode_done:
@@ -454,6 +485,19 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
             if session_done:
                 log.info('Session done')
+                if c.PY_ARGS.eval_only:
+                    # Keep an even number of observations in recorded datasets
+                    agent.save_unsaved_observations()
+                else:
+                    log.info('Discarding %d observations to keep even number of frames in recorded datasets. '
+                             'Pass --eval-only to save all observations.')
+                if agent.recorded_obz_count > 0:
+                    mp4_file = utils.hdf5_to_mp4()
+                    gist_url = utils.upload_to_gist('deepdrive-results-' + c.DATE_STR,
+                                                    [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME])
+                    create_artifacts_inventory(gist_url=gist_url, hdf5_dir=c.HDF5_SESSION_DIR,
+                                               episodes_file=c.EPISODES_CSV_FILENAME, summary_file=c.SUMMARY_CSV_FILENAME,
+                                               mp4_file=mp4_file)
             else:
                 log.info('Episode done')
                 episode += 1
