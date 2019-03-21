@@ -91,7 +91,7 @@ def main():
                                                           c.DAGGER_MNET2,
                                                           c.BOOTSTRAPPED_PPO2))
     parser.add_argument('--view-mode-period', type=int, default=None, help='Number of steps between view mode '
-                                                                                 'switches')
+                                                                           'switches')
     parser.add_argument('--max-steps', type=int, default=None, help='Max number of steps to run per episode')
     parser.add_argument('--max-episodes', type=int, default=None, help='Maximum number of episodes')
 

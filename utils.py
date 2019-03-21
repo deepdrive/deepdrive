@@ -201,7 +201,7 @@ def save_camera(image, depth, save_dir, name):
     dp_path = os.path.join(save_dir, 'z_' + name + '.png')
     imsave(im_path, image)
     imsave(dp_path, depth)
-    log.info('saved image and depth to %s and %s', im_path, dp_path)
+    log.debug('saved image and depth to %s and %s', im_path, dp_path)
 
 
 def show_camera(image, depth):
@@ -213,20 +213,27 @@ def show_camera(image, depth):
 
 def hdf5_to_mp4(fps=c.DEFAULT_FPS, png_dir=None, combine_all=False, sess_dir=None):
     png_dir = save_hdf5_recordings_to_png(combine_all, sess_dir) if png_dir is None else png_dir
+    try:
+        file_path = pngs_to_mp4(combine_all, fps, png_dir)
+    finally:
+        shutil.rmtree(png_dir)
+    return file_path
+
+
+def pngs_to_mp4(combine_all, fps, png_dir):
+    # TODO: Add FPS, frame number, run id, date str, g-forces, episode #, hdf5 #, etc... to this and rendered views for human interprettability
     log.info('Saved temp png\'s to ' + png_dir)
+    file_path = None
     import distutils.spawn
     ffmpeg_path = distutils.spawn.find_executable('ffmpeg')
     if ffmpeg_path is None:
         log.error('Could not find ffmpeg. Skipping hdf5=>mp4 conversion')
-        ffmpeg_result = None
     else:
         zfill_total = c.HDF5_DIR_ZFILL + c.HDF5_FRAME_ZFILL
         pix_fmt = 'yuv420p'  # The pix_fmt does not define resolution (i.e. this is totally different than 480p)
         title = 'deepdrive'
-        if combine_all:
-            file_dir = c.RECORDING_DIR
-        else:
-            file_dir = c.HDF5_SESSION_DIR
+        file_dir = c.RESULTS_DIR
+        if not combine_all:
             title += '_' + c.DATE_STR
         file_path = os.path.join(file_dir, '%s.mp4' % title)
         ffmpeg_cmd = ('ffmpeg'
@@ -238,21 +245,30 @@ def hdf5_to_mp4(fps=c.DEFAULT_FPS, png_dir=None, combine_all=False, sess_dir=Non
                       ' -crf 25'
                       ' -pix_fmt {pix_fmt}'
                       ' -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2"'
-                      ' {filename}'.format(fps=fps, pix_fmt=pix_fmt, zfill_total=zfill_total, filename=file_path,
-                                           temp_png_dir=png_dir))
+                      ' {file_path}'.format(fps=fps, pix_fmt=pix_fmt, zfill_total=zfill_total, file_path=file_path,
+                                            temp_png_dir=png_dir))
         log.info('PNG=>MP4: ' + ffmpeg_cmd)
         ffmpeg_result = os.system(ffmpeg_cmd)
         if ffmpeg_result == 0:
             log.info('Wrote mp4 to: ' + file_path)
-        url, ret_code = run_command('gist create {gist_name} {summary_csv} {episode_csv}'.format(
-            gist_name='deepdrive_results_' + c.DATE_STR,
-            summary_csv=c.SUMMARY_CSV_FILENAME,
-            episode_csv=c.EPISODES_CSV_FILENAME,
-        ))
-        pass
-        # TODO: Save a description file with DATE_STR and the CSV results summary section if not combine_all
-    shutil.rmtree(png_dir)
-    return ffmpeg_result
+        else:
+            file_path = None
+    return file_path
+
+
+def upload_to_gist(name: str, file_paths: list):
+    gist_env = os.environ.copy()
+    gist_env['YOU_GET_MY_JIST'] = requests.get(c.YOU_GET_MY_JIST_URL).text.strip()
+    if os.path.dirname(sys.executable) not in os.environ['PATH']:
+        gist_env['PATH'] = os.path.dirname(sys.executable) + ':' + gist_env['PATH']
+    output, ret_code = run_command('gist create --public {gist_name} {files}'.format(
+        gist_name=name,
+        files=' '.join('"%s"' % f for f in file_paths),
+    ), env=gist_env, verbose=True)
+    if ret_code != 0:
+        log.warn('Could not upload gist. \n%s' % (output,))
+    url = output if ret_code == 0 else None
+    return url
 
 
 def upload_to_youtube(file_path):
@@ -275,7 +291,6 @@ def upload_to_youtube(file_path):
     # os.environ['PYTHONPATH'] = python_path
 
 
-    # ffmpeg -r 8 -f image2 -s 224x224 -i /tmp/tmpw4u8sw4_/i_hdf5_%017d.png -vcodec libx264 -crf 25 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" test2.mp4
     # TODO: Mount client_secret.json and credentials into a container somehow
     # PYTHONPATH=. python vendor/youtube_upload/bin/youtube_upload --title=test --privacy=unlisted test.mp4
     # TODO: Remove temp_dir if TEMP
@@ -605,5 +620,6 @@ if __name__ == '__main__':
     # assert_disk_space(r'C:\Users\a\DeepDrive\recordings\2018-11-03__12-29-33PM\0000000143.hdf5')
     # assert_disk_space('/media/a/data-ext4/deepdrive-data/v2.1/asdf.hd5f')
     # print(get_sim_url())
-    print(save_recordings_to_png_and_mp4(png_dir='/tmp/tmp30zl8ouq'))
+    # print(save_recordings_to_png_and_mp4(png_dir='/tmp/tmp30zl8ouq'))
     # print(save_hdf5_recordings_to_png())
+    print(upload_to_gist('asdf', ['/home/c2/src/deepdrive/results/2018-05-30__02-40-01PM.csv', '/home/c2/src/deepdrive/results/2019-03-14__06-08-38PM.diff']))

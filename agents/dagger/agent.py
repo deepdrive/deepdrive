@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import time
 from datetime import datetime
@@ -397,6 +398,28 @@ class Agent(object):
         self.throttle_pid.auto_mode = False
 
 
+def create_artifacts_inventory(gist_url: str, hdf5_dir: str, episodes_file: str, summary_file: str,
+                               mp4_file: str):
+
+    # TODO: Add list of artifacts results file with:
+    filename = os.path.join(c.RESULTS_DIR, 'artifact-inventory.json')
+    with open(filename, 'w') as out_file:
+        observations: list = glob.glob(hdf5_dir + '/*.hdf5')
+        data = {'artifacts': {
+            'mp4': mp4_file,
+            'gist': gist_url,
+            'performance_summary': summary_file,
+            'episodes': episodes_file,
+            'observations': observations,
+        }}
+        json.dump(data, out_file, indent=2)
+    log.info('Wrote artifacts inventory to %s' % filename)
+
+    # TODO: Upload to YouTube on pull request
+
+    # TODO: Save a description file with the episode score summary, gist link, and s3 link
+
+
 def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, should_benchmark=True,
         run_baseline_agent=False, run_mnet2_baseline_agent=False, run_ppo_baseline_agent=False, camera_rigs=None,
         should_rotate_sim_types=False, should_jitter_actions=False, render=False,
@@ -468,8 +491,16 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                 if c.PY_ARGS.eval_only:
                     # Keep an even number of observations in recorded datasets
                     agent.save_unsaved_observations()
+                else:
+                    log.info('Discarding %d observations to keep even number of frames in recorded datasets. '
+                             'Pass --eval-only to save all observations.')
                 if agent.recorded_obz_count > 0:
-                    utils.hdf5_to_mp4()
+                    mp4_file = utils.hdf5_to_mp4()
+                    gist_url = utils.upload_to_gist('deepdrive-results-' + c.DATE_STR,
+                                                    [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME])
+                    create_artifacts_inventory(gist_url=gist_url, hdf5_dir=c.HDF5_SESSION_DIR,
+                                               episodes_file=c.EPISODES_CSV_FILENAME, summary_file=c.SUMMARY_CSV_FILENAME,
+                                               mp4_file=mp4_file)
             else:
                 log.info('Episode done')
                 episode += 1

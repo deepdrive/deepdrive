@@ -91,6 +91,7 @@ MNET2_PRETRAINED_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, MNET2_PRETRAINED_NAME)
 MNET2_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/mnet2_baseline_weights.zip'
 PPO_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/ppo_baseline_agent_weights.zip'
 SIM_PREFIX = 'deepdrive-sim-' + OS_NAME
+YOU_GET_MY_JIST_URL = BUCKET_URL + '/yougetmyjist.json'
 
 
 # Sim
@@ -147,7 +148,9 @@ STREAM_PORT = 5558
 PY_ARGS = None
 
 # Upload results to github
-SESS_RESULTS_CSV_FILENAME_TEMPLATE = os.path.join(RESULTS_DIR, '%s.csv' % (DATE_STR + '%s',))
-EPISODES_CSV_FILENAME = SESS_RESULTS_CSV_FILENAME_TEMPLATE % '_episodes'
-SUMMARY_CSV_FILENAME = SESS_RESULTS_CSV_FILENAME_TEMPLATE % '_summary'
-os.environ['YOU_GET_MY_JIST'] = '896516529e9fe2c88ad788c4e41a7550e4d3ed90'
+SESS_RESULTS_CSV_FILENAME_TEMPLATE = '{RESULTS_DIR}{os_path_sep}{DATE_STR}_{prefix}_{name}.csv'
+
+SUMMARY_CSV_FILENAME = SESS_RESULTS_CSV_FILENAME_TEMPLATE.format(
+    RESULTS_DIR=RESULTS_DIR, os_path_sep=os.path.sep, prefix='r0', name='summary', DATE_STR=DATE_STR)
+EPISODES_CSV_FILENAME = SESS_RESULTS_CSV_FILENAME_TEMPLATE.format(
+    RESULTS_DIR=RESULTS_DIR, os_path_sep=os.path.sep, prefix='r1', name='episodes', DATE_STR=DATE_STR)

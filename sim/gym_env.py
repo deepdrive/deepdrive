@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import platform
 import shutil
 
 # noinspection PyUnresolvedReferences
@@ -621,6 +622,7 @@ class DeepDriveEnv(gym.Env):
                                  score.episode_time])
         with open(c.SUMMARY_CSV_FILENAME, 'w', newline='') as csv_file2:
             writer = csv.writer(csv_file2)
+            writer.writerow(['Stat', 'Value'])
             writer.writerow(['median score', median])
             writer.writerow(['avg score', average])
             writer.writerow(['std', std])
@@ -632,7 +634,15 @@ class DeepDriveEnv(gym.Env):
             writer.writerow(['git commit', '@' + self.git_commit])
             writer.writerow(['git diff', diff_filename])
             writer.writerow(['experiment name', self.experiment or 'n/a'])
-            writer.writerow(['os', sys.platform])
+            writer.writerow(['run id', c.RUN_ID])
+            os_version = platform.platform()
+            if c.IS_LINUX:
+                try:
+                    os_version = ' '.join(utils.run_command('lsb_release -a')[0].split() + [os_version])
+                except:
+                    log.debug('Could not get os version from lsb_release')
+            writer.writerow(['os', os_version])
+
             try:
                 gpus = ','.join([gpu.name for gpu in GPUtil.getGPUs()])
             except:

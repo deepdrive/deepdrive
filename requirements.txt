@@ -24,8 +24,12 @@ paste
 simple-pid
 requests
 python-box
--e git://github.com/deepdrive/gist.git@89759947118e37fac13bbcc4ac93d52c923889ac#egg=gist
--e ./vendor/youtube-upload
+
+-e git://github.com/deepdrive/gist.git#egg=gist
+#git+git://github.com/deepdrive/gist.git#egg=gist
+
+-e git://github.com/deepdrive/youtube-upload#egg=youtube-upload
+#git+git://github.com/deepdrive/youtube-upload#egg=youtube-upload
 
 
 # The deepdrive bindings are installed via install.py according to the VERSION file in this repo
