@@ -1,6 +1,5 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-
 import argparse
 import os
 import tempfile
@@ -20,7 +19,7 @@ IS_UNIX = IS_LINUX or IS_MAC or 'bsd' in sys.platform.lower()
 IS_WINDOWS = sys.platform == 'win32'
 
 
-def run_command_async(cmd, throw=True):
+def run_command_with_sarge(cmd, throw=True):
     from sarge import run, Capture
     # TODO: p = run(..., stdout=Capture(buffer_size=-1), stderr=Capture(buffer_size=-1))
     # TODO: Then log p.stdout. while process not complete in realtime and to file
@@ -72,18 +71,14 @@ def main():
 
     check_tensorflow_gpu()
 
-    # Install sarge to nicely stream commands
-    run_command_no_deps(py + ' -m pip install sarge', verbose=True)
+    # Install sarge to nicely stream commands and wheel for precompiled packages
+    run_command_no_deps(py + ' -m pip install sarge wheel', verbose=True)
 
     if 'ubuntu' in platform.platform().lower() and not is_docker():
         # Install tk for dashboard
-        run_command_async('sudo apt-get install -y python3-tk', throw=False)
+        run_command_with_sarge('sudo apt-get install -y python3-tk', throw=False)
 
-    # os.system('pip install -r requirements.txt')
-
-    # print('Installed requirements.txt')
-
-    run_command_async(py + ' -m pip install -r requirements.txt')
+    run_command_with_sarge(py + ' -m pip install -r requirements.txt')
 
     # Create deepdrive directory
     import config as c
@@ -94,9 +89,13 @@ def main():
         pip_args = ''
 
     # Install correct version of the python bindings
-    # TODO: Remove dev0 once 3.0 is stable
-    run_command_async(py + ' -m pip install {pip_args} "deepdrive > {major_minor_version}.*dev0"'.format(
+    # # TODO: Remove dev0 once 3.0 is stable
+    run_command_with_sarge(py + ' -m pip install {pip_args} "deepdrive > {major_minor_version}.*dev0"'.format(
         major_minor_version=c.MAJOR_MINOR_VERSION_STR, pip_args=pip_args))
+
+
+    import utils
+    utils.ensure_sim()
 
     # noinspection PyUnresolvedReferences
     import config.check_bindings
@@ -123,6 +122,7 @@ def check_tensorflow_gpu():
     print('Checking for valid Tensorflow installation')
     try:
         # noinspection PyUnresolvedReferences
+        import h5py  # importing tensorflow later causes seg faults
         import tensorflow as tf
     except ImportError:
         print(error_msg % 'Tensorflow not installed', file=sys.stderr)
@@ -168,3 +168,4 @@ if __name__ == '__main__':
         run_command_no_deps('pip install sarge')
     else:
         main()
+

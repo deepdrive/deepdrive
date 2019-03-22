@@ -8,9 +8,9 @@ import re
 #                              int, map, next, oct, open, pow, range, round,
 #                              str, super, zip)
 
-
 import ctypes
 import platform
+import shutil
 import traceback
 
 import glob
@@ -23,14 +23,13 @@ import time
 import zipfile
 import tempfile
 
-import h5py
 import numpy as np
-import pkg_resources
+
+import h5py
 import requests
 from clint.textui import progress
 from subprocess import Popen, PIPE
 from boto.s3.connection import S3Connection
-
 import config as c
 import logs
 
@@ -90,16 +89,16 @@ def obj2dict(obj, exclude=None):
     return ret
 
 
-def save_hdf5(out, filename):
+def save_hdf5(out, filename, background=True):
     assert_disk_space(os.path.dirname(filename))
-    if 'DEEPDRIVE_NO_THREAD_SAVE' in os.environ:
-        save_hdf5_thread(out, filename)
+    if 'DEEPDRIVE_NO_THREAD_SAVE' in os.environ or not background:
+        save_hdf5_task(out, filename)
     else:
-        thread = threading.Thread(target=save_hdf5_thread, args=(out, filename))
+        thread = threading.Thread(target=save_hdf5_task, args=(out, filename))
         thread.start()
 
 
-def save_hdf5_thread(out, filename):
+def save_hdf5_task(out, filename):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     log.debug('Saving to %s', filename)
     opts = dict(compression='lzf', fletcher32=True)
@@ -131,8 +130,9 @@ def add_cams_to_hdf5(frame, frame_grp, opts):
 
 
 def add_collision_to_hdf5(frame, frame_grp):
+    from box import Box
     clsn_grp = frame_grp.create_group('last_collision')
-    clsn = frame['last_collision']
+    clsn = Box(frame['last_collision'], box_it_up=True)
     clsn_grp.attrs['collidee_velocity'] = tuple(clsn.collidee_velocity)
     collidee_location = getattr(clsn, 'collidee_location', None)
     clsn_grp.attrs['collidee_location'] = collidee_location if (clsn.time_utc and collidee_location) else ''
@@ -198,7 +198,7 @@ def save_camera(image, depth, save_dir, name):
     dp_path = os.path.join(save_dir, 'z_' + name + '.png')
     imsave(im_path, image)
     imsave(dp_path, depth)
-    log.info('saved image and depth to %s and %s', im_path, dp_path)
+    log.debug('saved image and depth to %s and %s', im_path, dp_path)
 
 
 def show_camera(image, depth):
@@ -275,6 +275,7 @@ def upload_to_youtube(file_path):
     # youtube_upload_dir = os.path.join(c.ROOT_DIR, 'vendor', 'youtube_upload')
     # os.environ['PYTHONPATH'] = '%s:%s' % (youtube_upload_dir, python_path)
     import youtube_upload.main
+    from box import Box
     options = Box(title=file_path, privacy='unlisted', client_secrets='', credentials_file='',
                   auth_browser=None, description='Deepdrive results for %s' % c.PY_ARGS)
     youtube = youtube_upload.main.get_youtube_handler(options)
@@ -520,13 +521,12 @@ def ensure_sim_python_binaries():
             print('Unreal embedded Python not found. Downloading...')
             download(lib_url, lib_path, overwrite=True, warn_existing=False)
     elif c.IS_LINUX:
-        # Now handled by ensure_requirements.py in the sim
-        pass
-        # lib_url = base_url + 'python_libs.zip'
-        # lib_path = os.path.join(get_sim_project_dir(), 'python_libs')
-        # if not os.path.exists(lib_path) or not has_stuff(lib_path):
-        #     print('Downloading Python libs (75MB) for Unreal embedded Python from', lib_url, '...')
-        #     download(lib_url, lib_path)
+        # Python is already embedded, however in docker ensure_requirements fails with pip-req-tracker errors
+        uepy = os.path.join(c.SIM_PATH, 'Engine/Plugins/UnrealEnginePython/EmbeddedPython/Linux/bin/python3')
+        st = os.stat(uepy)
+        os.chmod(uepy, st.st_mode | stat.S_IEXEC)
+        os.system('{uepy} -m pip install pyzmq pyarrow requests'.format(uepy=uepy))
+        log.info('Installed UEPy python depdendencies')
     elif c.IS_MAC:
         raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
 
@@ -617,4 +617,7 @@ if __name__ == '__main__':
     # save_random_hdf5_to_png()
     # assert_disk_space(r'C:\Users\a\DeepDrive\recordings\2018-11-03__12-29-33PM\0000000143.hdf5')
     # assert_disk_space('/media/a/data-ext4/deepdrive-data/v2.1/asdf.hd5f')
-    print(get_sim_url())
+    # print(get_sim_url())
+    # print(save_recordings_to_png_and_mp4(png_dir='/tmp/tmp30zl8ouq'))
+    # print(save_hdf5_recordings_to_png())
+    print(upload_to_gist('asdf', ['/home/c2/src/deepdrive/results/2018-05-30__02-40-01PM.csv', '/home/c2/src/deepdrive/results/2019-03-14__06-08-38PM.diff']))

@@ -6,46 +6,66 @@
 # docker build --build-arg version=$VERSION -t deepdriveio/deepdrive:env-$VERSION -f Dockerfile-env .
 #
 # Usage:
-# VERSION=`cat VERSION | sed 's/ //g'`
+# VERSION=`cat VERSION | sed 's/ //g
 # docker run -it --net=host --runtime=nvidia deepdriveio/deepdrive:env-$VERSION
 
 FROM adamrehn/ue4-runtime:tensorflow-virtualgl
 
+#FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04
+
 ARG version=3.0
 
-
 USER root
-RUN apt-get update
-
 # OS dependencies
-# RUN apt-get update; apt-get install -y libsdl2-2.0 software-properties-common software-properties-common sudo \
-#         python3-pip python3-dev \
-#       && cd /usr/local/bin \
-#       && ln -s /usr/bin/python3 python \
-#       && pip3 install --upgrade pip
+RUN apt-get update; apt-get install -y \
+        libsdl2-2.0 \
+        software-properties-common \
+#        python-software-properties \ - Ubuntu 16 only
+        sudo \
+        python3-venv \
+        python3-pip \
+        python3-dev \
+        git \
+      && cd /usr/local/bin \
+      && ln -s /usr/bin/python3 python \
+      && pip3 install --upgrade pip \
+      && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Non-root user for Unreal
-ARG user=dd
-RUN useradd -m $user
-USER $user
-ENV HOME /home/$user
-USER root
+ARG user=ue4
 RUN chown -R $user:$user /home/$user
-RUN echo "$user:$user" | chpasswd && adduser $user sudo
-WORKDIR /home/$user/src/deepdrive
+RUN adduser $user sudo
+RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Cleanup
-RUN sudo apt-get clean && rm -rf /var/lib/apt/lists/*
+# Ensure ue4 owns directories
+USER $user
+RUN sudo chown -R $user:$user /home/$user
+WORKDIR /home/$user/src/deepdrive
+RUN sudo chown -R $user:$user .
 
 # Install deepdrive
-# USER $user
-ENV PYTHONPATH=/home/$user/src/deepdrive
+ENV PYTHONPATH=/home/$user/src/deepdrive:$PYTHONPATH
 ENV DEEPDRIVE_DIR=/home/$user/Deepdrive
 COPY config/ ./config/
-COPY VERSION logs.py utils.py install.py requirements.txt ./
-RUN python install.py
+COPY VERSION requirements.txt ./
+RUN python -m venv /home/$user/ddvenv
+ENV VIRTUAL_ENV /home/$user/ddvenv
+ENV PATH /home/$user/ddvenv/bin:$PATH
+RUN which pip
+RUN pip install --upgrade pip
+#RUN pip install wheel
+#RUN pip install "deepdrive > $version.*dev0" # TODO: Remove dev0 after 3.0 stable release
+RUN pip install tensorflow-gpu
+#RUN pip install sarge
+#RUN pip install -r requirements.txt
+COPY logs.py utils.py install.py ./
+RUN python -u install.py
+#COPY 'deepdrive-sim-linux-3.0.20190225195958/' "${DEEPDRIVE_DIR}/deepdrive-sim-linux-3.0.20190225195958/"
+#RUN python -c "import utils; utils.ensure_sim();"
+#RUN sudo chmod +x "${DEEPDRIVE_DIR}/deepdrive-sim-linux-3.0.20190225195958/Engine/Plugins/UnrealEnginePython/EmbeddedPython/Linux/bin/python3"
+#RUN sudo chown -R $user:$user ${DEEPDRIVE_DIR}
+#RUN sudo "${DEEPDRIVE_DIR}/deepdrive-sim-linux-3.0.20190225195958/Engine/Plugins/UnrealEnginePython/EmbeddedPython/Linux/bin/python3" -m pip install pyarrow pyzmq requests
 
-RUN python -c "import utils; utils.ensure_sim();"
+
 
 
 # LibSDL2 offscreen opengl mode
@@ -57,3 +77,9 @@ EXPOSE 5557/tcp
 COPY . .
 
 CMD python api/server.py
+
+
+# TODO: Support
+# 1) Eval
+# 2) Experiement
+# 3) CI
