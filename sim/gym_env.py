@@ -273,7 +273,7 @@ class DeepDriveEnv(gym.Env):
         self.step_num += 1
         log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
 
-        info = self.init_step_info(done)
+        info = self.init_step_info()
 
         if done:
             self.report_score(info)
