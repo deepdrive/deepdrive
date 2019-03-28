@@ -4,14 +4,14 @@
 #     Run API server somewhere, i.e. python api/server.py
 #
 #     Then run the client:
-#     docker run --runtime=nvidia --net=host -it deepdriveio/deepdrive:agents-2.1 python3 main.py --baseline --is-remote-client
+#     docker run --runtime=nvidia --net=host -it deepdriveio/deepdrive:agents-2.1 python3 main.py --baseline --remote
 #
 #     ppo train:
 #     baselines results with weights: https://s3-us-west-1.amazonaws.com/deepdrive/weights/baselines_results.zip and change PPO_RESUME_PATH in config.py # TODO: Promote PPO resume path to command line arg
-#     docker run -v /baselines_results_dir/openai-2018-06-22-00-00-21-866205/checkpoints:/baselines_results_dir/openai-2018-06-22-00-00-21-866205/checkpoints --runtime=nvidia --net=host -it deepdrive python3 main.py --agent bootstrapped_ppo2 --experiment bootstrap --train --sync --is-remote-client
+#     docker run -v /baselines_results_dir/openai-2018-06-22-00-00-21-866205/checkpoints:/baselines_results_dir/openai-2018-06-22-00-00-21-866205/checkpoints --runtime=nvidia --net=host -it deepdrive python3 main.py --agent bootstrapped_ppo2 --experiment bootstrap --train --sync --remote
 #
 #     ppo run:
-#     docker run --runtime=nvidia --net=host -it deepdrive python3 main.py --agent bootstrapped_ppo2 --experiment bootstrap --eval-only --sync --is-remote-client
+#     docker run --runtime=nvidia --net=host -it deepdrive python3 main.py --agent bootstrapped_ppo2 --experiment bootstrap --eval-only --sync --remote
 #
 #     view:
 #     http://localhost:5558

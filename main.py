@@ -81,7 +81,7 @@ def main():
     parser.add_argument('--tf-debug', action='store_true', default=False, help='Run a tf_debug session')
     parser.add_argument('--freeze-pretrained', action='store_true', default=False, help='Freeze pretrained layers '
                                                                                         'during training')
-    parser.add_argument('--is-remote-client', action='store_true', default=False,
+    parser.add_argument('--remote', action='store_true', default=False,
                         help='Use API to connect to a remote environment')
     parser.add_argument('-v', '--verbose', help='Increase output verbosity',
                         action='store_true')
@@ -145,7 +145,7 @@ def run_agent(args, camera_rigs, driving_style):
               run_ppo_baseline_agent=args.ppo_baseline, render=args.render, camera_rigs=camera_rigs,
               should_jitter_actions=args.jitter_actions, fps=args.fps,
               net_name=args.net_type, is_sync=args.sync, driving_style=driving_style,
-              is_remote=args.is_remote_client, recording_dir=args.recording_dir,
+              is_remote=args.remote, recording_dir=args.recording_dir,
               randomize_view_mode=args.randomize_view_mode, randomize_sun_speed=args.randomize_sun_speed,
               randomize_shadow_level=args.randomize_shadow_level, randomize_month=args.randomize_month,
               enable_traffic=args.enable_traffic, view_mode_period=args.view_mode_period, max_steps=args.max_steps,
@@ -161,7 +161,7 @@ def run_path_follower(args, driving_style, camera_rigs):
         if isinstance(camera_rigs[0], list):
             cams = cams[0]
         gym_env = sim.start(experiment=args.experiment, env_id=args.env_id, fps=args.fps,
-                            driving_style=driving_style, is_remote_client=args.is_remote_client,
+                            driving_style=driving_style, is_remote_client=args.remote,
                             render=args.render, cameras=cams, enable_traffic=args.enable_traffic,
                             ego_mph=args.ego_mph)
         log.info('Path follower drive mode')
@@ -213,7 +213,7 @@ def train_agent(args, driving_style):
 
         train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent,
                   render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync, driving_style=driving_style,
-                  is_remote_client=args.is_remote_client, eval_only=args.eval_only)
+                  is_remote_client=args.remote, eval_only=args.eval_only)
     else:
         raise Exception('Agent type not recognized')
 
