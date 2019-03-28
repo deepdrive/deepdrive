@@ -26,3 +26,17 @@ class Score(object):
         self.episode_time = 0
         self.speed_sampler = Sampler()
         self.gforce_sampler = Sampler()
+
+
+def main():
+    score = Score()
+    from utils import obj2dict
+    now = time.time()
+    ser = obj2dict(score)
+    took = time.time() - now
+    print('took %f s' % took)
+    print(ser)
+
+
+if __name__ == '__main__':
+    main()
