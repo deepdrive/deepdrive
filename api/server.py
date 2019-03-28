@@ -53,11 +53,31 @@ class Server(object):
                     resp = 'No environment started, please send start request'
                     log.error('Client sent request with no environment started')
                 elif method == m.START:
-                    allowed_args = ['experiment', 'env', 'cameras', 'combine_box_action_spaces', 'is_discrete',
-                                    'preprocess_with_tensorflow', 'is_sync']
-                    if c.IS_EVAL:
-                        allowed_args.remove('env')
-                        allowed_args.remove('is_sync')
+                    '''
+                     Environment server started at tcp://*:5557
+                    '''
+                    blacklist = [
+                        # We are the server, so the sim is always local to us,
+                        # remote to a client somewhere
+                        'is_remote_client',
+
+                        # Distributed tf sessions are not implemented and probably
+                        # wouldn't be passed this way anyway. This param is just
+                        # for sharing local tf sessions on the same GPU.
+                        'sess',
+                    ]
+                    challenge_blacklist = {'env_id': 'Only one gym env',
+                                           'max_steps': 'Evaluation duration is standard across submissions',
+                                           'use_sim_start_command': 'Cannot pass parameters to Unreal',
+
+                                           # TODO: Step timeout and variable step duration less than threshold
+                                           'fps':  'Step duration is capped',
+
+                                           'driving_style':  'Modifies reward function',
+                                           'enable_traffic': 'Changes difficulty of scenario',
+                                           'ego_mph': 'Used by in-game throttle PID, '
+                                                      'submissions must control their own throttle',
+                                           }
                     for key in list(kwargs):
                         if key in blacklist:
                             log.warning('Removing {key} from sim start args, not relevant to remote clients'
@@ -104,16 +124,36 @@ class Server(object):
                 self.remove_unserializeables(resp, msg)
         return serialized
 
-    def remove_unserializeables(self, resp, msg):
-        for x in resp:
-            if isinstance(x, dict):
-                for k, v in x.items():
-                    value_type = str(type(v))
-                    if value_type in msg:
-                        if value_type not in self.serialization_errors:
-                            self.serialization_errors.add(value_type)
-                            log.warn('Unserializable type %s Not sending to client!', value_type)
-                        x[k] = '[REMOVED!] %s was not serializable on server' % value_type
+    def remove_unserializeables(self, x, msg):
+        """
+        Make an object serializeable by pyarrow after an error by checking for the type
+        in msg. Pyarrow doesn't have a great API for serializable types, so doing this as a
+        stop gap for now.
+        We should avoid sending unserializable data to pyarrow, but at the same time not
+        totally fail when we do. Errors will be printed when unserializable data is first
+        encountered, so that we can go back and remove when it's reasonable.
+        This will not remove a list or tuple item, but will recursively search through
+        lists and tuples for dicts with unserializeable values.
+
+        :param obj: Object from which to remove elements that pyarrow cannot serialize
+        :param msg: The error message returned by pyarrow during serizialization
+        :return:
+        """
+        if isinstance(x, dict):
+            for k, v in x.items():
+                value_type = str(type(v))
+                if value_type in msg:
+                    if value_type not in self.serialization_errors:
+                        self.serialization_errors.add(value_type)
+                        log.warn('Unserializable type %s Not sending to client!', value_type)
+                    x[k] = '[REMOVED!] %s was not serializable on server. ' \
+                           'Avoid sending unserializable data for best performance.' % value_type
+                if isinstance(v, dict) or isinstance(v, list) or isinstance(v, tuple):
+                    # No __iter__ as numpy arrays are too big for this
+                    self.remove_unserializeables(v, msg)
+        elif isinstance(x, tuple) or isinstance(x, list):
+            for e in x:
+                self.remove_unserializeables(e, msg)
 
     def serialize_space(self, resp):
         space = self.env.action_space
