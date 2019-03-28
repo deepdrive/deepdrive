@@ -276,6 +276,7 @@ class DeepDriveEnv(gym.Env):
         info = self.init_step_info()
 
         if done:
+            # For OpenAI baselines
             self.report_score(info)
 
         if obz is not None:
@@ -286,7 +287,16 @@ class DeepDriveEnv(gym.Env):
 
         return obz, reward, done, info
 
-    def init_step_info(self, done):
+    def init_step_info(self):
+        """From https://gym.openai.com/docs/
+        info (dict): diagnostic information useful for debugging.
+            It can sometimes be useful for learning (for example,
+            it might contain the raw probabilities behind the environment’s
+            last state change). However, official evaluations of your agent
+            are not allowed to use this for learning.
+
+            'episode_time' was added here in order to comply with OpenAI baselines PPO2.
+        """
         info = {}
         info['score'] = info.get('episode', {})
         info['score']['episode_time'] = self.score.episode_time
