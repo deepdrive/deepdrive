@@ -78,6 +78,14 @@ def depth_heatmap(depth):
 
 
 def obj2dict(obj, exclude=None):
+    """
+    Converts object properties to a dict.
+    This acts as a single level copy, i.e. it's NOT recursive.
+
+    @:param obj - The Object to convert
+    @:param exclude - A list of property names to omit from the returned object
+
+    """
     ret = {}
     exclude = exclude or []
     for name in dir(obj):
