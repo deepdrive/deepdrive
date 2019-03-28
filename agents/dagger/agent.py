@@ -86,7 +86,7 @@ class Agent(object):
 
         self.jitterer = ActionJitterer()
 
-    def act(self, obz, reward, done, episode_time=None):
+    def act(self, obz, reward, done):
         net_out = None
         if obz:
             try:
@@ -98,6 +98,7 @@ class Agent(object):
             obz = self.preprocess_obz(obz)
 
         if self.should_jitter_actions:
+            episode_time = obz.get('score', {}).get('episode_time', None) if obz else None
             if episode_time is None or episode_time < 10:
                 # Hold off a bit at start of episode
                 action = Action(has_control=False)
@@ -476,11 +477,11 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
             while not episode_done:
 
                 act_start = time.time()
-                action, net_out = agent.act(obz, reward, episode_done, env.score.episode_time)
+                action, net_out = agent.act(obz, reward, episode_done)
                 log.debug('act took %fs',  time.time() - act_start)
 
                 env_step_start = time.time()
-                obz, reward, episode_done, _ = env.step(action)
+                obz, reward, episode_done, info = env.step(action)
                 log.debug('env step took %fs', time.time() - env_step_start)
 
                 if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:
@@ -499,7 +500,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                     gist_url = utils.upload_to_gist('deepdrive-results-' + c.DATE_STR,
                                                     [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME])
                     create_artifacts_inventory(gist_url=gist_url, hdf5_dir=c.HDF5_SESSION_DIR,
-                                               episodes_file=c.EPISODES_CSV_FILENAME, summary_file=c.SUMMARY_CSV_FILENAME,
+                                               episodes_file=c.EPISODES_CSV_FILENAME,
+                                               summary_file=c.SUMMARY_CSV_FILENAME,
                                                mp4_file=mp4_file)
             else:
                 log.info('Episode done')
@@ -507,11 +509,10 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
                 agent.reset()
                 if should_rotate_camera_rigs:
-                    # TODO: Allow changing viewpoint as remote client
                     # TODO: Add this to domain_randomization()
                     cameras = copy.deepcopy(camera_rigs[episode % len(camera_rigs)])
                     randomize_cameras(cameras)
-                    env.unwrapped.change_cameras(cameras)
+                    env.change_cameras(cameras)
 
     except KeyboardInterrupt:
         log.info('keyboard interrupt detected in agent, closing')
@@ -520,6 +521,9 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
 
 
 def domain_randomization(env, randomize_month, randomize_shadow_level, randomize_sun_speed, randomize_view_mode):
+    """
+    Sim randomization modes to encourage generalization and sim2real transfer
+    """
     if randomize_view_mode:
         set_random_view_mode(env)
     # if randomize_sun_speed:

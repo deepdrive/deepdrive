@@ -106,6 +106,7 @@ def save_hdf5_task(out, filename):
         for i, frame in enumerate(out):
             frame_grp = f.create_group('frame_%s' % str(i).zfill(10))
             add_collision_to_hdf5(frame, frame_grp)
+            add_score_to_hdf5(frame, frame_grp)
             add_cams_to_hdf5(frame, frame_grp, opts)
             del frame['cameras']
             for k, v in frame.items():
@@ -127,6 +128,14 @@ def add_cams_to_hdf5(frame, frame_grp, opts):
         for k, v in camera.items():
             # TODO: Move this to a 'props' dataset as attrs can only be 64kB
             camera_grp.attrs[k] = v
+
+
+def add_score_to_hdf5(frame, frame_grp):
+    score = frame['score']
+    score_grp = frame_grp.create_group('score')
+    for k, v in score.items():
+        score_grp.attrs[k] = v
+    del frame['score']
 
 
 def add_collision_to_hdf5(frame, frame_grp):
