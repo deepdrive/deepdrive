@@ -95,6 +95,10 @@ def start(**kwargs):
             log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
             _env.init_benchmarking()
 
+        # Monkey patch methods we want to expose to the remote client,
+        # so they can be called the same way locally.
+        env.change_cameras = env.unwrapped.change_cameras
+
         env.reset()
     return env
 

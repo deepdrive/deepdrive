@@ -59,7 +59,14 @@ class Server(object):
                         allowed_args.remove('env')
                         allowed_args.remove('is_sync')
                     for key in list(kwargs):
-                        if key not in allowed_args:
+                        if key in blacklist:
+                            log.warning('Removing {key} from sim start args, not relevant to remote clients'
+                                        .format(key=key))
+                            del kwargs[key]
+                        if c.IS_CHALLENGE and key in challenge_blacklist:
+                            log.warning('Removing {key} from sim start args, '
+                                        'blacklisted for challenges. Reason: {reason}.'
+                                        .format(key=key, reason=challenge_blacklist[key]))
                             del kwargs[key]
                     self.env = sim.start(**kwargs)
                 elif method == m.STEP:
@@ -72,6 +79,8 @@ class Server(object):
                     resp = self.env.reward_range
                 elif method == m.METADATA:
                     resp = self.env.metadata
+                elif method == m.CHANGE_CAMERAS:
+                    resp = self.env.unwrapped.change_cameras(*args, **kwargs)
                 else:
                     log.error('Invalid API method')
 

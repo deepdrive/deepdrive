@@ -36,6 +36,7 @@ class Client(object):
         else:
             self.renderer = None
         log.info('===========> Queuing server start message ===========>')
+        # TODO: Fix connecting to an open sim
         self._send(m.START, kwargs=kwargs)
         log.info('===========> Deepdrive started')
 
@@ -82,6 +83,9 @@ class Client(object):
     def render(self):
         if self.last_obz is not None:
             self.renderer.render(self.last_obz)
+
+    def change_cameras(self, cameras):
+        return self._send(m.CHANGE_CAMERAS, args=[cameras])
 
     def close(self):
         self.socket.close()
