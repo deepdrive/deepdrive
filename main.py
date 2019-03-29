@@ -25,7 +25,8 @@ log = logs.get_log(__name__)
 
 def main():
     parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('-e', '--env-id', nargs='?', default='Deepdrive-v0', help='Select the environment to run')
+    parser.add_argument('-e', '--env-id', nargs='?', default='Deepdrive-v0',
+                        help='Select the environment to run')
     parser.add_argument('-r', '--record', action='store_true', default=False,
                         help='Records game driving, including recovering from random actions')
     parser.add_argument('--baseline', action='store_true', default=False,
@@ -42,8 +43,8 @@ def main():
                         help='Trains tensorflow agent on stored driving data')
     parser.add_argument('--use-latest-model', action='store_true', default=False,
                         help='Use most recently trained model')
-    parser.add_argument('--recording-dir', nargs='?', default=c.RECORDING_DIR, help='Where to store and read recorded '
-                                                                                    'environment data from')
+    parser.add_argument('--recording-dir', nargs='?', default=c.RECORDING_DIR,
+                        help='Where to store and read recorded environment data from')
     parser.add_argument('--render', action='store_true', default=False,
                         help='Show the cameras as seen your agents in Python')
     parser.add_argument('--sync', action='store_true', default=False,
@@ -65,8 +66,8 @@ def main():
     parser.add_argument('--overfit', action='store_true', default=False,
                         help='Whether or not to overfit to a small test set during training to sanity check '
                              'convergability')
-    parser.add_argument('--eval-only', help='Whether to just run evaluation, i.e. disable gradient updates',
-                        action='store_true', default=False)
+    parser.add_argument('--eval-only', action='store_true', default=False,
+                        help='Whether to just run evaluation, i.e. disable gradient updates',)
     parser.add_argument('--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
@@ -78,54 +79,46 @@ def main():
     parser.add_argument('--resume-train', nargs='?', default=None,
                         help='Name of the tensorflow training session you want to resume within %s, '
                              'i.e. 2018-01-01__11-11-11AM_train' % c.TENSORFLOW_OUT_DIR)
-    parser.add_argument('--tf-debug', action='store_true', default=False, help='Run a tf_debug session')
-    parser.add_argument('--freeze-pretrained', action='store_true', default=False, help='Freeze pretrained layers '
-                                                                                        'during training')
+    parser.add_argument('--tf-debug', action='store_true', default=False,
+                        help='Run a tf_debug session')
+    parser.add_argument('--freeze-pretrained', action='store_true', default=False,
+                        help='Freeze pretrained layers during training')
     parser.add_argument('--remote', action='store_true', default=False,
                         help='Use API to connect to a remote environment')
-    parser.add_argument('-v', '--verbose', help='Increase output verbosity',
-                        action='store_true')
-    parser.add_argument('--camera-rigs', nargs='?', default=None, help='Name of camera rigs to use')
-    parser.add_argument('--train-args-collection', nargs='?', default=None, help='Name of the set of training args to '
-                                                                                'use')
-    parser.add_argument('--experiment', nargs='?', default=None, help='Name of your experiment')
-    parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS, help='Frames / steps per second')
-    parser.add_argument('--ego-mph', type=float, default=25, help='Ego (i.e. main) agent vehicle miles per hour')
+    parser.add_argument('-v', '--verbose',
+                        help='Increase output verbosity', action='store_true')
+    parser.add_argument('--camera-rigs', nargs='?', default=None,
+                        help='Name of camera rigs to use')
+    parser.add_argument('--train-args-collection', nargs='?', default=None,
+                        help='Name of the set of training args to use')
+    parser.add_argument('--experiment', nargs='?', default=None,
+                        help='Name of your experiment')
+    parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS,
+                        help='Frames / steps per second')
+    parser.add_argument('--ego-mph', type=float, default=25,
+                        help='Ego (i.e. main) agent vehicle miles per hour')
     parser.add_argument('--agent', nargs='?', default=c.DAGGER_MNET2,
                         help='Agent type (%s, %s, %s)' % (c.DAGGER,
                                                           c.DAGGER_MNET2,
                                                           c.BOOTSTRAPPED_PPO2))
-    parser.add_argument('--view-mode-period', type=int, default=None, help='Number of steps between view mode '
-                                                                           'switches')
-    parser.add_argument('--max-steps', type=int, default=None, help='Max number of steps to run per episode')
-    parser.add_argument('--max-episodes', type=int, default=None, help='Maximum number of episodes')
+    parser.add_argument('--view-mode-period', type=int, default=None,
+                        help='Number of steps between view mode switches')
+    parser.add_argument('--max-steps', type=int, default=None,
+                        help='Max number of steps to run per episode')
+    parser.add_argument('--max-episodes', type=int, default=None,
+                        help='Maximum number of episodes')
 
     args = c.PY_ARGS = parser.parse_args()
     if args.verbose:
         logs.set_level(logging.DEBUG)
 
     if args.hdf5_2_tfrecord:
-        hdf5_to_tfrecord.encode(hdf5_path=args.recording_dir, experiment=args.experiment)
+        hdf5_to_tfrecord.encode(hdf5_path=args.recording_dir,
+                                experiment=args.experiment)
         return
 
-    if args.camera_rigs:
-        camera_rigs = camera_config.rigs[args.camera_rigs]
-    else:
-        camera_rigs = camera_config.rigs['baseline_rigs']
-
-    if args.use_latest_model:
-        if args.net_path:
-            raise ValueError('--use-latest-model and --net-path cannot both be set')
-        if args.train:
-            args.resume_train = get_latest_model()
-        else:
-            args.net_path = get_latest_model()
-    elif args.net_path and os.path.isdir(args.net_path):
-        args.net_path = get_latest_model_from_path(args.net_path)
-
-    if args.mnet2_baseline:
-        args.net_type = net.MOBILENET_V2_NAME
-
+    camera_rigs = get_camera_rigs(args)
+    configure_net_args(args)
     driving_style = DrivingStyle[args.driving_style.upper()]
 
     if args.train:
@@ -137,7 +130,37 @@ def main():
         run_agent(args, camera_rigs, driving_style)
 
 
+def get_camera_rigs(args):
+    if args.camera_rigs:
+        camera_rigs = camera_config.rigs[args.camera_rigs]
+    else:
+        camera_rigs = camera_config.rigs['baseline_rigs']
+    return camera_rigs
+
+
+def configure_net_args(args):
+    if args.use_latest_model:
+        if args.net_path:
+            raise ValueError('--use-latest-model and --net-path cannot both be set')
+        if args.train:
+            args.resume_train = get_latest_model()
+        else:
+            args.net_path = get_latest_model()
+    elif args.net_path and os.path.isdir(args.net_path):
+        args.net_path = get_latest_model_from_path(args.net_path)
+    if args.mnet2_baseline:
+        args.net_type = net.MOBILENET_V2_NAME
+
+
 def run_agent(args, camera_rigs, driving_style):
+    """
+    Here we run an agent alongside an open simulator and either just benchmark
+    it's performance, as with agents trained offline (i.e. the current dagger mnet and
+    alexnet agents), or train an online agent.
+
+    :param camera_rigs: A collection of camera configs to cycle through, with
+    one rig used for the duration of an episode
+    """
     from agents.dagger import agent
     agent.run(args.experiment,
               should_record=args.record, net_path=args.net_path, env_id=args.env_id,
@@ -148,8 +171,9 @@ def run_agent(args, camera_rigs, driving_style):
               is_remote=args.remote, recording_dir=args.recording_dir,
               randomize_view_mode=args.randomize_view_mode, randomize_sun_speed=args.randomize_sun_speed,
               randomize_shadow_level=args.randomize_shadow_level, randomize_month=args.randomize_month,
-              enable_traffic=args.enable_traffic, view_mode_period=args.view_mode_period, max_steps=args.max_steps,
-              max_episodes=args.max_episodes)
+              enable_traffic=args.enable_traffic, view_mode_period=args.view_mode_period,
+              max_steps=args.max_steps,
+              max_episodes=args.max_episodes, agent_name=args.agent)
 
 
 def run_path_follower(args, driving_style, camera_rigs):
@@ -186,20 +210,8 @@ def run_path_follower(args, driving_style, camera_rigs):
 
 
 def train_agent(args, driving_style):
-    # TODO: Add experiment name here as well, and integrate it into Tensorflow runs, recording names, model checkpoints, etc...
     if args.agent == 'dagger' or args.agent == 'dagger_mobilenet_v2':
-        '''
-        Really it's just the first iteration of DAgger where our policy is random.
-        This seems to be sufficient for exploring the types of mistakes our AI makes and labeling
-        corrections to those mistakes. This does a better job at handling edge cases that
-        the agent would not encounter acting under its own policy during training.
-        In this way, we come a little closer to reinforcement learning, as we explore randomly and cover
-        a larger number of possibilities.
-        '''
-        from agents.dagger.train import train
-        train.run(resume_dir=args.resume_train, data_dir=args.recording_dir, agent_name=args.agent,
-                  overfit=args.overfit, eval_only=args.eval_only, tf_debug=args.tf_debug,
-                  freeze_pretrained=args.freeze_pretrained, train_args_collection_name=args.train_args_collection)
+        train_dagger(args)
     elif args.agent == 'bootstrapped_ppo2':
         from agents.bootstrap_rl.train import train
         net_path = args.net_path
@@ -211,11 +223,24 @@ def train_agent(args, driving_style):
             log.warning('Detected training RL in async mode which can cause unequal time deltas. '
                         'Switching to synchronous mode. Use --sync to avoid this.')
 
-        train.run(args.env_id, resume_dir=args.resume_train, bootstrap_net_path=net_path, agent_name=args.agent,
-                  render=args.render, camera_rigs=[c.DEFAULT_CAM], is_sync=args.sync, driving_style=driving_style,
+        train.run(args.env_id, resume_dir=args.resume_train,
+                  bootstrap_net_path=net_path, agent_name=args.agent,
+                  render=args.render, camera_rigs=[c.DEFAULT_CAM],
+                  is_sync=args.sync, driving_style=driving_style,
                   is_remote_client=args.remote, eval_only=args.eval_only)
     else:
         raise Exception('Agent type not recognized')
+
+
+def train_dagger(args):
+    """
+    Run the first iteration of DAgger where our policy is random.
+    """
+    from agents.dagger.train import train
+    train.run(resume_dir=args.resume_train, data_dir=args.recording_dir, agent_name=args.agent,
+              overfit=args.overfit, eval_only=args.eval_only, tf_debug=args.tf_debug,
+              freeze_pretrained=args.freeze_pretrained,
+              train_args_collection_name=args.train_args_collection)
 
 
 def get_latest_model():

@@ -1,7 +1,8 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-# TODO: Bootstrap future module to enable Python 2 support of install which depends on this file to do below
+# TODO: Bootstrap future module to enable Python 2 support of install
+#  which depends on this file to do below
 # from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
 #                              int, map, next, oct, open, pow, range, round,
 #                              str, super, zip)
@@ -44,7 +45,6 @@ MEAN_PIXEL = np.array([104., 117., 123.], np.float32)
 
 # HDF5
 FRAMES_PER_HDF5_FILE = int(os.environ.get('FRAMES_PER_HDF5_FILE', 1000))
-MAX_RECORDED_OBSERVATIONS = FRAMES_PER_HDF5_FILE * 150
 NUM_TRAIN_FRAMES_TO_QUEUE = 6000
 NUM_TRAIN_FILES_TO_QUEUE = NUM_TRAIN_FRAMES_TO_QUEUE // FRAMES_PER_HDF5_FILE
 HDF5_DIR_ZFILL = 7
@@ -110,6 +110,7 @@ def get_sim_path():
         return list(sorted(version_paths))[-1]
     else:
         return orig_path
+
 
 REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
 SIM_PATH = get_sim_path()

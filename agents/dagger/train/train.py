@@ -50,7 +50,8 @@ def visualize_gradients(grads_and_vars):
     tf.summary.scalar("model/var_global_norm", tf.global_norm(var_list))
 
 
-def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=False, eval_only=False, tf_debug=False,
+def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None,
+        overfit=False, eval_only=False, tf_debug=False,
         freeze_pretrained=False, train_args_collection_name=None):
     show_tfboard_hint()
     if agent_name == c.DAGGER_MNET2:
@@ -74,25 +75,32 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None, overfit=Fals
         else:
             train_mobile_net(data_dir, resume_dir, train_args_collection_name)
     else:
-        custom_train_loop(agent_name, data_dir, eval_only, freeze_pretrained, overfit, resume_dir, tf_debug)
+        custom_train_loop(agent_name, data_dir, eval_only,
+                          freeze_pretrained, overfit, resume_dir, tf_debug)
 
 
-def custom_train_loop(agent_name, data_dir, eval_only, freeze_pretrained, overfit, resume_dir, tf_debug):
+def custom_train_loop(agent_name, data_dir, eval_only,
+                      freeze_pretrained, overfit, resume_dir, tf_debug):
     # TODO: Don't use generic word like 'model' here that other projects often use.
     # Need to rename/retrain saved models tho...
     with tf.variable_scope("model"):
-        global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.zeros_initializer, trainable=False)
-    agent_net = get_agent_net(agent_name, global_step, eval_only=eval_only, freeze_pretrained=freeze_pretrained)
+        global_step = tf.get_variable("global_step", [], tf.int32,
+                                      initializer=tf.zeros_initializer, trainable=False)
+    agent_net = get_agent_net(agent_name, global_step,
+                              eval_only=eval_only, freeze_pretrained=freeze_pretrained)
     log.info('starter learning rate is %f', agent_net.starter_learning_rate)
     sess_eval_dir, sess_train_dir = get_dirs(resume_dir)
     targets_tensor = tf.placeholder(tf.float32, (None, agent_net.num_targets))
     total_loss = setup_loss(agent_net, targets_tensor)
     opt = tf.train.AdamOptimizer(agent_net.learning_rate)
     tf.summary.scalar("model/learning_rate", agent_net.learning_rate)
-    summary_op, sv, train_op = get_train_ops(agent_net, global_step, opt, sess_train_dir, targets_tensor, total_loss)
+    summary_op, sv, train_op = get_train_ops(agent_net, global_step, opt,
+                                             sess_train_dir, targets_tensor, total_loss)
     eval_sw = tf.summary.FileWriter(sess_eval_dir)
-    train_dataset = get_dataset(data_dir, overfit=overfit, mute_spurious_targets=agent_net.mute_spurious_targets)
-    eval_dataset = get_dataset(data_dir, train=False, mute_spurious_targets=agent_net.mute_spurious_targets)
+    train_dataset = get_dataset(data_dir, overfit=overfit,
+                                mute_spurious_targets=agent_net.mute_spurious_targets)
+    eval_dataset = get_dataset(data_dir, train=False,
+                               mute_spurious_targets=agent_net.mute_spurious_targets)
     config = tf.ConfigProto(allow_soft_placement=True)
     with sv.managed_session(config=config) as sess, sess.as_default():
         if tf_debug:
@@ -236,9 +244,6 @@ def perform_eval(step, agent_net, batch_size, eval_dataset, eval_sw, sess):
         log.info('%s loss %f', loss_name, loss_component)
     eval_sw.add_summary(summary, step)
     eval_sw.flush()
-
-
-
 
 
 if __name__ == "__main__":

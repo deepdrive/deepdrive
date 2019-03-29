@@ -17,6 +17,31 @@ log = logs.get_log(__name__)
 
 CONN_STRING = "tcp://*:%s" % c.API_PORT
 
+BLACKLIST_PARAMS = [
+    # We are the server, so the sim is always local to us,
+    # remote to a client somewhere
+    'is_remote_client',
+
+    # Distributed tf sessions are not implemented and probably
+    # wouldn't be passed this way anyway. This param is just
+    # for sharing local tf sessions on the same GPU.
+    'sess',
+]
+
+CHALLENGE_BLACKLIST_PARAMS = {
+    'env_id': 'Only one gym env',
+    'max_steps': 'Evaluation duration is standard across submissions',
+    'use_sim_start_command': 'Cannot pass parameters to Unreal',
+
+    # TODO: Step timeout and variable step duration less than threshold
+    'fps': 'Step duration is capped',
+
+    'driving_style': 'Modifies reward function',
+    'enable_traffic': 'Changes difficulty of scenario',
+    'ego_mph': 'Used by in-game throttle PID, '
+               'submissions must control their own throttle',
+}
+
 
 class Server(object):
     def __init__(self):
@@ -46,73 +71,43 @@ class Server(object):
         log.info('Environment server started at %s', CONN_STRING)
         while True:
             try:
-                msg = self.socket.recv()
-                method, args, kwargs = pyarrow.deserialize(msg)
-                resp = None
-                if self.env is None and method != m.START:
-                    resp = 'No environment started, please send start request'
-                    log.error('Client sent request with no environment started')
-                elif method == m.START:
-                    '''
-                     Environment server started at tcp://*:5557
-                    '''
-                    blacklist = [
-                        # We are the server, so the sim is always local to us,
-                        # remote to a client somewhere
-                        'is_remote_client',
-
-                        # Distributed tf sessions are not implemented and probably
-                        # wouldn't be passed this way anyway. This param is just
-                        # for sharing local tf sessions on the same GPU.
-                        'sess',
-                    ]
-                    challenge_blacklist = {'env_id': 'Only one gym env',
-                                           'max_steps': 'Evaluation duration is standard across submissions',
-                                           'use_sim_start_command': 'Cannot pass parameters to Unreal',
-
-                                           # TODO: Step timeout and variable step duration less than threshold
-                                           'fps':  'Step duration is capped',
-
-                                           'driving_style':  'Modifies reward function',
-                                           'enable_traffic': 'Changes difficulty of scenario',
-                                           'ego_mph': 'Used by in-game throttle PID, '
-                                                      'submissions must control their own throttle',
-                                           }
-                    for key in list(kwargs):
-                        if key in blacklist:
-                            log.warning('Removing {key} from sim start args, not relevant to remote clients'
-                                        .format(key=key))
-                            del kwargs[key]
-                        if c.IS_CHALLENGE and key in challenge_blacklist:
-                            log.warning('Removing {key} from sim start args, '
-                                        'blacklisted for challenges. Reason: {reason}.'
-                                        .format(key=key, reason=challenge_blacklist[key]))
-                            del kwargs[key]
-                    self.env = sim.start(**kwargs)
-                elif method == m.STEP:
-                    resp = self.env.step(args[0])
-                elif method == m.RESET:
-                    resp = self.env.reset()
-                elif method == m.ACTION_SPACE or method == m.OBSERVATION_SPACE:
-                    resp = self.serialize_space(resp)
-                elif method == m.REWARD_RANGE:
-                    resp = self.env.reward_range
-                elif method == m.METADATA:
-                    resp = self.env.metadata
-                elif method == m.CHANGE_CAMERAS:
-                    resp = self.env.unwrapped.change_cameras(*args, **kwargs)
-                else:
-                    log.error('Invalid API method')
-
-                serialized = self.serialize(resp)
-
-                if serialized is None:
-                    raise RuntimeError('Could not serialize response. Check above for details')
-                self.socket.send(serialized.to_buffer())
-
+                self.dispatch()
             except zmq.error.Again:
                 log.info('Waiting for client')
                 self.create_socket()
+
+    def dispatch(self):
+        """
+        Waits for a message from the client, deserializes, routes to the appropriate method,
+        and sends a serialized response.
+        """
+        msg = self.socket.recv()
+        method, args, kwargs = pyarrow.deserialize(msg)
+        resp = None
+        if self.env is None and method != m.START:
+            resp = 'No environment started, please send start request'
+            log.error('Client sent request with no environment started')
+        elif method == m.START:
+            self.remove_blacklisted_params(kwargs)
+            self.env = sim.start(**kwargs)
+        elif method == m.STEP:
+            resp = self.env.step(args[0])
+        elif method == m.RESET:
+            resp = self.env.reset()
+        elif method == m.ACTION_SPACE or method == m.OBSERVATION_SPACE:
+            resp = self.serialize_space(resp)
+        elif method == m.REWARD_RANGE:
+            resp = self.env.reward_range
+        elif method == m.METADATA:
+            resp = self.env.metadata
+        elif method == m.CHANGE_CAMERAS:
+            resp = self.env.unwrapped.change_cameras(*args, **kwargs)
+        else:
+            log.error('Invalid API method')
+        serialized = self.serialize(resp)
+        if serialized is None:
+            raise RuntimeError('Could not serialize response. Check above for details')
+        self.socket.send(serialized.to_buffer())
 
     def serialize(self, resp):
         serialized = None
@@ -154,6 +149,19 @@ class Server(object):
         elif isinstance(x, tuple) or isinstance(x, list):
             for e in x:
                 self.remove_unserializeables(e, msg)
+
+    @staticmethod
+    def remove_blacklisted_params(kwargs):
+        for key in list(kwargs):
+            if key in BLACKLIST_PARAMS:
+                log.warning('Removing {key} from sim start args, not relevant to remote clients'
+                            .format(key=key))
+                del kwargs[key]
+            if c.IS_CHALLENGE and key in CHALLENGE_BLACKLIST_PARAMS:
+                log.warning('Removing {key} from sim start args, '
+                            'blacklisted for challenges. Reason: {reason}.'
+                            .format(key=key, reason=CHALLENGE_BLACKLIST_PARAMS[key]))
+                del kwargs[key]
 
     def serialize_space(self, resp):
         space = self.env.action_space

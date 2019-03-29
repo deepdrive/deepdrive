@@ -24,6 +24,24 @@ def deserialize_space(resp):
 
 
 class Client(object):
+    """
+    A Client object acts as a remote proxy to the deepdrive gym environment. Methods
+    that you would call on the env, like step() are also called on this object,
+    with communication over the network - rather than over shared memory (for
+    observations) and network (for transactions like reset) as is the case with
+    the locally run sim/gym_env.py.
+    This allows the agent and environment to run on separate machines, but
+    with the same API as a local agent, namely the gym API.
+
+    The local gym environment is then run by api/server.py which proxies RPC's from
+    this client to the local environment.
+
+    All network communication happens over ZMQ to take advantage of their highly optimized
+    cross-language / cross-OS sockets.
+
+    NOTE: This will obviously run more slowly than a local agent which communicates
+    sensor data over shared memory.
+    """
     def __init__(self, **kwargs):
         self.socket = None
         self.last_obz = None
@@ -81,6 +99,10 @@ class Client(object):
         return self._send(m.RESET)
 
     def render(self):
+        """
+        We pass the obz through an instance variable to comply with
+        the gym api where render() takes 0 arguments
+        """
         if self.last_obz is not None:
             self.renderer.render(self.last_obz)
 

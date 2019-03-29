@@ -14,6 +14,7 @@ import logs
 
 log = logs.get_log(__name__)
 
+
 class JitterState(Enum):
     MAINTAIN = 1
     SWITCH_TO_NONRAND = 2

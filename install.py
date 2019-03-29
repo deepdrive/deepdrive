@@ -80,6 +80,8 @@ def main():
 
     run_command_with_sarge(py + ' -m pip install -r requirements.txt')
 
+
+
     # Create deepdrive directory
     import config as c
 
@@ -92,7 +94,6 @@ def main():
     # # TODO: Remove dev0 once 3.0 is stable
     run_command_with_sarge(py + ' -m pip install {pip_args} "deepdrive > {major_minor_version}.*dev0"'.format(
         major_minor_version=c.MAJOR_MINOR_VERSION_STR, pip_args=pip_args))
-
 
     import utils
     utils.ensure_sim()
@@ -134,14 +135,16 @@ def check_tensorflow_gpu():
             print('\n\n*** Warning: %s \n\n' %
                   'tensorflow-gpu not found, performance will be severely degraded if run on CPU. '
                   'HINT: Try "pip install tensorflow-gpu"')
-            # TODO: use get_available_gpu's on a given session or confirm assumption the plain tensorflow package is always cpu
+            # TODO: use get_available_gpu's on a given session or
+            #  confirm assumption the plain tensorflow package is always cpu
             # TODO: Handle TPU's
         else:
             print('Found tensorflow-gpu - assuming you are running Tensorflow on GPU')
 
         min_version = '1.7'
         if semvar(tf.__version__) < semvar(min_version):
-            warn_msg = 'Tensorflow %s is less than the minimum required version (%s)' % (tf.__version__, min_version)
+            warn_msg = 'Tensorflow %s is less than the minimum required version (%s)' \
+                       % (tf.__version__, min_version)
             print(error_msg % warn_msg, file=sys.stderr)
             return False
         else:

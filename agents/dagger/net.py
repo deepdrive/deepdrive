@@ -25,7 +25,8 @@ FAKE_QUANT_OPS = ('FakeQuantWithMinMaxVars',
 
 
 class Net(object):
-    def __init__(self, global_step=None, num_targets=c.NUM_TARGETS, is_training=True, freeze_pretrained=False, overfit=False):
+    def __init__(self, global_step=None, num_targets=c.NUM_TARGETS, is_training=True,
+                 freeze_pretrained=False, overfit=False):
         self.num_targets = num_targets
         self.is_training = is_training
         self.global_step = global_step

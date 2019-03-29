@@ -142,7 +142,8 @@ def add_score_to_hdf5(frame, frame_grp):
     score = frame['score']
     score_grp = frame_grp.create_group('score')
     for k, v in score.items():
-        score_grp.attrs[k] = v
+        if v is not None:
+            score_grp.attrs[k] = v
     del frame['score']
 
 
@@ -235,7 +236,8 @@ def hdf5_to_mp4(fps=c.DEFAULT_FPS, png_dir=None, combine_all=False, sess_dir=Non
 
 
 def pngs_to_mp4(combine_all, fps, png_dir):
-    # TODO: Add FPS, frame number, run id, date str, g-forces, episode #, hdf5 #, etc... to this and rendered views for human interprettability
+    # TODO: Add FPS, frame number, run id, date str, g-forces, episode #, hdf5 #, etc... to this
+    #  and rendered views for human interprettability
     log.info('Saved temp png\'s to ' + png_dir)
     file_path = None
     import distutils.spawn
@@ -286,8 +288,6 @@ def upload_to_gist(name: str, file_paths: list):
 
 
 def upload_to_youtube(file_path):
-    # TODO: pip install -e https://github.com/deepdrive/youtube-upload in install.py - could add './vendor/youtube-upload' to requirements but does not update on changes
-
     # python_path = os.environ['PYTHONPATH']
     # youtube_upload_dir = os.path.join(c.ROOT_DIR, 'vendor', 'youtube_upload')
     # os.environ['PYTHONPATH'] = '%s:%s' % (youtube_upload_dir, python_path)

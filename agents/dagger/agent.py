@@ -12,21 +12,17 @@ from simple_pid import PID
 
 import config as c
 import sim
-import utils
 from agents.common import get_throttle
 from agents.dagger import net
 from agents.dagger.action_jitterer import ActionJitterer, JitterState
 from sim.driving_style import DrivingStyle
 from sim.action import Action
 from sim import world
-from agents.dagger.net import AlexNet, MobileNetV2
-from utils import save_hdf5, download
+from agents.dagger.net import AlexNet, MobileNetV2, MOBILENET_V2_IMAGE_SHAPE
+from utils import download
 import logs
 
 log = logs.get_log(__name__)
-
-
-TEST_SAVE_IMAGE = False
 
 TARGET_MPH = 25
 TARGET_MPS = TARGET_MPH / 2.237
@@ -35,10 +31,9 @@ TARGET_MPS_TEST = 75 * TARGET_MPS
 
 class Agent(object):
     def __init__(self, tf_session, should_jitter_actions=True,
-                 should_record=False, net_path=None, use_frozen_net=False, random_action_count=0,
-                 non_random_action_count=5, path_follower=False, recording_dir=c.RECORDING_DIR,
-                 output_last_hidden=False,
-                 net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL):
+                 net_path=None, use_frozen_net=False, path_follower=False,
+                 output_last_hidden=False, net_name=net.ALEXNET_NAME,
+                 driving_style=DrivingStyle.NORMAL):
         np.random.seed(c.RNG_SEED)
         self.previous_action = None
         self.previous_net_out = None
@@ -49,22 +44,12 @@ class Agent(object):
         # State for toggling random actions
         self.should_jitter_actions = should_jitter_actions
         self.episode_action_count = 0
-        self.recorded_obz_count = 0
-        self.num_saved_observations = 0
         self.path_follower_mode = path_follower
-        self.recording_dir = recording_dir
         self.output_last_hidden = output_last_hidden
 
-        # Recording state
-        self.should_record = should_record
-        self.sess_dir = c.HDF5_SESSION_DIR
-        self.obz_recording = []
-        self.skipped_first_corrective_action = False
-
         if should_jitter_actions:
-            log.info('Mixing in random actions to increase data diversity (these are not recorded).')
-        if should_record:
-            log.info('Recording driving data to %s', self.sess_dir)
+            log.info('Mixing in random actions to increase data diversity '
+                     '(these are not recorded).')
 
         # Net
         self.sess = tf_session
@@ -95,7 +80,6 @@ class Agent(object):
             except TypeError as e:
                 log.error('Could not parse this observation %r', obz)
                 raise
-            obz = self.preprocess_obz(obz)
 
         if self.should_jitter_actions:
             episode_time = obz.get('score', {}).get('episode_time', None) if obz else None
@@ -123,51 +107,8 @@ class Agent(object):
             action = Action(has_control=(not self.path_follower_mode))
         self.previous_action = action
         self.step += 1
-        log.debug('obz_exists? %r should_record? %r', obz is not None, self.should_record)
-        if self.should_record_obz(obz):
-            log.debug('Recording frame')
-            self.obz_recording.append(obz)
-            if TEST_SAVE_IMAGE:
-                utils.save_camera(obz['cameras'][0]['image'], obz['cameras'][0]['depth'],
-                                  self.sess_dir, 'screenshot_' + str(self.step).zfill(10))
-                input('continue?')
-            self.recorded_obz_count += 1
-            if self.recorded_obz_count % 100 == 0:
-                log.info('%d recorded observations', self.recorded_obz_count)
-
-        else:
-            log.debug('Not recording frame.')
-
-        self.maybe_save()
         action = action.as_gym()
         return action, net_out
-
-    def should_record_obz(self, obz):
-        if not obz:
-            return False
-        if not self.should_record:
-            return False
-        if not self.should_jitter_actions:
-            return self.should_record
-        else:
-            is_game_driving = self.get_is_game_driving(obz)
-            safe_action = is_game_driving and not self.jitterer.perform_random_actions
-            if safe_action:
-                # TODO: Fix race condition in sim and remove skipped_first_corrective_action guard (might be done)
-                if self.skipped_first_corrective_action:
-                    return True
-                else:
-                    self.skipped_first_corrective_action = True
-                    return False
-            else:
-                self.skipped_first_corrective_action = False
-                return False
-
-    def get_is_game_driving(self, obz):
-        if not obz:
-            log.warn('Observation not set, assuming game not driving to prevent recording bad actions')
-            return False
-        return obz['is_game_driving'] == 1
 
     def get_next_action(self, obz, net_out):
         log.debug('getting next action')
@@ -177,8 +118,12 @@ class Agent(object):
 
         net_out = net_out[0]  # We currently only have one environment
 
-        desired_spin, desired_direction, desired_speed, desired_speed_change, desired_steering, desired_throttle = \
-            net_out
+        (desired_spin,
+         desired_direction,
+         desired_speed,
+         desired_speed_change,
+         desired_steering,
+         desired_throttle) = net_out
 
         desired_spin = desired_spin * c.SPIN_NORMALIZATION_FACTOR
         desired_speed = desired_speed * c.SPEED_NORMALIZATION_FACTOR
@@ -249,25 +194,11 @@ class Agent(object):
         action = Action(smoothed_steering, desired_throttle)
         return action
 
-    def maybe_save(self):
-        # TODO: Move recording to env
-        if (
-            self.should_record and self.recorded_obz_count % c.FRAMES_PER_HDF5_FILE == 0 and
-            self.recorded_obz_count != 0 and self.num_saved_observations < self.recorded_obz_count
-           ):
-            self.save_recordings()
-
-    def save_recordings(self):
-        filename = os.path.join(self.sess_dir, '%s.hdf5' %
-                                str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10))
-        save_hdf5(self.obz_recording, filename=filename, background=False)
-        log.info('Flushing output data')
-        self.obz_recording = []
-        self.num_saved_observations = self.recorded_obz_count
-
     def jitter_action(self, obz):
-        """Reduce sampling error by randomly exploring space around non-random agent's trajectory with occasional
-            random actions"""
+        """
+        Reduce sampling error by randomly exploring space around non-random agent's
+        trajectory with occasional random actions
+        """
         state = self.jitterer.advance()
         if state is JitterState.SWITCH_TO_RAND:
             steering = np.random.uniform(-0.5, 0.5, 1)[0]  # Going too large here gets us stuck
@@ -357,10 +288,6 @@ class Agent(object):
         if self.sess is not None:
             self.sess.close()
 
-    def save_unsaved_observations(self):
-        if self.should_record and self.num_saved_observations < self.recorded_obz_count:
-            self.save_recordings()
-
     def get_net_out(self, image):
         begin = time.time()
         if self.use_frozen_net:
@@ -379,67 +306,42 @@ class Agent(object):
         log.debug('inference time %s', end - begin)
         return net_out
 
-    # noinspection PyMethodMayBeStatic
-    def preprocess_obz(self, obz):
-        for camera in obz['cameras']:
-            prepro_start = time.time()
-            image = camera['image']
-            image = image.astype(np.float32)
-            image -= c.MEAN_PIXEL
-            if isinstance(self.net, MobileNetV2):
-                resize_start = time.time()
-                image = utils.resize_images(self.net.input_image_shape, [image], always=True)[0]
-                log.debug('resize took %fs', time.time() - resize_start)
-            camera['image'] = image
-            log.debug('prepro took %fs',  time.time() - prepro_start)
-        return obz
-
     def reset(self):
         self.jitterer.reset()
         self.throttle_pid.auto_mode = False
 
 
-def create_artifacts_inventory(gist_url: str, hdf5_dir: str, episodes_file: str, summary_file: str,
-                               mp4_file: str):
+def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
+        should_benchmark=True, run_baseline_agent=False, run_mnet2_baseline_agent=False,
+        run_ppo_baseline_agent=False, camera_rigs=None,
 
-    # TODO: Add list of artifacts results file with:
-    filename = os.path.join(c.RESULTS_DIR, 'artifact-inventory.json')
-    with open(filename, 'w') as out_file:
-        observations: list = glob.glob(hdf5_dir + '/*.hdf5')
-        data = {'artifacts': {
-            'mp4': mp4_file,
-            'gist': gist_url,
-            'performance_summary': summary_file,
-            'episodes': episodes_file,
-            'observations': observations,
-        }}
-        json.dump(data, out_file, indent=2)
-    log.info('Wrote artifacts inventory to %s' % filename)
+        # Placeholder for rotating between Unreal Editor and packaged game
+        should_rotate_sim_types=False,
 
-    # TODO: Upload to YouTube on pull request
-
-    # TODO: Save a description file with the episode score summary, gist link, and s3 link
-
-
-def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, should_benchmark=True,
-        run_baseline_agent=False, run_mnet2_baseline_agent=False, run_ppo_baseline_agent=False, camera_rigs=None,
-        should_rotate_sim_types=False, should_jitter_actions=False, render=False,
-        path_follower=False, fps=c.DEFAULT_FPS, net_name=net.ALEXNET_NAME, driving_style=DrivingStyle.NORMAL,
-        is_sync=False, is_remote=False, recording_dir=c.RECORDING_DIR, randomize_view_mode=False,
-        randomize_sun_speed=False, randomize_shadow_level=False, randomize_month=False, enable_traffic=True,
-        view_mode_period=None, max_steps=None, max_episodes=1000):
-
+        should_jitter_actions=False, render=False,
+        path_follower=False, fps=c.DEFAULT_FPS, net_name=net.ALEXNET_NAME,
+        driving_style=DrivingStyle.NORMAL, is_sync=False, is_remote=False,
+        recording_dir=c.RECORDING_DIR, randomize_view_mode=False,
+        randomize_sun_speed=False, randomize_shadow_level=False,
+        randomize_month=False, enable_traffic=True,
+        view_mode_period=None, max_steps=None, max_episodes=1000,
+        agent_name=None):
     if should_record:
         path_follower = True
         randomize_sun_speed = True
         randomize_month = True
 
+    if agent_name == c.DAGGER_MNET2:
+        image_resize_dims = MOBILENET_V2_IMAGE_SHAPE
+    else:
+        image_resize_dims = None
+
     agent, env, should_rotate_camera_rigs, start_env = \
-        setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir,
-              run_baseline_agent,
-              run_mnet2_baseline_agent, run_ppo_baseline_agent, should_record,
-              should_jitter_actions, env_id, render, fps, should_benchmark, is_remote, is_sync,
-              enable_traffic, view_mode_period, max_steps)
+        setup(experiment, camera_rigs, driving_style, net_name, net_path,
+              path_follower, recording_dir, run_baseline_agent, run_mnet2_baseline_agent,
+              run_ppo_baseline_agent, should_record, should_jitter_actions,
+              env_id, render, fps, should_benchmark, is_remote, is_sync,
+              enable_traffic, view_mode_period, max_steps, image_resize_dims)
 
     reward = 0
     episode_done = False
@@ -451,18 +353,10 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
     session_done = False
     episode = 0
 
-    # if enable_traffic:
-    #     world.enable_traffic_next_reset()
-    # else:
-    #     world.disable_traffic_next_reset()
-    # time.sleep(5)
-    # env.reset()  # TODO: Remove once traffic bug is fixed
-    # time.sleep(5)
-    # env.reset()  # TODO: Remove once traffic bug is fixed
-
     try:
         while not session_done:
             if episode_done:
+                # TODO: Don't use reset return value. Should always be 0.
                 obz = env.reset()
                 episode_done = False
             else:
@@ -484,25 +378,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
                 obz, reward, episode_done, info = env.step(action)
                 log.debug('env step took %fs', time.time() - env_step_start)
 
-                if agent.recorded_obz_count > c.MAX_RECORDED_OBSERVATIONS:
-                    session_done = True
-
             if session_done:
                 log.info('Session done')
-                if c.PY_ARGS.eval_only:
-                    # Keep an even number of observations in recorded datasets
-                    agent.save_unsaved_observations()
-                else:
-                    log.info('Discarding %d observations to keep even number of frames in recorded datasets. '
-                             'Pass --eval-only to save all observations.')
-                if agent.recorded_obz_count > 0:
-                    mp4_file = utils.hdf5_to_mp4()
-                    gist_url = utils.upload_to_gist('deepdrive-results-' + c.DATE_STR,
-                                                    [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME])
-                    create_artifacts_inventory(gist_url=gist_url, hdf5_dir=c.HDF5_SESSION_DIR,
-                                               episodes_file=c.EPISODES_CSV_FILENAME,
-                                               summary_file=c.SUMMARY_CSV_FILENAME,
-                                               mp4_file=mp4_file)
             else:
                 log.info('Episode done')
                 episode += 1
@@ -520,7 +397,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None, s
         close()
 
 
-def domain_randomization(env, randomize_month, randomize_shadow_level, randomize_sun_speed, randomize_view_mode):
+def domain_randomization(env, randomize_month, randomize_shadow_level,
+                         randomize_sun_speed, randomize_view_mode):
     """
     Sim randomization modes to encourage generalization and sim2real transfer
     """
@@ -539,30 +417,18 @@ def set_random_view_mode(env):
     env.unwrapped.view_mode_controller.set_random()
 
 
-def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follower, recording_dir, run_baseline_agent,
-          run_mnet2_baseline_agent, run_ppo_baseline_agent, should_record, should_jitter_actions,
-          env_id, render, fps, should_benchmark, is_remote, is_sync, enable_traffic, view_mode_period, max_steps):
+def setup(experiment, camera_rigs, driving_style, net_name, net_path,
+          path_follower, recording_dir, run_baseline_agent, run_mnet2_baseline_agent,
+          run_ppo_baseline_agent, should_record, should_jitter_actions, env_id,
+          render, fps, should_benchmark, is_remote, is_sync,
+          enable_traffic, view_mode_period, max_steps, image_resize_dims):
     if run_baseline_agent:
         net_path = ensure_mnet2_baseline_weights(net_path)
     elif run_mnet2_baseline_agent:
         net_path = ensure_mnet2_baseline_weights(net_path)
     elif run_ppo_baseline_agent:
         net_path = ensure_ppo_baseline_weights(net_path)
-
-    # The following will work with 4GB vram
-    if net_name == net.ALEXNET_NAME:
-        per_process_gpu_memory_fraction = 0.8
-    else:
-        per_process_gpu_memory_fraction = 0.4
-    tf_config = tf.ConfigProto(
-        gpu_options=tf.GPUOptions(
-            per_process_gpu_memory_fraction=per_process_gpu_memory_fraction,
-            # leave room for the game,
-            # NOTE: debugging python, i.e. with PyCharm can cause OOM errors, where running will not
-            allow_growth=True
-        ),
-    )
-    sess = tf.Session(config=tf_config)
+    sess = config_tensorflow_memory(net_name)
     if camera_rigs:
         cameras = camera_rigs[0]
     else:
@@ -578,21 +444,47 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path, path_follo
 
     def start_env():
         return sim.start(experiment=experiment, env_id=env_id, should_benchmark=should_benchmark,
-                         cameras=cameras,
-                         use_sim_start_command=use_sim_start_command_first_lap, render=render, fps=fps,
-                         driving_style=driving_style, is_sync=is_sync, reset_returns_zero=False,
-                         is_remote_client=is_remote, enable_traffic=enable_traffic, view_mode_period=view_mode_period,
-                         max_steps=max_steps)
+                         cameras=cameras, use_sim_start_command=use_sim_start_command_first_lap,
+                         render=render, fps=fps, driving_style=driving_style,
+                         is_sync=is_sync, reset_returns_zero=False,
+                         is_remote_client=is_remote, enable_traffic=enable_traffic,
+                         view_mode_period=view_mode_period, max_steps=max_steps,
+                         should_record=should_record, recording_dir=recording_dir,
+                         image_resize_dims=image_resize_dims, should_normalize_image=True)
 
     env = start_env()
-    agent = Agent(sess,
-                  should_jitter_actions=should_jitter_actions,
-                  should_record=should_record, net_path=net_path, random_action_count=4, non_random_action_count=5,
-                  path_follower=path_follower, net_name=net_name, driving_style=driving_style,
-                  recording_dir=recording_dir)
+    agent = Agent(sess, should_jitter_actions=should_jitter_actions,
+                  net_path=net_path, path_follower=path_follower,
+                  net_name=net_name, driving_style=driving_style)
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
     return agent, env, should_rotate_camera_rigs, start_env
+
+
+def config_tensorflow_memory(net_name):
+    """
+    Configure TensorFlow so that we leave GPU memory for the game to run
+    on cards with 4GB of VRAM
+
+    NOTE: Debugging python, i.e. with PyCharm can cause OOM errors,
+    where running will not
+
+    :param net_name: Name of the Neural Network we're using
+    :return: Tensorflow Session object
+    """
+
+    if net_name == net.ALEXNET_NAME:
+        per_process_gpu_memory_fraction = 0.8
+    else:
+        per_process_gpu_memory_fraction = 0.4
+    tf_config = tf.ConfigProto(
+        gpu_options=tf.GPUOptions(
+            per_process_gpu_memory_fraction=per_process_gpu_memory_fraction,
+            allow_growth=True
+        ),
+    )
+    sess = tf.Session(config=tf_config)
+    return sess
 
 
 def okay_to_jitter_actions(obz):
@@ -652,8 +544,10 @@ def ensure_alexnet_baseline_weights(net_path):
 
 
 def ensure_mnet2_baseline_weights(net_path):
-    return _ensure_baseline_weights(net_path, c.MNET2_BASELINE_WEIGHTS_VERSION, c.MNET2_BASELINE_WEIGHTS_DIR,
+    return _ensure_baseline_weights(net_path, c.MNET2_BASELINE_WEIGHTS_VERSION,
+                                    c.MNET2_BASELINE_WEIGHTS_DIR,
                                     c.MNET2_BASELINE_WEIGHTS_URL)
+
 
 def ensure_ppo_baseline_weights(net_path):
     return _ensure_baseline_weights(net_path, c.PPO_BASELINE_WEIGHTS_VERSION, c.PPO_BASELINE_WEIGHTS_DIR,

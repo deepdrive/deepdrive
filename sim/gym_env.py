@@ -33,6 +33,7 @@ import deepdrive_simulation
 
 import config as c
 import logs
+from recorder.Recorder import Recorder
 import utils
 from sim import world
 from sim.action import Action, DiscreteActions
@@ -99,6 +100,9 @@ class DeepDriveEnv(gym.Env):
         self.enable_traffic = False  # type: bool
         self.ego_mph = None  # type: float
         self.max_steps = None  # type: int
+        self.recorder = None  # type: Recorder
+        self.image_resize_dims = None  # type: np.ndarray
+        self.should_normalize_image = False  # type: bool
 
         if not c.REUSE_OPEN_SIM:
             utils.ensure_sim()
@@ -266,8 +270,9 @@ class DeepDriveEnv(gym.Env):
 
         if self.dashboard_pub is not None:
             start_dashboard_put = time.time()
-            self.dashboard_pub.put(OrderedDict({'display_stats': list(self.display_stats.items()),
-                                                'should_stop': False}))
+            self.dashboard_pub.put(OrderedDict(
+                {'display_stats': list(self.display_stats.items()),
+                 'should_stop': False}))
             log.debug('dashboard put took %fs', time.time() - start_dashboard_put)
 
         self.step_num += 1
@@ -284,6 +289,11 @@ class DeepDriveEnv(gym.Env):
 
         self.regulate_fps()
         self.view_mode_controller.step(self.client_id)
+
+        obz = self.postprocess_obz(obz)
+
+        if self.recorder is not None:
+            self.recorder.step(obz, is_agent_action=dd_action.has_control)
 
         return obz, reward, done, info
 
@@ -708,6 +718,8 @@ class DeepDriveEnv(gym.Env):
         self.close()
 
     def close(self):
+        if self.recorder is not None:
+            self.recorder.close()
         if self.dashboard_pub is not None:
             try:
                 self.dashboard_pub.put({'should_stop': True})
@@ -727,13 +739,18 @@ class DeepDriveEnv(gym.Env):
         deepdrive_simulation.disconnect()
         self.client_id = 0
 
-        # Keep this open as agents share this session and restart the env for things like changing cameras during recording.
+        # TODO: Test the we can re-enable session closing
+        #  Sessions were kept open as a hack to change cameras by reopening the sim
         # if self.sess:
         #     self.sess.close()
 
         self.close_sim()
 
     def render(self, mode='human', close=False):
+        """
+        We pass the obz through an instance variable to comply with
+        the gym api where render() takes 0 arguments
+        """
         if self.last_obz:
             self.renderer.render(self.last_obz)
 
@@ -757,6 +774,29 @@ class DeepDriveEnv(gym.Env):
                 log.warn('No camera data received - nulling observation')
             ret = None
         return ret
+
+    def postprocess_obz(self, obz):
+        """
+        Perform normalization and resizing for use with neural nets
+        """
+        if not self.should_normalize_image:
+            if self.image_resize_dims:
+                raise NotImplementedError('Resize without normalizing not implemented')
+            return
+        if obz is None:
+            return
+        for camera in obz['cameras']:
+            start = time.time()
+            image = camera['image']
+            image = image.astype(np.float32)
+            image -= c.MEAN_PIXEL
+            if self.image_resize_dims is not None:
+                resize_start = time.time()
+                image = utils.resize_images(self.image_resize_dims, [image], always=True)[0]
+                log.debug('resize took %fs', time.time() - resize_start)
+            camera['image'] = image
+            log.debug('preprocess_obz took %fs',  time.time() - start)
+        return obz
 
     def preprocess_cameras(self, cameras):
         ret = []
@@ -914,8 +954,10 @@ class DeepDriveEnv(gym.Env):
             try:
                 self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
                 if isinstance(self.connection_props, int):
-                    raise Exception('You have an old version of the deepdrive client - try uninstalling and reinstalling with pip')
-                if not self.connection_props or not self.connection_props['max_capture_resolution']:
+                    raise Exception('You have an old version of the deepdrive client - '
+                                    'try uninstalling and reinstalling with pip')
+                if (not self.connection_props or
+                        not self.connection_props['max_capture_resolution']):
                     # Try again
                     return
                 self.check_version()

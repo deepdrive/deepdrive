@@ -10,17 +10,18 @@
 # docker run -it --net=host --runtime=nvidia deepdriveio/deepdrive:env-$VERSION
 
 FROM adamrehn/ue4-runtime:tensorflow-virtualgl
-
 #FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04
-
 ARG version=3.0
-
 USER root
+
 # OS dependencies
 RUN apt-get update; apt-get install -y \
         libsdl2-2.0 \
         software-properties-common \
-#        python-software-properties \ - Ubuntu 16 only
+
+        # For Ubuntu 16
+        # python-software-properties \
+
         sudo \
         python3-venv \
         python3-pip \
@@ -31,55 +32,65 @@ RUN apt-get update; apt-get install -y \
       && pip3 install --upgrade pip \
       && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Give the ue4 user the ability to install pip packages
 ARG user=ue4
 RUN chown -R $user:$user /home/$user
 RUN adduser $user sudo
 RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Ensure ue4 owns directories
+# Ensure ue4 owns directories needed to run Deepdrive
 USER $user
 RUN sudo chown -R $user:$user /home/$user
 WORKDIR /home/$user/src/deepdrive
 RUN sudo chown -R $user:$user .
 
-# Install deepdrive
-ENV PYTHONPATH=/home/$user/src/deepdrive:$PYTHONPATH
-ENV DEEPDRIVE_DIR=/home/$user/Deepdrive
-COPY config/ ./config/
-COPY VERSION requirements.txt ./
-RUN python -m venv /home/$user/ddvenv
-ENV VIRTUAL_ENV /home/$user/ddvenv
-ENV PATH /home/$user/ddvenv/bin:$PATH
+# Create our virtual environment
+ARG venv=deepdrive_venv
+RUN python -m venv /home/$user/$venv
+ENV VIRTUAL_ENV /home/$user/$venv
+ENV PATH /home/$user/$venv/bin:$PATH
 RUN which pip
+
+# Get the latest pip within the virtual environment
 RUN pip install --upgrade pip
-#RUN pip install wheel
-#RUN pip install "deepdrive > $version.*dev0" # TODO: Remove dev0 after 3.0 stable release
+RUN which pip
+
+# Install tensorflow
 RUN pip install tensorflow-gpu
-#RUN pip install sarge
-#RUN pip install -r requirements.txt
-COPY logs.py utils.py install.py ./
-RUN python -u install.py
-#COPY 'deepdrive-sim-linux-3.0.20190225195958/' "${DEEPDRIVE_DIR}/deepdrive-sim-linux-3.0.20190225195958/"
-#RUN python -c "import utils; utils.ensure_sim();"
-#RUN sudo chmod +x "${DEEPDRIVE_DIR}/deepdrive-sim-linux-3.0.20190225195958/Engine/Plugins/UnrealEnginePython/EmbeddedPython/Linux/bin/python3"
-#RUN sudo chown -R $user:$user ${DEEPDRIVE_DIR}
-#RUN sudo "${DEEPDRIVE_DIR}/deepdrive-sim-linux-3.0.20190225195958/Engine/Plugins/UnrealEnginePython/EmbeddedPython/Linux/bin/python3" -m pip install pyarrow pyzmq requests
 
+# Set Deepdrive directory so that we are not prompted to enter it interactively
+ENV DEEPDRIVE_DIR=/home/$user/Deepdrive
 
+# Copy files needed for install, so that docker will cache our dependencies
+COPY config/ ./config/
+COPY VERSION requirements.txt logs.py utils.py install.py ./
 
-
-# LibSDL2 offscreen opengl mode
-ENV SDL_VIDEODRIVER=offscreen
-
-# API
-EXPOSE 5557/tcp
-
-COPY . .
-
-CMD python api/server.py
-
-
-# TODO: Support
-# 1) Eval
-# 2) Experiement
-# 3) CI
+#
+## Install
+#RUN python -u install.py
+#
+## Commands useful for debugging
+##ENV PYTHONPATH=/home/$user/src/deepdrive:$PYTHONPATH
+##RUN which pip
+##RUN pip install wheel
+##RUN pip install "deepdrive > $version.*dev0" # TODO: Remove dev0 after 3.0 stable release
+##RUN pip install sarge
+##RUN pip install -r requirements.txt
+##COPY logs.py utils.py install.py ./
+#
+#
+## LibSDL2 offscreen opengl mode
+#ENV SDL_VIDEODRIVER=offscreen
+#
+## API
+#EXPOSE 5557/tcp
+#
+#COPY . .
+#
+#CMD python api/server.py
+#
+#
+## TODO: Support
+## 1) Eval
+## 2) Experiement
+## 3) CI
