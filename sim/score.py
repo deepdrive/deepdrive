@@ -19,10 +19,13 @@ class Score(object):
     prev_progress = 0
     got_stuck = False
     wrong_way = False
+    start_time = 0
+    end_time = 0
+    episode_time = 0
 
     def __init__(self):
         self.start_time = time.time()
-        self.end_time = None
+        self.end_time = 0
         self.episode_time = 0
         self.speed_sampler = Sampler()
         self.gforce_sampler = Sampler()

@@ -36,7 +36,7 @@ class ViewModeController(object):
 
     def step(self, client_id):
         self.client_id = client_id
-        if self.period is not None and self.steps_since_switch == (self.period - 1):
+        if self.should_switch():
             self.view_index += 1
             if self.view_index >= self.num_modes:
                 self.view_index = 0
@@ -44,6 +44,12 @@ class ViewModeController(object):
             self.steps_since_switch = 0
         else:
             self.steps_since_switch += 1
+
+    def should_switch(self):
+        if self.period is not None:
+            return self.steps_since_switch == (self.period - 1)
+        else:
+            return False
 
     def reset(self):
         self.steps_since_switch = 0
@@ -55,7 +61,8 @@ class ViewModeController(object):
     def set_view_mode(self, view_mode, cam_id=-1):
         # Passing a cam_id of -1 sets all cameras with the same view mode
         if self.client_id is None:
-            raise RuntimeError('Client id not set. Call env.step() at least once before setting view mode')
+            raise RuntimeError('Client id not set. HINT: Call env.step() '
+                               'at least once before setting view mode')
         deepdrive_client.set_view_mode(self.client_id, cam_id, view_mode.value)
         self.current = view_mode
 

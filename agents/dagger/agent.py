@@ -201,8 +201,12 @@ class Agent(object):
         """
         state = self.jitterer.advance()
         if state is JitterState.SWITCH_TO_RAND:
-            steering = np.random.uniform(-0.5, 0.5, 1)[0]  # Going too large here gets us stuck
-            throttle = self.get_target_throttle(obz) * 0.5  # Slow down a bit so we don't crash before recovering
+            # Going too large here gets us stuck
+            steering = np.random.uniform(-0.5, 0.5, 1)[0]
+
+            # Slow down a bit so we don't crash before recovering
+            throttle = self.get_target_throttle(obz) * 0.5
+
             has_control = True
             log.debug('random steering %f', steering)
         elif state is JitterState.SWITCH_TO_NONRAND:
@@ -257,14 +261,14 @@ class Agent(object):
         if is_frozen:
             # TODO: Get frozen nets working
 
-            # We load the protobuf file from the disk and parse it to retrieve the
-            # unserialized graph_def
+            # We load the protobuf file from the disk and parse it to
+            # retrieve the unserialized graph_def
             with tf.gfile.GFile(net_path, "rb") as f:
                 graph_def = tf.GraphDef()
                 graph_def.ParseFromString(f.read())
 
-            # Then, we can use again a convenient built-in function to import a graph_def into the
-            # current default Graph
+            # Then, we can use again a convenient built-in function to 
+            # import a graph_def into the current default Graph
             with tf.Graph().as_default() as graph:
                 tf.import_graph_def(
                     graph_def,
@@ -312,7 +316,8 @@ class Agent(object):
 
 
 def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
-        should_benchmark=True, run_baseline_agent=False, run_mnet2_baseline_agent=False,
+        should_benchmark=True, run_baseline_agent=False,
+        run_mnet2_baseline_agent=False,
         run_ppo_baseline_agent=False, camera_rigs=None,
 
         # Placeholder for rotating between Unreal Editor and packaged game
@@ -338,7 +343,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
 
     agent, env, should_rotate_camera_rigs, start_env = \
         setup(experiment, camera_rigs, driving_style, net_name, net_path,
-              path_follower, recording_dir, run_baseline_agent, run_mnet2_baseline_agent,
+              path_follower, recording_dir, run_baseline_agent,
+              run_mnet2_baseline_agent,
               run_ppo_baseline_agent, should_record, should_jitter_actions,
               env_id, render, fps, should_benchmark, is_remote, is_sync,
               enable_traffic, view_mode_period, max_steps, image_resize_dims)
@@ -361,40 +367,46 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
                 episode_done = False
             else:
                 obz = None
-
-            domain_randomization(env, randomize_month, randomize_shadow_level,
-                                 randomize_sun_speed, randomize_view_mode)
-
             if max_episodes is not None and episode >= (max_episodes - 1):
                 session_done = True
-
-            while not episode_done:
-
-                act_start = time.time()
-                action, net_out = agent.act(obz, reward, episode_done)
-                log.debug('act took %fs',  time.time() - act_start)
-
-                env_step_start = time.time()
-                obz, reward, episode_done, info = env.step(action)
-                log.debug('env step took %fs', time.time() - env_step_start)
-
+            episode_done = run_episode(agent, env, episode_done, obz, reward)
             if session_done:
                 log.info('Session done')
             else:
                 log.info('Episode done')
                 episode += 1
-
                 agent.reset()
                 if should_rotate_camera_rigs:
-                    # TODO: Add this to domain_randomization()
-                    cameras = copy.deepcopy(camera_rigs[episode % len(camera_rigs)])
-                    randomize_cameras(cameras)
-                    env.change_cameras(cameras)
+                    rotate_cameras(camera_rigs, env, episode)
+            domain_randomization(env, randomize_month, randomize_shadow_level,
+                                 randomize_sun_speed, randomize_view_mode)
 
     except KeyboardInterrupt:
         log.info('keyboard interrupt detected in agent, closing')
+    except Exception as e:
+        raise e
     finally:
         close()
+
+
+def rotate_cameras(camera_rigs, env, episode):
+    # TODO: Add this to domain_randomization()
+    cameras = copy.deepcopy(
+        camera_rigs[episode % len(camera_rigs)])
+    randomize_cameras(cameras)
+    env.change_cameras(cameras)
+
+
+def run_episode(agent, env, episode_done, obz, reward):
+    while not episode_done:
+        act_start = time.time()
+        action, net_out = agent.act(obz, reward, episode_done)
+        log.debug('act took %fs', time.time() - act_start)
+
+        env_step_start = time.time()
+        obz, reward, episode_done, info = env.step(action)
+        log.debug('env step took %fs', time.time() - env_step_start)
+    return episode_done
 
 
 def domain_randomization(env, randomize_month, randomize_shadow_level,
@@ -418,7 +430,8 @@ def set_random_view_mode(env):
 
 
 def setup(experiment, camera_rigs, driving_style, net_name, net_path,
-          path_follower, recording_dir, run_baseline_agent, run_mnet2_baseline_agent,
+          path_follower, recording_dir, run_baseline_agent,
+          run_mnet2_baseline_agent,
           run_ppo_baseline_agent, should_record, should_jitter_actions, env_id,
           render, fps, should_benchmark, is_remote, is_sync,
           enable_traffic, view_mode_period, max_steps, image_resize_dims):

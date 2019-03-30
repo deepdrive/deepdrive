@@ -32,6 +32,7 @@ from subprocess import Popen, PIPE
 from boto.s3.connection import S3Connection
 import config as c
 import logs
+from sim.score import Score
 
 log = logs.get_log(__name__)
 
@@ -91,9 +92,8 @@ def obj2dict(obj, exclude=None):
     for name in dir(obj):
         if not name.startswith('__') and name not in exclude:
             value = getattr(obj, name)
-            if not inspect.ismethod(value):
-                value = getattr(obj, name)
-            ret[name] = value
+            if not callable(value):
+                ret[name] = value
     return ret
 
 
@@ -141,9 +141,10 @@ def add_cams_to_hdf5(frame, frame_grp, opts):
 def add_score_to_hdf5(frame, frame_grp):
     score = frame['score']
     score_grp = frame_grp.create_group('score')
-    for k, v in score.items():
-        if v is not None:
-            score_grp.attrs[k] = v
+    defaults = obj2dict(Score)
+    prop_names = defaults.keys()
+    for k in prop_names:
+        score_grp.attrs[k] = score.get(k, defaults[k])
     del frame['score']
 
 
@@ -153,7 +154,8 @@ def add_collision_to_hdf5(frame, frame_grp):
     clsn = Box(frame['last_collision'], box_it_up=True)
     clsn_grp.attrs['collidee_velocity'] = tuple(clsn.collidee_velocity)
     collidee_location = getattr(clsn, 'collidee_location', None)
-    clsn_grp.attrs['collidee_location'] = collidee_location if (clsn.time_utc and collidee_location) else ''
+    clsn_grp.attrs['collidee_location'] = \
+        collidee_location if (clsn.time_utc and collidee_location) else ''
     clsn_grp.attrs['collision_normal'] = tuple(clsn.collision_normal)
     clsn_grp.attrs['time_since_last_collision'] = clsn.time_since_last_collision
     clsn_grp.attrs['time_stamp'] = clsn.time_stamp

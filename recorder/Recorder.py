@@ -29,7 +29,7 @@ class Recorder(object):
     """
     def __init__(self, recording_dir, should_record_agent_actions=True,
                  should_record=True):
-        self.should_record_agent_actions = should_record_agent_actions  # type: bool
+        self.record_agent_actions = should_record_agent_actions  # type: bool
         self.should_record = should_record  # type: bool
         self.hdf5_dir = c.HDF5_SESSION_DIR  # type: str
         self.obz_recording = []  # type: list
@@ -43,14 +43,16 @@ class Recorder(object):
 
     def step(self, obz, is_agent_action=True):
         self.was_agent_action = is_agent_action
-        log.debug('obz_exists? %r should_record? %r', obz is not None, self.should_record)
+        log.debug('obz_exists? %r should_record? %r', obz is not None,
+                  self.should_record)
         if self.should_record_obz(obz):
             log.debug('Recording frame')
             self.obz_recording.append(obz)
             if TEST_SAVE_IMAGE:
                 utils.save_camera(obz['cameras'][0]['image'],
                                   obz['cameras'][0]['depth'],
-                                  self.hdf5_dir, 'screenshot_' + str(self.step).zfill(10))
+                                  self.hdf5_dir, 'screenshot_' +
+                                  str(self.step).zfill(10))
                 input('continue?')
             self.recorded_obz_count += 1
             if self.recorded_obz_count % 100 == 0:
@@ -75,16 +77,20 @@ class Recorder(object):
             # Okay to have partial eval recordings
             self.save_unsaved_observations()
         else:
-            log.info('Discarding %d observations to keep even number of frames in recorded datasets. '
+            log.info('Discarding %d observations to keep even number of '
+                     'frames in recorded datasets. '
                      'Pass --eval-only to save all observations.')
         if self.recorded_obz_count > 0:
             mp4_file = utils.hdf5_to_mp4()
-            gist_url = utils.upload_to_gist('deepdrive-results-' + c.DATE_STR,
-                                            [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME])
-            self.create_artifacts_inventory(gist_url=gist_url, hdf5_dir=c.HDF5_SESSION_DIR,
-                                            episodes_file=c.EPISODES_CSV_FILENAME,
-                                            summary_file=c.SUMMARY_CSV_FILENAME,
-                                            mp4_file=mp4_file)
+            gist_url = utils.upload_to_gist(
+                'deepdrive-results-' + c.DATE_STR,
+                [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME])
+            self.create_artifacts_inventory(
+                gist_url=gist_url,
+                hdf5_dir=c.HDF5_SESSION_DIR,
+                episodes_file=c.EPISODES_CSV_FILENAME,
+                summary_file=c.SUMMARY_CSV_FILENAME,
+                mp4_file=mp4_file)
 
     def save_recordings(self):
         name = str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10)
@@ -103,7 +109,7 @@ class Recorder(object):
             return False
         elif not self.should_record:
             return False
-        elif self.should_record_agent_actions:
+        elif self.record_agent_actions:
             return self.should_record
         else:
             is_game_driving = self.get_is_game_driving(obz)

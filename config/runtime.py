@@ -32,7 +32,8 @@ except Exception as e:
 import config.version
 
 # General
-CONTROL_NAMES = ['spin', 'direction', 'speed', 'speed_change', 'steering', 'throttle']
+CONTROL_NAMES = ['spin', 'direction', 'speed', 'speed_change', 'steering',
+                 'throttle']
 
 # Net
 NUM_TARGETS = len(CONTROL_NAMES)
@@ -69,7 +70,8 @@ BOOTSTRAPPED_PPO2 = 'bootstrapped_ppo2'
 
 
 # Weights
-ALEXNET_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'baseline_agent_weights')
+ALEXNET_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR,
+                                            'baseline_agent_weights')
 ALEXNET_BASELINE_WEIGHTS_VERSION = 'model.ckpt-143361'
 ALEXNET_PRETRAINED_NAME = 'bvlc_alexnet.ckpt'
 ALEXNET_PRETRAINED_PATH = os.path.join(WEIGHTS_DIR, ALEXNET_PRETRAINED_NAME)
@@ -77,9 +79,11 @@ ALEXNET_PRETRAINED_PATH = os.path.join(WEIGHTS_DIR, ALEXNET_PRETRAINED_NAME)
 MNET2_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'mnet2_baseline_weights')
 MNET2_BASELINE_WEIGHTS_VERSION = 'model.ckpt-49147'
 MNET2_PRETRAINED_NAME = 'mobilenet_v2_1.0_224_checkpoint'
-MNET2_PRETRAINED_PATH = os.path.join(WEIGHTS_DIR, MNET2_PRETRAINED_NAME, 'mobilenet_v2_1.0_224.ckpt')
+MNET2_PRETRAINED_PATH = os.path.join(WEIGHTS_DIR, MNET2_PRETRAINED_NAME,
+                                     'mobilenet_v2_1.0_224.ckpt')
 
-PPO_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'ppo_baseline_agent_weights')
+PPO_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR,
+                                        'ppo_baseline_agent_weights')
 PPO_BASELINE_WEIGHTS_VERSION = '03125'
 
 # Urls
