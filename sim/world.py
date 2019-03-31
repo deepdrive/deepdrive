@@ -9,7 +9,7 @@ import deepdrive_simulation
 
 import logs
 import config as c
-from sim.lambda_client import rpc
+from sim.uepy_client import rpc
 
 log = logs.get_log(__name__)
 

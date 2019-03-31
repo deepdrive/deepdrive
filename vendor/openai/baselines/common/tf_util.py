@@ -159,7 +159,8 @@ def function(inputs, outputs, updates=None, givens=None):
         return _Function(inputs, outputs, updates, givens=givens)
     elif isinstance(outputs, (dict, collections.OrderedDict)):
         f = _Function(inputs, outputs.values(), updates, givens=givens)
-        return lambda *args, **kwargs: type(outputs)(zip(outputs.keys(), f(*args, **kwargs)))
+        return lambda *args, **kwargs: type(outputs)(zip(outputs.keys(),
+                                                         f(*args, **kwargs)))
     else:
         f = _Function(inputs, [outputs], updates, givens=givens)
         return lambda *args, **kwargs: f(*args, **kwargs)[0]

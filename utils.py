@@ -166,9 +166,9 @@ def add_collision_to_hdf5(frame, frame_grp):
 def read_hdf5(filename, save_png_dir=None, overfit=False, save_prefix=''):
     ret = []
     with h5py.File(filename, 'r') as file:
-        # save_prefix = 'dd_imgs_%s_' % str(os.path.dirname(filename).split(os.path.sep)[-1])
         for i, frame_name in enumerate(file):
-            out_frame = read_frame(file, frame_name, i, save_png_dir, save_prefix)
+            out_frame = read_frame(file, frame_name, i, save_png_dir,
+                                   save_prefix)
             if out_frame is None:
                 log.error('Could not read frame, skipping')
             else:
@@ -199,17 +199,19 @@ def read_frame(file, frame_name, frame_index, save_png_dir, save_prefix=''):
     return out_frame
 
 
-def read_camera(dataset_name, frame, frame_index, out_cameras, save_png_dir, save_prefix=''):
+def read_camera(dataset_name, frame, frame_index, out_cameras, save_png_dir,
+                save_prefix=''):
     camera = frame[dataset_name]
     out_camera = dict(camera.attrs)
-    out_camera['image'] = camera['image'].value
-    out_camera['depth'] = camera['depth'].value
+    out_camera['image'] = camera['image'][()]
+    out_camera['depth'] = camera['depth'][()]
     out_cameras.append(out_camera)
     if save_png_dir is not None:
         if not os.path.exists(save_png_dir):
             os.makedirs(save_png_dir)
         save_camera(out_camera['image'], out_camera['depth'],
-                    save_dir=save_png_dir, name=save_prefix + str(frame_index).zfill(c.HDF5_FRAME_ZFILL))
+                    save_dir=save_png_dir, name=save_prefix + str(frame_index)
+                    .zfill(c.HDF5_FRAME_ZFILL))
 
 
 def save_camera(image, depth, save_dir, name):
@@ -315,7 +317,8 @@ def upload_to_youtube(file_path):
 
 def save_hdf5_recordings_to_png(combine_all=False, sess_dir=None):
     if combine_all:
-        hdf5_filenames = sorted(glob.glob(c.RECORDING_DIR + '/**/*.hdf5', recursive=True))
+        hdf5_filenames = sorted(glob.glob(c.RECORDING_DIR + '/**/*.hdf5',
+                                          recursive=True))
     else:
         sess_dir = sess_dir or c.HDF5_SESSION_DIR
         hdf5_filenames = sorted(glob.glob(sess_dir + '/*.hdf5', recursive=True))

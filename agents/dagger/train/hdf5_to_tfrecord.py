@@ -9,7 +9,6 @@ import glob
 import os
 import sys
 
-from multiprocessing import Pool
 import tensorflow as tf
 
 import utils
@@ -43,12 +42,17 @@ def _bytes_feature(value):
 
 
 def _floats_feature(value):
-    """Wrapper for inserting numpy 32 bit float arrays features into Example proto."""
-    return tf.train.Feature(float_list=tf.train.FloatList(value=value.reshape(-1)))
+    """
+    Wrapper for inserting numpy 32 bit float arrays features
+    into Example proto.
+    """
+    return tf.train.Feature(
+        float_list=tf.train.FloatList(value=value.reshape(-1)))
 
 
 def add_total_to_tfrecord_files(directory, filename_prefix):
-    all_files = glob.glob(os.path.join(directory, filename_prefix) + '_' + '[0-9]' * 5 + '*.tfrecord')
+    all_files = glob.glob(os.path.join(directory, filename_prefix) +
+                          '_' + '[0-9]' * 5 + '*.tfrecord')
     files_to_rename = []
     for file in all_files:
         if os.path.getsize(file) == 0:
@@ -59,7 +63,8 @@ def add_total_to_tfrecord_files(directory, filename_prefix):
     mid_fix = '-of-%s' % str(len(files_to_rename) - 1).zfill(5)
     for i, file in enumerate(sorted(files_to_rename)):
         fname = os.path.basename(file)
-        os.rename(file, os.path.join(directory, fname[:16] + str(i).zfill(5) + mid_fix + '.tfrecord'))
+        os.rename(file, os.path.join(directory, fname[:16] + str(i).zfill(5)
+                                     + mid_fix + '.tfrecord'))
 
 
 def save_dataset(dataset, buffer_size, filename, out_path, parallelize=True):
@@ -114,12 +119,15 @@ def save_tfrecord_file(file_idx, filename, images, targets):
             'image/colorspace': _bytes_feature(colorspace),
             'image/channels': _int64_feature(channels),
             'image/format': _bytes_feature(image_format),
-            'image/encoded': _bytes_feature(tf.compat.as_bytes(image.tostring()))}
+            'image/encoded': _bytes_feature(
+                tf.compat.as_bytes(image.tostring()))}
 
         for name_idx, name in enumerate(c.CONTROL_NAMES):
-            feature_dict['image/control/' + name] = _float_feature(target[name_idx])
+            feature_dict['image/control/' + name] = \
+                _float_feature(target[name_idx])
 
-        example = tf.train.Example(features=tf.train.Features(feature=feature_dict))
+        example = tf.train.Example(
+            features=tf.train.Features(feature=feature_dict))
 
         # Serialize to string and write on the file
         writer.write(example.SerializeToString())
@@ -127,29 +135,83 @@ def save_tfrecord_file(file_idx, filename, images, targets):
     log.info('Wrote %r examples to %s', len(images), out_filename)
 
 
-# TODO: See whether HDF5 images have negative, mean subtracted values. If so, it must be the tf record process that gets rid of those
 def encode(parallelize=True, hdf5_path=c.RECORDING_DIR, experiment=None):
-    # TODO: Get a couple separate hdf5 files from different situations / view modes for eval
-    train_dataset = get_dataset(hdf5_path, train=True)
-    eval_dataset = get_dataset(hdf5_path, train=False)
+    # TODO: Get a couple separate hdf5 files from different
+    #  situations / view modes for eval
+    hdf5_to_convert_path = get_hdf5_path_to_convert(hdf5_path)
+    train_dataset = get_dataset(hdf5_to_convert_path, train=True)
+    eval_dataset = get_dataset(hdf5_to_convert_path, train=False)
     buffer_size = 1000
     utils.assert_disk_space(hdf5_path)
+    out_path = None
     while experiment is None:
-        experiment = utils.get_valid_filename(input('Enter a name for your dataset: '))
+        experiment = utils.get_valid_filename(
+            input('Enter a name for your dataset: '))
         out_path = os.path.join(hdf5_path, experiment + c.TFRECORD_DIR_SUFFIX)
         if os.path.exists(out_path):
             print('The path %s exists, please choose a new name.' % out_path)
             experiment = None
-
+    if out_path is None:
+        raise RuntimeError('tfrecord output path not set')
     os.makedirs(out_path)
-    save_dataset(train_dataset, buffer_size, filename=os.path.join(out_path, 'deepdrive_train'),
+    save_dataset(train_dataset, buffer_size,
+                 filename=os.path.join(out_path, 'deepdrive_train'),
                  parallelize=parallelize, out_path=out_path)
-    save_dataset(eval_dataset, buffer_size, filename=os.path.join(out_path, 'deepdrive_eval'),
+    save_dataset(eval_dataset, buffer_size,
+                 filename=os.path.join(out_path, 'deepdrive_eval'),
                  parallelize=parallelize, out_path=out_path)
+
+
+def get_hdf5_path_to_convert(hdf5_path):
+    hdf5_dirs = list(get_hdf5_dirs(hdf5_path))
+    if not hdf5_dirs:
+        raise RuntimeError('No directories with hdf5 files found in %s' %
+                           hdf5_path)
+    convert_all = 1
+    convert_latest = 2
+    convert_path = 3
+    options = {
+        convert_all: 'Convert all HDF5 recording to tfrecords',
+        convert_latest: 'Convert latest (%s)' % hdf5_dirs[0],
+        convert_path: 'Enter a path to convert', }
+    option = None
+    if 'DEEPDRIVE_CONVERT_ALL_HDF5' in os.environ:
+        option = convert_all
+    else:
+        done = False
+        print('Please choose an option:')
+        msg = '\n'.join(['%d) %s' % o for o in options.items()])
+        answer = input(msg + '\nOption #: ')
+        while not done:
+            try:
+                option = int(answer)
+                _ = options[option]
+            except (ValueError, KeyError):
+                answer = input('Invalid option. Please try again: ')
+            else:
+                done = True
+    if option is None:
+        raise RuntimeError('No option chosen for HDF5 conversion')
+    if option == convert_path:
+        hdf5_path = input(
+            'Please input the absolute path to the directory '
+            'containing hdf5 files you want to convert: ').strip()
+    elif option == convert_latest:
+        hdf5_path = os.path.join(hdf5_path, hdf5_dirs[0])
+    return hdf5_path
+
+
+def get_hdf5_dirs(hdf5_path):
+    for d in sorted(next(os.walk(hdf5_path))[1], reverse=True):
+        has_hdf5 = glob.glob(os.path.join(hdf5_path, d, '*.hdf5'))
+        sensible_year = d[0:4].isdigit() and int(d[0:4]) > 2000
+        if has_hdf5 and sensible_year:
+            yield d
 
 
 def test_decode():
-    data_path = os.path.join(c.RECORDING_DIR, 'deepdrive_train_00000-of-00162.tfrecord')
+    data_path = os.path.join(c.RECORDING_DIR,
+                             'deepdrive_train_00000-of-00162.tfrecord')
 
     with tf.Session() as sess:
         feature = {
@@ -161,7 +223,8 @@ def test_decode():
             'image/encoded': tf.FixedLenFeature([], tf.string)}
 
         # Create a list of filenames and pass it to a queue
-        filename_queue = tf.train.string_input_producer([data_path], num_epochs=1)
+        filename_queue = tf.train.string_input_producer([data_path],
+                                                        num_epochs=1)
         # Define a reader and read the next record
         reader = tf.TFRecordReader()
         _, serialized_example = reader.read(filename_queue)
@@ -190,8 +253,8 @@ def test_decode():
         # # Any preprocessing here ...
         #
         # # Creates batches by randomly shuffling tensors
-        # images, labels = tf.train.shuffle_batch([image, label], batch_size=10, capacity=30, num_threads=1,
-        #                                         min_after_dequeue=10)
+        # images, labels = tf.train.shuffle_batch([image, label],
+        #     batch_size=10, capacity=30, num_threads=1, min_after_dequeue=10)
 
 
 if __name__ == '__main__':
