@@ -9,8 +9,13 @@
 # VERSION=`cat VERSION | sed 's/ //g
 # docker run -it --net=host --runtime=nvidia deepdriveio/deepdrive:env-$VERSION
 
+# Ubuntu 18
 FROM adamrehn/ue4-runtime:tensorflow-virtualgl
+
 #FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04
+# For Ubuntu 16 also install
+# python-software-properties
+
 ARG version=3.0
 USER root
 
@@ -18,10 +23,6 @@ USER root
 RUN apt-get update; apt-get install -y \
         libsdl2-2.0 \
         software-properties-common \
-
-        # For Ubuntu 16
-        # python-software-properties \
-
         sudo \
         python3-venv \
         python3-pip \
@@ -65,32 +66,35 @@ ENV DEEPDRIVE_DIR=/home/$user/Deepdrive
 COPY config/ ./config/
 COPY VERSION requirements.txt logs.py utils.py install.py ./
 
-#
-## Install
-#RUN python -u install.py
-#
-## Commands useful for debugging
-##ENV PYTHONPATH=/home/$user/src/deepdrive:$PYTHONPATH
-##RUN which pip
-##RUN pip install wheel
-##RUN pip install "deepdrive > $version.*dev0" # TODO: Remove dev0 after 3.0 stable release
-##RUN pip install sarge
-##RUN pip install -r requirements.txt
-##COPY logs.py utils.py install.py ./
-#
-#
-## LibSDL2 offscreen opengl mode
-#ENV SDL_VIDEODRIVER=offscreen
-#
-## API
-#EXPOSE 5557/tcp
-#
-#COPY . .
-#
-#CMD python api/server.py
-#
-#
-## TODO: Support
-## 1) Eval
-## 2) Experiement
-## 3) CI
+
+# Install
+RUN python -u install.py
+
+# Commands useful for debugging
+#ENV PYTHONPATH=/home/$user/src/deepdrive:$PYTHONPATH
+#RUN which pip
+#RUN pip install wheel
+#RUN pip install "deepdrive > $version.*dev0" # TODO: Remove dev0 after 3.0 stable release
+#RUN pip install sarge
+#RUN pip install -r requirements.txt
+#COPY logs.py utils.py install.py ./
+
+
+# LibSDL2 offscreen opengl mode
+ENV SDL_VIDEODRIVER=offscreen
+
+# API
+EXPOSE 5557/tcp
+
+COPY . .
+
+# Why, Docker, why?
+RUN sudo chmod -R 775 /home/$user
+
+CMD python api/server.py
+
+
+# TODO: Support
+# 1) Eval
+# 2) Experiement
+# 3) CI

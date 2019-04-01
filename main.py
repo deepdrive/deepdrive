@@ -141,7 +141,8 @@ def get_camera_rigs(args):
 def configure_net_args(args):
     if args.use_latest_model:
         if args.net_path:
-            raise ValueError('--use-latest-model and --net-path cannot both be set')
+            raise ValueError('--use-latest-model and '
+                             '--net-path cannot both be set')
         if args.train:
             args.resume_train = get_latest_model()
         else:
@@ -155,28 +156,41 @@ def configure_net_args(args):
 def run_agent(args, camera_rigs, driving_style):
     """
     Here we run an agent alongside an open simulator and either just benchmark
-    it's performance, as with agents trained offline (i.e. the current dagger mnet and
-    alexnet agents), or train an online agent.
+    it's performance, as with agents trained offline (i.e. the current dagger
+    mnet and alexnet agents), or train an online agent (i.e. the PP02 agent).
 
     :param camera_rigs: A collection of camera configs to cycle through, with
     one rig used for the duration of an episode
     """
     from agents.dagger import agent
     agent.run(args.experiment,
-              should_record=args.record, net_path=args.net_path, env_id=args.env_id,
-              run_baseline_agent=args.baseline, run_mnet2_baseline_agent=args.mnet2_baseline,
-              run_ppo_baseline_agent=args.ppo_baseline, render=args.render, camera_rigs=camera_rigs,
+              should_record=args.record, net_path=args.net_path,
+              env_id=args.env_id,
+              run_baseline_agent=args.baseline,
+              run_mnet2_baseline_agent=args.mnet2_baseline,
+              run_ppo_baseline_agent=args.ppo_baseline, render=args.render,
+              camera_rigs=camera_rigs,
               should_jitter_actions=args.jitter_actions, fps=args.fps,
-              net_name=args.net_type, is_sync=args.sync, driving_style=driving_style,
+              net_name=args.net_type, is_sync=args.sync,
+              driving_style=driving_style,
               is_remote=args.remote, recording_dir=args.recording_dir,
-              randomize_view_mode=args.randomize_view_mode, randomize_sun_speed=args.randomize_sun_speed,
-              randomize_shadow_level=args.randomize_shadow_level, randomize_month=args.randomize_month,
-              enable_traffic=args.enable_traffic, view_mode_period=args.view_mode_period,
+              randomize_view_mode=args.randomize_view_mode,
+              randomize_sun_speed=args.randomize_sun_speed,
+              randomize_shadow_level=args.randomize_shadow_level,
+              randomize_month=args.randomize_month,
+              enable_traffic=args.enable_traffic,
+              view_mode_period=args.view_mode_period,
               max_steps=args.max_steps,
               max_episodes=args.max_episodes, agent_name=args.agent)
 
 
 def run_path_follower(args, driving_style, camera_rigs):
+    """
+    Runs the C++ PID-based path follower agent which uses a reference
+    spline in the center of the lane, and speed annotations on tight turns
+    to drive.
+    Refer to https://github.com/deepdrive/deepdrive-sim/tree/b21e0a0bf8cec60538425fa41b5fc5ee28142556/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent
+    """
     done = False
     episode_count = 1
     gym_env = None
@@ -184,9 +198,12 @@ def run_path_follower(args, driving_style, camera_rigs):
         cams = camera_rigs
         if isinstance(camera_rigs[0], list):
             cams = cams[0]
-        gym_env = sim.start(experiment=args.experiment, env_id=args.env_id, fps=args.fps,
-                            driving_style=driving_style, is_remote_client=args.remote,
-                            render=args.render, cameras=cams, enable_traffic=args.enable_traffic,
+        gym_env = sim.start(experiment=args.experiment, env_id=args.env_id,
+                            fps=args.fps,
+                            driving_style=driving_style,
+                            is_remote_client=args.remote,
+                            render=args.render, cameras=cams,
+                            enable_traffic=args.enable_traffic,
                             ego_mph=args.ego_mph)
         log.info('Path follower drive mode')
         for episode in range(episode_count):
@@ -220,8 +237,10 @@ def train_agent(args, driving_style):
             net_path = ensure_mnet2_baseline_weights(args.net_path)
         if not args.sync and not args.eval_only:
             args.sync = True
-            log.warning('Detected training RL in async mode which can cause unequal time deltas. '
-                        'Switching to synchronous mode. Use --sync to avoid this.')
+            log.warning('Detected training RL in async mode which '
+                        'can cause unequal time deltas. '
+                        'Switching to synchronous mode. '
+                        'Use --sync to avoid this.')
 
         train.run(args.env_id, resume_dir=args.resume_train,
                   bootstrap_net_path=net_path, agent_name=args.agent,
@@ -237,8 +256,10 @@ def train_dagger(args):
     Run the first iteration of DAgger where our policy is random.
     """
     from agents.dagger.train import train
-    train.run(resume_dir=args.resume_train, data_dir=args.recording_dir, agent_name=args.agent,
-              overfit=args.overfit, eval_only=args.eval_only, tf_debug=args.tf_debug,
+    train.run(resume_dir=args.resume_train, data_dir=args.recording_dir,
+              agent_name=args.agent,
+              overfit=args.overfit, eval_only=args.eval_only,
+              tf_debug=args.tf_debug,
               freeze_pretrained=args.freeze_pretrained,
               train_args_collection_name=args.train_args_collection)
 

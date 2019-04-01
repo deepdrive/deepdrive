@@ -80,8 +80,6 @@ def main():
 
     run_command_with_sarge(py + ' -m pip install -r requirements.txt')
 
-
-
     # Create deepdrive directory
     import config as c
 

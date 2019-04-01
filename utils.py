@@ -32,7 +32,6 @@ from subprocess import Popen, PIPE
 from boto.s3.connection import S3Connection
 import config as c
 import logs
-from sim.score import Score
 
 log = logs.get_log(__name__)
 
@@ -139,6 +138,7 @@ def add_cams_to_hdf5(frame, frame_grp, opts):
 
 
 def add_score_to_hdf5(frame, frame_grp):
+    from sim.score import Score
     score = frame['score']
     score_grp = frame_grp.create_group('score')
     defaults = obj2dict(Score)

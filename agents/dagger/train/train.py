@@ -55,20 +55,21 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None,
         freeze_pretrained=False, train_args_collection_name=None):
     show_tfboard_hint()
     if agent_name == c.DAGGER_MNET2:
-        tfrecord_dirs = glob.glob(data_dir + '/*' + c.TFRECORD_DIR_SUFFIX)
-        if len(tfrecord_dirs) == 0:
-            raise RuntimeError('No tfrecord directories found')
-        elif len(tfrecord_dirs) > 1:
-            dir_num = None
-            while dir_num is None:
-                question = 'Which tfrecord directory would you like to train on?'
-                for i, tfrecord_dir in enumerate(tfrecord_dirs):
-                    question += '\n%d) %s' % (i+1, tfrecord_dir)
-                dir_num = int(input(question + '\nEnter index above: ').strip())
-                if dir_num > len(tfrecord_dirs):
-                    dir_num = None
-                    print('Invalid directory number')
-            data_dir = tfrecord_dirs[dir_num-1]
+        if not glob.glob(data_dir + '/*.tfrecord'):
+            tfrecord_dirs = glob.glob(data_dir + '/*' + c.TFRECORD_DIR_SUFFIX)
+            if len(tfrecord_dirs) == 0:
+                raise RuntimeError('No tfrecord directories found')
+            elif len(tfrecord_dirs) > 1:
+                dir_num = None
+                while dir_num is None:
+                    question = 'Which tfrecord directory would you like to train on?'
+                    for i, tfrecord_dir in enumerate(tfrecord_dirs):
+                        question += '\n%d) %s' % (i+1, tfrecord_dir)
+                    dir_num = int(input(question + '\nEnter index above: ').strip())
+                    if dir_num > len(tfrecord_dirs):
+                        dir_num = None
+                        print('Invalid directory number')
+                data_dir = tfrecord_dirs[dir_num-1]
         # Use tf-slim training
         if eval_only:
             eval_mobile_net(data_dir)
