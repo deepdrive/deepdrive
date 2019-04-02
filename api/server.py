@@ -82,6 +82,9 @@ class Server(object):
         and sends a serialized response.
         """
         msg = self.socket.recv()
+        if not msg:
+            log.error('Received empty message, skipping')
+            return
         method, args, kwargs = pyarrow.deserialize(msg)
         resp = None
         if self.env is None and method != m.START:

@@ -27,6 +27,7 @@ class Recorder(object):
     * Results csv files (Uploaded to Gist)
     * MP4's (Uploaded to YouTube)
     """
+
     def __init__(self, recording_dir, should_record_agent_actions=True,
                  should_record=True):
         self.record_agent_actions = should_record_agent_actions  # type: bool
@@ -79,7 +80,8 @@ class Recorder(object):
         else:
             log.info('Discarding %d observations to keep even number of '
                      'frames in recorded datasets. '
-                     'Pass --eval-only to save all observations.')
+                     'Pass --eval-only to save all observations.' %
+                     self.num_saved_observations)
         if self.recorded_obz_count > 0:
             mp4_file = utils.hdf5_to_mp4()
             gist_url = utils.upload_to_gist(
@@ -129,7 +131,9 @@ class Recorder(object):
     @staticmethod
     def get_is_game_driving(obz):
         if not obz:
-            log.warn('Observation not set, assuming game not driving to prevent recording bad actions')
+            log.warn(
+                'Observation not set, assuming game not driving to '
+                'prevent recording bad actions')
             return False
         return obz['is_game_driving'] == 1
 

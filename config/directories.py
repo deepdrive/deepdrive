@@ -71,3 +71,5 @@ TENSORFLOW_OUT_DIR = os.path.join(DEEPDRIVE_DIR, 'tensorflow')
 WEIGHTS_DIR = os.path.join(DEEPDRIVE_DIR, 'weights')
 BASELINES_DIR = os.path.join(DEEPDRIVE_DIR, 'baselines_results')
 TFRECORD_DIR_SUFFIX = '_tfrecords'
+TF_ENV_EVENT_DIR = os.path.join(TENSORFLOW_OUT_DIR, 'env', DATE_STR)
+os.makedirs(TF_ENV_EVENT_DIR, exist_ok=True)

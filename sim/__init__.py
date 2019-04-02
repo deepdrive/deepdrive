@@ -37,16 +37,11 @@ def start(**kwargs):
     :param kwargs: Deepdrive gym env configuration
     :return: environment object that implements the gym API (i.e. step, reset, close, render)
     """
-    args = Box(experiment=None, env_id='Deepdrive-v0', sess=None, start_dashboard=True,
-               should_benchmark=True, cameras=None, use_sim_start_command=False, render=False,
-               fps=c.DEFAULT_FPS, combine_box_action_spaces=False, is_discrete=False,
-               preprocess_with_tensorflow=False, is_sync=False, driving_style=DrivingStyle.NORMAL,
-               reset_returns_zero=True, is_remote_client=False, enable_traffic=False, ego_mph=None,
-               view_mode_period=None, max_steps=None, should_record=False,
-               recording_dir=c.RECORDING_DIR, image_resize_dims=None, should_normalize_image=False)
+    args = get_default_start_args()
     unexpected_args = set(kwargs) - set(args)
     if unexpected_args:
-        raise RuntimeError('Received unexpected args in run: ' + str(unexpected_args))
+        raise RuntimeError(
+            'Received unexpected args in run: ' + str(unexpected_args))
     args.update(kwargs)
     if args.is_remote_client:
         if not isinstance(args.driving_style, str):
@@ -55,6 +50,22 @@ def start(**kwargs):
     else:
         env = start_local_env(args)
     return env
+
+
+def get_default_start_args():
+    return Box(experiment=None, env_id='Deepdrive-v0', sess=None,
+               start_dashboard=True,
+               should_benchmark=True, cameras=None, use_sim_start_command=False,
+               render=False,
+               fps=c.DEFAULT_FPS, combine_box_action_spaces=False,
+               is_discrete=False,
+               preprocess_with_tensorflow=False, is_sync=False,
+               driving_style=DrivingStyle.NORMAL,
+               reset_returns_zero=True, is_remote_client=False,
+               enable_traffic=False, ego_mph=None,
+               view_mode_period=None, max_steps=None, should_record=False,
+               recording_dir=c.RECORDING_DIR, image_resize_dims=None,
+               should_normalize_image=False)
 
 
 def start_local_env(args):

@@ -35,15 +35,17 @@ RUN apt-get update; apt-get install -y \
 
 # Give the ue4 user the ability to install pip packages
 ARG user=ue4
-RUN chown -R $user:$user /home/$user
+ENV DEEPDRIVE_USER=$user
+#RUN chown -R $user:$user /home/$user
 RUN adduser $user sudo
 RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Ensure ue4 owns directories needed to run Deepdrive
 USER $user
-RUN sudo chown -R $user:$user /home/$user
+#RUN sudo chown -R $user:$user /home/$user
 WORKDIR /home/$user/src/deepdrive
-RUN sudo chown -R $user:$user .
+#RUN sudo chown -R $user:$user .
+#RUN sudo chmod -R 775 /home/$user
 
 # Create our virtual environment
 ARG venv=deepdrive_venv
@@ -59,6 +61,9 @@ RUN which pip
 # Install tensorflow
 RUN pip install tensorflow-gpu
 
+# Install OpenCV for web renderer
+RUN pip install opencv-python
+
 # Set Deepdrive directory so that we are not prompted to enter it interactively
 ENV DEEPDRIVE_DIR=/home/$user/Deepdrive
 
@@ -69,6 +74,8 @@ COPY VERSION requirements.txt logs.py utils.py install.py ./
 
 # Install
 RUN python -u install.py
+
+RUN python -c "import utils; utils.ensure_sim();"
 
 # Commands useful for debugging
 #ENV PYTHONPATH=/home/$user/src/deepdrive:$PYTHONPATH
@@ -88,10 +95,8 @@ EXPOSE 5557/tcp
 
 COPY . .
 
-# Why, Docker, why?
-RUN sudo chmod -R 775 /home/$user
-
-CMD python api/server.py
+ENTRYPOINT ["/bin/bash", "docker/entrypoint.bash"]
+CMD python main.py --server
 
 
 # TODO: Support

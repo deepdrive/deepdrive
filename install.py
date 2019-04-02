@@ -69,7 +69,11 @@ def main():
     py = check_py_version()
     print('check!')
 
-    check_tensorflow_gpu()
+    if not is_docker():
+        # Docker does not build with nvidia runtime. We can do this if
+        # we want by setting the default docker runtime to nvidia, but
+        # we don't want to require that people do this.
+        check_tensorflow_gpu()
 
     # Install sarge to nicely stream commands and wheel for precompiled packages
     run_command_no_deps(py + ' -m pip install sarge wheel', verbose=True)
@@ -93,8 +97,8 @@ def main():
     run_command_with_sarge(py + ' -m pip install {pip_args} "deepdrive > {major_minor_version}.*dev0"'.format(
         major_minor_version=c.MAJOR_MINOR_VERSION_STR, pip_args=pip_args))
 
-    import utils
-    utils.ensure_sim()
+    # import utils
+    # utils.ensure_sim()
 
     # noinspection PyUnresolvedReferences
     import config.check_bindings
@@ -112,42 +116,62 @@ def main():
     # Gen: https://bit.ly/2SrCVFO
 
 
-def check_tensorflow_gpu():
-    error_msg = '\n\n*** Warning: %s, Tensorflow agents will not be available. ' \
-                'HINT: Install Tensorflow or use the python / virtualenv you have it already installed to. ' \
-                'If you install, check out our Tensorflow install tips on the README ' \
-                '\n\n'
-
-    print('Checking for valid Tensorflow installation')
-    try:
-        # noinspection PyUnresolvedReferences
-        import h5py  # importing tensorflow later causes seg faults
-        import tensorflow as tf
-    except ImportError:
-        print(error_msg % 'Tensorflow not installed', file=sys.stderr)
+def check_nvidia_docker():
+    if is_docker() and not has_nvidia_docker():
+        print('WARNING: No nvidia-docker runtime detected', file=sys.stderr)
         return False
     else:
-        try:
-            pkg_resources.get_distribution('tensorflow-gpu')
-        except pkg_resources.DistributionNotFound:
-            print('\n\n*** Warning: %s \n\n' %
-                  'tensorflow-gpu not found, performance will be severely degraded if run on CPU. '
-                  'HINT: Try "pip install tensorflow-gpu"')
-            # TODO: use get_available_gpu's on a given session or
-            #  confirm assumption the plain tensorflow package is always cpu
-            # TODO: Handle TPU's
-        else:
-            print('Found tensorflow-gpu - assuming you are running Tensorflow on GPU')
+        return True
 
-        min_version = '1.7'
-        if semvar(tf.__version__) < semvar(min_version):
-            warn_msg = 'Tensorflow %s is less than the minimum required version (%s)' \
-                       % (tf.__version__, min_version)
-            print(error_msg % warn_msg, file=sys.stderr)
-            return False
+
+def check_tensorflow_gpu():
+    error_msg = \
+        '\n\n*** Warning: %s, Tensorflow agents will not be available. ' \
+        'HINT: Install Tensorflow or use the python / virtualenv ' \
+        'you have it already installed to. ' \
+        'If you install, check out our Tensorflow install ' \
+        'tips on the README ' \
+        '\n\n'
+    print('Checking for valid Tensorflow installation')
+    # noinspection PyUnresolvedReferences
+    if not check_nvidia_docker():
+        print(error_msg % 'Not using nvidia-docker runtime', file=sys.stderr)
+        ret = False
+    else:
+        import h5py  # importing tensorflow later causes seg faults
+        try:
+            import tensorflow as tf
+        except ImportError:
+            print(error_msg % 'Tensorflow not installed', file=sys.stderr)
+            ret = False
         else:
-            print('Tensorflow %s detected - meets min version (%s)' % (tf.__version__, min_version))
-            return True
+            try:
+                pkg_resources.get_distribution('tensorflow-gpu')
+            except pkg_resources.DistributionNotFound:
+                print('\n\n*** Warning: %s \n\n' %
+                      'tensorflow-gpu not found, performance will be severely'
+                      'degraded if run on CPU. '
+                      'HINT: Try "pip install tensorflow-gpu"')
+                # TODO: use get_available_gpu's on a given session or
+                #  confirm assumption the plain tensorflow package is always cpu
+                # TODO: Handle TPU's
+            else:
+                print('Found tensorflow-gpu - assuming you are running'
+                      ' Tensorflow on GPU')
+
+            min_version = '1.7'
+            if semvar(tf.__version__) < semvar(min_version):
+                warn_msg = 'Tensorflow %s is less than the minimum ' \
+                           'required version (%s)' \
+                           % (tf.__version__, min_version)
+                print(error_msg % warn_msg, file=sys.stderr)
+                ret = False
+            else:
+                print('Tensorflow %s detected - meets min version'
+                      ' (%s)' % (tf.__version__, min_version))
+                ret = True
+
+    return ret
 
 
 def get_available_gpus():
@@ -162,6 +186,11 @@ def is_docker():
         os.path.exists('/.dockerenv') or
         os.path.isfile(path) and any('docker' in line for line in open(path))
     )
+
+
+def has_nvidia_docker():
+    import distutils.spawn
+    return distutils.spawn.find_executable('nvidia-docker') is not None
 
 
 if __name__ == '__main__':

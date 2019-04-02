@@ -14,9 +14,6 @@ import config.check_bindings
 
 from config import camera_config
 import config as c
-from agents.dagger import net
-from agents.dagger.agent import ensure_mnet2_baseline_weights
-from agents.dagger.train import hdf5_to_tfrecord
 from sim.driving_style import DrivingStyle
 import sim
 import logs
@@ -71,7 +68,7 @@ def main():
     parser.add_argument('--net-path', nargs='?', default=None,
                         help='Path to the tensorflow checkpoint you want to test drive. '
                              'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
-    parser.add_argument('--net-type', nargs='?', default=net.MOBILENET_V2_NAME,
+    parser.add_argument('--net-type', nargs='?', default=None,
                         help='Your model type - i.e. AlexNet or MobileNetV2')
     parser.add_argument('--driving-style', nargs='?', default=DrivingStyle.NORMAL.name.lower(),
                         help='Speed vs comfort prioritization, i.e. ' +
@@ -107,24 +104,39 @@ def main():
                         help='Max number of steps to run per episode')
     parser.add_argument('--max-episodes', type=int, default=None,
                         help='Maximum number of episodes')
+    parser.add_argument('--server', action='store_true', default=False,
+                        help='Run as an API server',)
 
     args = c.PY_ARGS = parser.parse_args()
     if args.verbose:
         logs.set_level(logging.DEBUG)
 
     if args.hdf5_2_tfrecord:
+        from agents.dagger.train import hdf5_to_tfrecord
         hdf5_to_tfrecord.encode(hdf5_path=args.recording_dir,
                                 experiment=args.experiment)
         return
+    elif args.server:
+        from api import server
+        server.start()
+        return
+    else:
+        camera_rigs = get_camera_rigs(args)
+        driving_style = DrivingStyle[args.driving_style.upper()]
+        if args.path_follower:
+            run_path_follower(args, driving_style, camera_rigs)
+        else:
+            run_tf_based_models(args, camera_rigs, driving_style)
 
-    camera_rigs = get_camera_rigs(args)
+
+def run_tf_based_models(args, camera_rigs, driving_style):
+    from install import check_tensorflow_gpu
+    if not check_tensorflow_gpu():
+        raise RuntimeError('Tensorflow not installed, cannot run or '
+                           'trained tensorflow agents')
     configure_net_args(args)
-    driving_style = DrivingStyle[args.driving_style.upper()]
-
     if args.train:
         train_agent(args, driving_style)
-    elif args.path_follower:
-        run_path_follower(args, driving_style, camera_rigs)
     else:
         # TODO: Run PPO agent here, not with c.TEST_PPO
         run_agent(args, camera_rigs, driving_style)
@@ -149,6 +161,10 @@ def configure_net_args(args):
             args.net_path = get_latest_model()
     elif args.net_path and os.path.isdir(args.net_path):
         args.net_path = get_latest_model_from_path(args.net_path)
+
+    from agents.dagger import net
+    if args.net_type is None:
+        args.net_type = net.MOBILENET_V2_NAME
     if args.mnet2_baseline:
         args.net_type = net.MOBILENET_V2_NAME
 
@@ -227,6 +243,7 @@ def run_path_follower(args, driving_style, camera_rigs):
 
 
 def train_agent(args, driving_style):
+    from agents.dagger.agent import ensure_mnet2_baseline_weights
     if args.agent == 'dagger' or args.agent == 'dagger_mobilenet_v2':
         train_dagger(args)
     elif args.agent == 'bootstrapped_ppo2':

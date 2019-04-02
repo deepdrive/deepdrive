@@ -142,8 +142,7 @@ class DeepDriveEnv(gym.Env):
 
         if c.TENSORFLOW_AVAILABLE:
             import tensorflow as tf
-            self.tensorboard_writer = tf.summary.FileWriter(
-                os.path.join(c.TENSORFLOW_OUT_DIR, 'env', c.DATE_STR))
+            self.tensorboard_writer = tf.summary.FileWriter(c.TF_ENV_EVENT_DIR)
         else:
             self.tensorboard_writer = None
 
