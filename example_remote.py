@@ -1,3 +1,5 @@
+import time
+
 import sim
 from sim.action import Action
 
@@ -9,11 +11,13 @@ def main():
     forward = Action(throttle=1)
     done = False
     while True:
-        while not done:
-            observation, reward, done, info = env.step(forward)
-
-        print('Episode finished')
-        done = env.reset()
+        time.sleep(1)
+        print('sleeping')
+        # while not done:
+        #     observation, reward, done, info = env.step(forward)
+        #
+        # print('Episode finished')
+        # done = env.reset()
 
 
 if __name__ == '__main__':

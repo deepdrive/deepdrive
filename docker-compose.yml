@@ -1,6 +1,5 @@
-version: '2.3'
+version: '3'
 services:
   server:
     image: deepdriveio/deepdrive:env-3.0
     network_mode: "host"
-    runtime: nvidia

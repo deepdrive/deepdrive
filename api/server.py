@@ -98,7 +98,7 @@ class Server(object):
         elif method == m.RESET:
             resp = self.env.reset()
         elif method == m.ACTION_SPACE or method == m.OBSERVATION_SPACE:
-            resp = self.serialize_space(resp)
+            resp = self.serialize_space(self.env.action_space)
         elif method == m.REWARD_RANGE:
             resp = self.env.reward_range
         elif method == m.METADATA:
@@ -166,8 +166,8 @@ class Server(object):
                             .format(key=key, reason=CHALLENGE_BLACKLIST_PARAMS[key]))
                 del kwargs[key]
 
-    def serialize_space(self, resp):
-        space = self.env.action_space
+    @staticmethod
+    def serialize_space(space):
         space_type = type(space)
         if space_type == spaces.Box:
             resp = {'type': str(space_type),
@@ -176,7 +176,8 @@ class Server(object):
                     'dtype': str(space.dtype)
                     }
         else:
-            raise RuntimeError(str(space_type) + ' not supported')
+            raise RuntimeError('Space of type "%s" value "%r" not supported'
+                               % (str(space_type), space))
         return resp
 
 
