@@ -104,12 +104,12 @@ def run(env_id, bootstrap_net_path,
 
         with sess_1.as_default():
             dagger_gym_env = sim.start(
-                experiment=experiment, env_id=env_id, cameras=camera_rigs, render=render,
-                fps=fps, combine_box_action_spaces=True, is_sync=is_sync,
-                driving_style=driving_style, is_remote_client=is_remote_client,
-                should_record=should_record, image_resize_dims=MOBILENET_V2_IMAGE_SHAPE,
-                should_normalize_image=True
-            )
+                experiment=experiment, env_id=env_id, cameras=camera_rigs,
+                render=render, fps=fps, combine_box_action_spaces=True,
+                is_sync=is_sync, driving_style=driving_style,
+                is_remote_client=is_remote_client, should_record=should_record,
+                image_resize_dims=MOBILENET_V2_IMAGE_SHAPE,
+                should_normalize_image=True)
 
             dagger_agent = Agent(
                 sess_1, should_jitter_actions=False,

@@ -129,16 +129,19 @@ class DeepDriveEnv(gym.Env):
         self.trial_scores = []
 
         try:
-            self.git_commit = str(utils.run_command('git rev-parse --short HEAD')[0])
+            self.git_commit = str(utils.run_command(
+                'git rev-parse --short HEAD')[0])
         except:
             self.git_commit = 'n/a'
-            log.warning('Could not get git commit for associating benchmark results with code state')
+            log.warning('Could not get git commit for associating benchmark '
+                        'results with code state')
 
         try:
             self.git_diff = utils.run_command('git diff')[0]
         except:
             self.git_diff = None
-            log.warning('Could not get git diff for associating benchmark results with code state')
+            log.warning('Could not get git diff for associating benchmark '
+                        'results with code state')
 
         if c.TENSORFLOW_AVAILABLE:
             import tensorflow as tf
@@ -151,8 +154,8 @@ class DeepDriveEnv(gym.Env):
         if c.REUSE_OPEN_SIM:
             return
         if self.use_sim_start_command:
-            log.info('Starting simulator with command %s - this will take a few seconds.',
-                     c.SIM_START_COMMAND)
+            log.info('Starting simulator with command %s - this will take a '
+                     'few seconds.', c.SIM_START_COMMAND)
 
             self.sim_process = Popen(c.SIM_START_COMMAND)
 
@@ -192,7 +195,8 @@ class DeepDriveEnv(gym.Env):
                 cmd += ' -LogCmds="LogPython Verbose, LogSharedMemoryImpl_Linux VeryVerbose, LogDeepDriveAgent VeryVerbose"'
 
             self.sim_process = Popen(utils.get_sim_bin_path())
-            log.info('Starting simulator at %s (takes a few seconds the first time).', cmd)
+            log.info('Starting simulator at %s '
+                     '(takes a few seconds the first time).', cmd)
 
     def close_sim(self):
         log.info('Closing sim')
@@ -202,7 +206,8 @@ class DeepDriveEnv(gym.Env):
             utils.kill_process(process_to_kill)
 
     def _kill_competing_procs(self):
-        # TODO: Allow for many environments on the same machine by using registry DB for this and sharedmem
+        # TODO: Allow for many environments on the same machine by using
+        #  registry DB for this and sharedmem
         path = utils.get_sim_bin_path()
         if path is None:
             return
@@ -214,7 +219,9 @@ class DeepDriveEnv(gym.Env):
         else:
             raise NotImplementedError('OS not supported')
         utils.run_command(cmd, verbose=False, throw=False, print_errors=False)
-        time.sleep(1)  # TODO: Don't rely on time for shared mem to go away, we should have a unique name on startup.
+        time.sleep(1)
+        # TODO: Don't rely on time for shared mem to go away,
+        #  we should have a unique name on startup.
 
     def set_use_sim_start_command(self, use_sim_start_command):
         self.use_sim_start_command = use_sim_start_command
@@ -225,11 +232,13 @@ class DeepDriveEnv(gym.Env):
 
     def start_dashboard(self):
         if utils.is_debugging():
-            # TODO: Deal with plot UI not being in the main thread somehow - (move to Unreal HUD)
+            # TODO: Deal with plot UI not being in the main thread somehow -
+            #  (move to Unreal HUD)
             log.warning('Dashboard not supported in debug mode')
             return
         elif utils.is_docker():
-            # TODO: Move dashboard stats to Unreal / Tensorboard where appropriate
+            # TODO: Move dashboard stats to Unreal / Tensorboard
+            #  where appropriate
             log.warning('Dashboard not supported in docker')
             return
 
@@ -272,7 +281,8 @@ class DeepDriveEnv(gym.Env):
             self.dashboard_pub.put(OrderedDict(
                 {'display_stats': list(self.display_stats.items()),
                  'should_stop': False}))
-            log.debug('dashboard put took %fs', time.time() - start_dashboard_put)
+            log.debug(
+                'dashboard put took %fs', time.time() - start_dashboard_put)
 
         self.step_num += 1
         log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
@@ -304,7 +314,8 @@ class DeepDriveEnv(gym.Env):
             last state change). However, official evaluations of your agent
             are not allowed to use this for learning.
 
-            'episode_time' was added here in order to comply with OpenAI baselines PPO2.
+        'episode_time' was added here in order to comply with OpenAI baselines
+        PPO2.
         """
         info = {}
         info['score'] = info.get('episode', {})
@@ -352,12 +363,15 @@ class DeepDriveEnv(gym.Env):
                 if not self.is_sync:
                     sleep_time = max(0., self.period - delta - 0.001)
                     log.debug('regulating fps by sleeping for %f', sleep_time)
-                    time.sleep(sleep_time)  # TODO: Set environment capture FPS so that sleep is not needed here.
+                    time.sleep(sleep_time)
+                    # TODO: Set environment capture FPS
+                    #  so that sleep is not needed here.
             else:
                 log.debug('step longer than desired')
                 self.sync_step_time = self.period / 2
                 if self.step_num > 5 and fps < self.fps / 2:
-                    log.warning('Step %r took %rs - target is %rs', self.step_num, delta, 1 / self.fps)
+                    log.warning('Step %r took %rs - target is %rs',
+                                self.step_num, delta, 1 / self.fps)
         self.previous_action_time = now
 
     def compute_lap_statistics(self, obz):
@@ -366,7 +380,6 @@ class DeepDriveEnv(gym.Env):
         done = False
         if obz:
             lap_number = obz.get('lap_number')
-            have_lap_numbers = lap_number is not None and self.lap_number is not None
             lap_via_progress = self.score.progress > 99.9
             if lap_via_progress:
                 median_meters_per_sec = self.score.speed_sampler.mean() / 100
@@ -381,7 +394,8 @@ class DeepDriveEnv(gym.Env):
                 log.info('episode finished, lap complete')
                 self.log_up_time()
             self.lap_number = lap_number
-            log.debug('compute lap stats took %fs', time.time() - start_compute_lap_stats)
+            log.debug('compute lap stats took %fs',
+                      time.time() - start_compute_lap_stats)
 
         return done, lap_bonus
 
@@ -405,19 +419,23 @@ class DeepDriveEnv(gym.Env):
                 # Give time to get on track after spawn
                 reward = 0
             else:
-                gforce_penalty, gforce_done = self.get_gforce_penalty(obz, step_time)
-                lane_deviation_penalty = self.get_lane_deviation_penalty(obz, step_time)
+                gforce_penalty, gforce_done = self.get_gforce_penalty(
+                    obz, step_time)
+                lane_deviation_penalty = self.get_lane_deviation_penalty(
+                    obz, step_time)
                 time_penalty = self.get_time_penalty(obz, step_time)
-                progress_reward, speed = self.get_progress_and_speed_reward(obz, step_time,
-                                                                            gforce_penalty, lane_deviation_penalty)
-                reward = self.combine_rewards(progress_reward, gforce_penalty, lane_deviation_penalty,
-                                              time_penalty, speed)
+                progress_reward, speed = self.get_progress_and_speed_reward(
+                    obz, step_time, gforce_penalty, lane_deviation_penalty)
+                reward = self.combine_rewards(
+                    progress_reward, gforce_penalty, lane_deviation_penalty,
+                    time_penalty, speed)
 
             self.score.wrong_way = self.driving_wrong_way()
             if self.score.wrong_way:
                 log.warn('episode finished, going the wrong way')
 
-            if self.is_stuck(obz) or self.score.wrong_way:  # TODO: Collision or near collision
+            # TODO: Collision or near collision
+            if self.is_stuck(obz) or self.score.wrong_way:
                 done = True
                 reward -= 10
                 # TODO: Scale cost by collision momentum when speed is returned
@@ -451,7 +469,8 @@ class DeepDriveEnv(gym.Env):
         return reward, done
 
     def log_up_time(self):
-        log.info('up for %r' % arrow.get(time.time()).humanize(other=arrow.get(self.start_time), only_distance=True))
+        log.info('up for %r' % arrow.get(time.time()).humanize(
+            other=arrow.get(self.start_time), only_distance=True))
 
     def get_lane_deviation_penalty(self, obz, time_passed):
         lane_deviation_penalty = 0.
@@ -479,13 +498,15 @@ class DeepDriveEnv(gym.Env):
                 three_second_avg = self.average_gs(sampler, secs=3)
                 if gs > 5 or three_second_avg > 4:
                     # Game over
-                    log.warn('G-force limit exceeded, game over. Recent g\'s were: %r',
+                    log.warn('G-force limit exceeded, game over. '
+                             'Recent g\'s were: %r',
                              list(reversed(list(sampler.q)[-10:])))
                     done = True
 
                 self.display_stats['g-forces']['value'] = gs
                 self.display_stats['g-forces']['total'] = gs
-                gforce_penalty = RewardCalculator.get_gforce_penalty(gs, time_passed)
+                gforce_penalty = RewardCalculator.get_gforce_penalty(
+                    gs, time_passed)
 
         gforce_penalty *= self.driving_style.value.gforce_weight
         self.score.gforce_penalty += gforce_penalty
@@ -494,7 +515,8 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['gforce penalty']['total'] = -self.score.gforce_penalty
         return gforce_penalty, done
 
-    def get_progress_and_speed_reward(self, obz, time_passed, gforce_penalty, lane_deviation_penalty):
+    def get_progress_and_speed_reward(self, obz, time_passed, gforce_penalty,
+                                      lane_deviation_penalty):
         progress_reward = speed_reward = 0
         if 'distance_along_route' in obz:
             if self.start_distance_along_route is None:
@@ -543,9 +565,11 @@ class DeepDriveEnv(gym.Env):
         self.score.time_penalty += time_penalty
         return time_penalty
 
-    def combine_rewards(self, progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty, speed):
-        return self.driving_style.value.combine(progress_reward, gforce_penalty, lane_deviation_penalty, time_penalty,
-                                                speed)
+    def combine_rewards(self, progress_reward, gforce_penalty,
+                        lane_deviation_penalty, time_penalty, speed):
+        return self.driving_style.value.combine(progress_reward, gforce_penalty,
+                                                lane_deviation_penalty,
+                                                time_penalty, speed)
 
     def is_stuck(self, obz):
         start_is_stuck = time.time()
@@ -553,7 +577,8 @@ class DeepDriveEnv(gym.Env):
         # TODO: Get this from the game instead
         ret = False
         if 'TEST_END_OF_EPISODE' in os.environ and self.step_num >= 9:
-            log.warn('TEST_END_OF_EPISODE is set triggering end of episode via is_stuck!')
+            log.warn('TEST_END_OF_EPISODE is set triggering end of episode'
+                     ' via is_stuck!')
             self.score.got_stuck = True
             self.log_benchmark_trial()
             ret = True
@@ -567,18 +592,23 @@ class DeepDriveEnv(gym.Env):
                 self.steps_crawling_with_throttle_on += 1
                 log.debug('crawling detected num steps crawling is %d', self.steps_crawling_with_throttle_on)
             else:
-                log.debug('not stuck, throttle %f, brake %f, handbrake %f', obz['throttle'], obz['brake'],
-                          obz['handbrake'])
+                log.debug('not stuck, throttle %f, brake %f, handbrake %f',
+                          obz['throttle'], obz['brake'], obz['handbrake'])
 
             time_crawling = time.time() - self.last_not_stuck_time
 
-            # This was to detect legitimate stops, but we will have real collision detection before the need to stop
+            # This was to detect legitimate stops, but we will have real
+            # collision detection before the need to stop
             # portion_crawling = self.steps_crawling_with_throttle_on / max(1, self.steps_crawling)
 
             if self.steps_crawling_with_throttle_on > 40 and time_crawling > 5:
-                log.warn('No progress made while throttle on - assuming stuck and ending episode. steps crawling: %r, '
-                         'steps crawling with throttle on: %r, time crawling: %r',
-                         self.steps_crawling, self.steps_crawling_with_throttle_on, time_crawling)
+                log.warn('No progress made while throttle on - '
+                         'assuming stuck and ending episode. '
+                         'steps crawling: %r, '
+                         'steps crawling with throttle on: %r, '
+                         'time crawling: %r',
+                         self.steps_crawling,
+                         self.steps_crawling_with_throttle_on, time_crawling)
                 self.set_forward_progress()
                 if self.should_benchmark:
                     self.score.got_stuck = True
@@ -603,7 +633,8 @@ class DeepDriveEnv(gym.Env):
         high = max(totals)
         low = min(totals)
         std = np.std(totals)
-        log.info('benchmark lap #%d score: %f - average: %f', len(self.trial_scores), self.score.total, average)
+        log.info('benchmark lap #%d score: %f - average: %f',
+                 len(self.trial_scores), self.score.total, average)
         file_prefix = self.experiment + '_' if self.experiment else ''
         diff_filename = '%s%s.diff' % (file_prefix, c.DATE_STR)
         diff_filepath = os.path.join(c.RESULTS_DIR, diff_filename)
@@ -633,14 +664,19 @@ class DeepDriveEnv(gym.Env):
             writer = csv.writer(csv_file1)
             for i, score in enumerate(self.trial_scores):
                 if i == 0:
-                    writer.writerow(['episode #', 'score', 'speed reward', 'lane deviation penalty',
-                                     'gforce penalty', 'got stuck', 'wrong way', 'start', 'end', 'lap time'])
+                    writer.writerow(['episode #', 'score', 'speed reward',
+                                     'lane deviation penalty', 'gforce penalty',
+                                     'got stuck', 'wrong way', 'start', 'end',
+                                     'lap time'])
                 writer.writerow([i + 1, score.total,
-                                 score.speed_reward, score.lane_deviation_penalty,
-                                 score.gforce_penalty, score.got_stuck, score.wrong_way,
+                                 score.speed_reward,
+                                 score.lane_deviation_penalty,
+                                 score.gforce_penalty, score.got_stuck,
+                                 score.wrong_way,
                                  str(arrow.get(score.start_time).to('local')),
                                  str(arrow.get(score.end_time).to('local')),
                                  score.episode_time])
+        py_args = str(vars(c.PY_ARGS) if c.PY_ARGS else '')
         with open(c.SUMMARY_CSV_FILENAME, 'w', newline='') as csv_file2:
             writer = csv.writer(csv_file2)
             writer.writerow(['Stat', 'Value'])
@@ -651,7 +687,7 @@ class DeepDriveEnv(gym.Env):
             writer.writerow(['low score', low])
             writer.writerow(['env', self.spec.id])
             writer.writerow(['cmd args', ', '.join(sys.argv[1:])])
-            writer.writerow(['py args', str(vars(c.PY_ARGS) if c.PY_ARGS else '')])
+            writer.writerow(['py args', py_args])
             writer.writerow(['git commit', '@' + self.git_commit])
             writer.writerow(['git diff', diff_filename])
             writer.writerow(['experiment name', self.experiment or 'n/a'])
@@ -669,16 +705,19 @@ class DeepDriveEnv(gym.Env):
         os_version = platform.platform()
         if c.IS_LINUX:
             try:
-                os_version = ' '.join(utils.run_command('lsb_release -a')[0].split() + [os_version])
+                lsb_release = utils.run_command('lsb_release -a')[0].split()
+                os_version = ' '.join(lsb_release + [os_version])
             except:
                 log.debug('Could not get os version from lsb_release')
         return os_version
 
     def release_agent_control(self):
-        self.has_control = deepdrive_client.release_agent_control(self.client_id) is not None
+        res = deepdrive_client.release_agent_control(self.client_id)
+        self.has_control = res is not None
 
     def request_agent_control(self):
-        self.has_control = deepdrive_client.request_agent_control(self.client_id) == 1
+        res = deepdrive_client.request_agent_control(self.client_id)
+        self.has_control = res == 1
 
     # noinspection PyAttributeOutsideInit
     def set_forward_progress(self):
@@ -700,7 +739,8 @@ class DeepDriveEnv(gym.Env):
         self.view_mode_controller.reset()
         log.info('Reset complete')
         if self.reset_returns_zero:
-            # TODO: Always return zero after testing that everything works with dagger agents
+            # TODO: Always return zero after testing that everything
+            #  works with dagger agents
             return 0
 
     def change_viewpoint(self, cameras, use_sim_start_command):
@@ -780,35 +820,42 @@ class DeepDriveEnv(gym.Env):
         """
         if not self.should_normalize_image:
             if self.image_resize_dims:
-                raise NotImplementedError('Resize without normalizing not implemented')
-            return
-        if obz is None:
-            return
-        for camera in obz['cameras']:
-            start = time.time()
-            image = camera['image']
-            image = image.astype(np.float32)
-            image -= c.MEAN_PIXEL
-            if self.image_resize_dims is not None:
-                resize_start = time.time()
-                image = utils.resize_images(self.image_resize_dims, [image], always=True)[0]
-                log.debug('resize took %fs', time.time() - resize_start)
-            camera['image'] = image
-            log.debug('preprocess_obz took %fs',  time.time() - start)
+                raise NotImplementedError('Resize without normalizing not '
+                                          'implemented')
+        else:
+            if obz is None:
+                return
+            for camera in obz['cameras']:
+                start = time.time()
+                image = camera['image']
+                image = image.astype(np.float32)
+                image -= c.MEAN_PIXEL
+                if self.image_resize_dims is not None:
+                    resize_start = time.time()
+                    image = utils.resize_images(self.image_resize_dims,
+                                                [image], always=True)[0]
+                    log.debug('resize took %fs', time.time() - resize_start)
+                camera['image'] = image
+                log.debug('preprocess_obz took %fs',  time.time() - start)
         return obz
 
     def preprocess_cameras(self, cameras):
         ret = []
         for camera in cameras:
-            image = camera.image_data.reshape(camera.capture_height, camera.capture_width, 3)
-            depth = camera.depth_data.reshape(camera.capture_height, camera.capture_width)
+            image = camera.image_data.reshape(camera.capture_height,
+                                              camera.capture_width, 3)
+            depth = camera.depth_data.reshape(camera.capture_height,
+                                              camera.capture_width)
             start_preprocess = time.time()
             if self.preprocess_with_tensorflow:
                 import tf_utils  # avoid hard requirement on tensorflow
                 if self.sess is None:
-                    raise Exception('No tensorflow session. Did you call set_tf_session?')
-                # This runs ~2x slower (18ms on a gtx 980) than CPU when we are not running a model due to
-                # transfer overhead, but we do it anyway to keep training and testing as similar as possible.
+                    raise Exception(
+                        'No tensorflow session. Did you call set_tf_session?')
+                # This runs ~2x slower (18ms on a gtx 980) than
+                # CPU when we are not running a model due to
+                # transfer overhead, but we do it anyway to keep
+                # training and testing as similar as possible.
                 image = tf_utils.preprocess_image(image, self.sess)
                 depth = tf_utils.preprocess_depth(depth, self.sess)
             else:
@@ -816,12 +863,14 @@ class DeepDriveEnv(gym.Env):
                 depth = utils.preprocess_depth(depth)
 
             end_preprocess = time.time()
-            log.debug('preprocess took %rms', (end_preprocess - start_preprocess) * 1000.)
+            log.debug('preprocess took %rms',
+                      (end_preprocess - start_preprocess) * 1000.)
             camera_out = obj2dict(camera, exclude=['image', 'depth'])
             camera_out['image'] = image
             if self.should_render:
-                # Keep copy of image without mean subtraction etc that agent does
-                # through side effect on this mutable sensor data that gets passed around
+                # Keep copy of image without mean subtraction etc
+                # that agent does through side effect on this mutable sensor
+                # data that gets passed around
                 camera_out['image_raw'] = image
             camera_out['depth'] = depth
             ret.append(camera_out)
@@ -852,34 +901,40 @@ class DeepDriveEnv(gym.Env):
             self.change_has_control(action.has_control)
 
         if action.handbrake:
-            log.debug('Not expecting any handbraking right now! What\'s happening?! Disabling - hack :D')
+            log.debug('Not expecting any handbraking right now! '
+                      'What\'s happening?! Disabling - hack :D')
             action.handbrake = False
 
         action.clip()
 
         if self.is_sync:
             sync_start = time.time()
-            seq_number = deepdrive_client.advance_synchronous_stepping(self.client_id, self.sync_step_time,
-                                                                       action.steering, action.throttle,
-                                                                       action.brake, action.handbrake)
+            seq_number = deepdrive_client.advance_synchronous_stepping(
+                self.client_id, self.sync_step_time, action.steering,
+                action.throttle, action.brake, action.handbrake)
             log.debug('sync step took %fs',  time.time() - sync_start)
         else:
             if c.PPO_RESUME_PATH:
-                action.throttle = action.throttle * 0.90  # OmegaHack to deal with sync vs async
-            deepdrive_client.set_control_values(self.client_id, steering=action.steering, throttle=action.throttle,
-                                                brake=action.brake, handbrake=action.handbrake)
+                # OmegaHack to deal with sync vs async
+                action.throttle = action.throttle * 0.90
+            deepdrive_client.set_control_values(
+                self.client_id, steering=action.steering,
+                throttle=action.throttle, brake=action.brake,
+                handbrake=action.handbrake)
 
     def set_step_mode(self):
         if self.is_sync:
             ret = deepdrive_client.activate_synchronous_stepping(self.client_id)
             if ret != 1:
-                raise RuntimeError('Could not activate synchronous mode - errno %r' % ret)
+                raise RuntimeError(
+                    'Could not activate synchronous mode - errno %r' % ret)
 
     def check_version(self):
         self.client_id = self.connection_props['client_id']
         server_version_str = self.connection_props['server_protocol_version']
         if not server_version_str:
-            log.warn('Server version not reported. Can not check version compatibility.')
+            log.warn('Server version not reported. '
+                     'Can not check version compatibility.')
         else:
             server_version = semvar(server_version_str).version
             # TODO: For dev, store hash of .cpp and .h files on extension build inside VERSION_DEV, then when
@@ -900,13 +955,14 @@ class DeepDriveEnv(gym.Env):
             (server_version_str, self.client_version))
         sim_url = utils.get_sim_url()
         if sim_url:
-            answer = input('We\'ve found a version of the sim which matches your client. Would you like'
-                           ' to download it now? [y/n] ')
+            answer = input('We\'ve found a version of the sim which matches your '
+                           'client. Would you like to download it now? [y/n] ')
             if answer.lower().strip() == 'y':
                 backup_dir = os.path.join(
-                    c.DEEPDRIVE_DIR, '%s-%s' % (c.SIM_PREFIX, server_version_str))
+                    c.DEEPDRIVE_DIR,
+                    '%s-%s' % (c.SIM_PREFIX, server_version_str))
                 log.warn('Backing up old sim to %s', backup_dir)
-                shutil.move(c.SIM_PATH, backup_dir)
+                shutil.move(utils.get_sim_path(), backup_dir)
                 utils.ensure_sim()
                 self.open_sim()
 
@@ -920,11 +976,14 @@ class DeepDriveEnv(gym.Env):
             self.register_cameras(cameras)
             shared_mem = deepdrive_client.get_shared_memory(self.client_id)
             self.reset_capture(shared_mem[0], shared_mem[1])
-            if not deepdrive_simulation.connect('127.0.0.1', 9009, seed=c.rng.randint(1, 10**9)):
-                raise RuntimeError('Could not connect to Deepdrive simulation server')
+            if not deepdrive_simulation.connect('127.0.0.1', 9009,
+                                                seed=c.rng.randint(1, 10**9)):
+                raise RuntimeError(
+                    'Could not connect to Deepdrive simulation server')
             self._init_observation_space()
         else:
-            log.error('Invalid client_id of "%s". Expected a value greater than zero. Aborting connection',
+            log.error('Invalid client_id of "%s". Expected a value greater '
+                      'than zero. Aborting connection',
                       str(self.client_id))
             self.raise_connect_fail()
 
@@ -935,15 +994,18 @@ class DeepDriveEnv(gym.Env):
 
     def register_cameras(self, cameras):
         for cam in cameras:
-            cam['cxn_id'] = deepdrive_client.register_camera(self.client_id, cam['field_of_view'],
-                                                             cam['capture_width'],
-                                                             cam['capture_height'],
-                                                             cam['relative_position'],
-                                                             cam['relative_rotation'],
-                                                             cam['name'])
+            cam['cxn_id'] = deepdrive_client.register_camera(
+                self.client_id,
+                cam['field_of_view'],
+                cam['capture_width'],
+                cam['capture_height'],
+                cam['relative_position'],
+                cam['relative_rotation'],
+                cam['name'])
 
             if 'view_mode' in cam:
-                self.view_mode_controller.set_view_mode(cam['view_mode'], cam_id=cam['cxn_id'])
+                self.view_mode_controller.set_view_mode(cam['view_mode'],
+                                                        cam_id=cam['cxn_id'])
 
             self.cameras = cameras
 
@@ -951,10 +1013,12 @@ class DeepDriveEnv(gym.Env):
 
         def connect():
             try:
-                self.connection_props = deepdrive_client.create('127.0.0.1', 9876)
+                self.connection_props = deepdrive_client.create(
+                    '127.0.0.1', 9876)
                 if isinstance(self.connection_props, int):
-                    raise Exception('You have an old version of the deepdrive client - '
-                                    'try uninstalling and reinstalling with pip')
+                    raise Exception(
+                        'You have an old version of the deepdrive client - '
+                        'try uninstalling and reinstalling with pip')
                 if (not self.connection_props or
                         not self.connection_props['max_capture_resolution']):
                     # Try again
@@ -981,9 +1045,12 @@ class DeepDriveEnv(gym.Env):
                 log.info('No open sim detected')
                 self.open_sim()
             else:
-                sleep = cxn_attempts + random.random() * 2  # splay to avoid thundering herd
-                log.warning('Connection to environment failed, retry (%d/%d) in %d seconds',
-                            cxn_attempts, max_cxn_attempts, round(sleep, 0))
+                # splay to avoid thundering herd
+                sleep = cxn_attempts + random.random() * 2
+                log.warning('Connection to environment failed, '
+                            'retry (%d/%d) in %d seconds',
+                            cxn_attempts,
+                            max_cxn_attempts, round(sleep, 0))
                 time.sleep(sleep)
                 connect()
             if cxn_attempts >= max_cxn_attempts:
@@ -1009,7 +1076,8 @@ class DeepDriveEnv(gym.Env):
         sleep = 0.1
         log.debug('Connecting to deepdrive...')
         while n > 0:
-            # TODO: Establish some handshake so we don't hardcode size here and in Unreal project
+            # TODO: Establish some handshake so we don't hardcode size
+            #  here and in Unreal project
             if deepdrive_capture.reset(shared_mem_name, shared_mem_size):
                 log.debug('Connected to deepdrive shared capture memory')
                 return
@@ -1024,8 +1092,11 @@ class DeepDriveEnv(gym.Env):
     def raise_connect_fail():
         log.error('Environment connection failed')
         if c.SIM_START_COMMAND or c.REUSE_OPEN_SIM:
-            raise Exception('Could not connect to environment. You may need to close the Unreal Editor and/or turn off '
-                            'saving CPU in background in the Editor preferences (search for CPU).')
+            raise Exception(
+                'Could not connect to environment. '
+                'You may need to close the Unreal Editor and/or turn off '
+                'saving CPU in background in the Editor preferences '
+                '(search for CPU).')
         else:
             raise Exception('\n\n\n'
                         '**********************************************************************\n'
@@ -1058,37 +1129,52 @@ class DeepDriveEnv(gym.Env):
 
         else:
             # TODO(PPO)
-            # I think what we need to do here is normalize the brake and handbrake space to be between -1 and 1 so
-            # that all actions have the same dimension - Then create a single box space. The is_game_driving space
+            # I think what we need to do here is normalize the brake and
+            # handbrake space to be between -1 and 1 so
+            # that all actions have the same dimension -
+            # Then create a single box space. The is_game_driving space
             # can be ignored for now within the ppo agent.
-            steering_space = spaces.Box(low=Action.STEERING_MIN, high=Action.STEERING_MAX, shape=(1,), dtype=np.float32)
-            throttle_space = spaces.Box(low=Action.THROTTLE_MIN, high=Action.THROTTLE_MAX, shape=(1,), dtype=np.float32)
-            brake_space = spaces.Box(low=Action.BRAKE_MIN, high=Action.BRAKE_MAX, shape=(1,), dtype=np.float32)
-            handbrake_space = spaces.Box(low=Action.HANDBRAKE_MIN, high=Action.HANDBRAKE_MAX, shape=(1,),
-                                         dtype=np.float32)
+            steering_space = spaces.Box(
+                low=Action.STEERING_MIN, high=Action.STEERING_MAX, shape=(1,),
+                dtype=np.float32)
+            throttle_space = spaces.Box(
+                low=Action.THROTTLE_MIN, high=Action.THROTTLE_MAX, shape=(1,),
+                dtype=np.float32)
+            brake_space = spaces.Box(
+                low=Action.BRAKE_MIN, high=Action.BRAKE_MAX, shape=(1,),
+                dtype=np.float32)
+            handbrake_space = spaces.Box(
+                low=Action.HANDBRAKE_MIN, high=Action.HANDBRAKE_MAX, shape=(1,),
+                dtype=np.float32)
             is_game_driving_space = spaces.Discrete(2)
             action_space = spaces.Tuple(
-                (steering_space, throttle_space, brake_space, handbrake_space, is_game_driving_space))
+                (steering_space, throttle_space, brake_space, handbrake_space,
+                 is_game_driving_space))
         self.action_space = action_space
         return action_space
 
     def _init_observation_space(self):
         if len(self.cameras) > 1:
-            log.warning('\n\n\n MULTIPLE CAMERAS OBSERVATION SPACE RETURNS TUPLE - '
-                        'YOU MAY WANT TO IMPLEMENT BETTER SUPPORT DEPENDING ON HOW YOUR '
-                        'AGENT COMBINES CAMERA VIEWS \n\n\n')
+            log.warning(
+                '\n\n\n MULTIPLE CAMERAS OBSERVATION SPACE RETURNS TUPLE - '
+                'YOU MAY WANT TO IMPLEMENT BETTER SUPPORT DEPENDING ON HOW YOUR '
+                'AGENT COMBINES CAMERA VIEWS \n\n\n')
 
             obz_spaces = []
             for camera in self.cameras:
-                obz_spaces.append(spaces.Box(low=0, high=255, shape=(camera['capture_width'], camera['capture_height']),
-                                             dtype=np.uint8))
+                obz_spaces.append(spaces.Box(
+                    low=0, high=255,
+                    shape=(camera['capture_width'],
+                           camera['capture_height']), dtype=np.uint8))
             observation_space = spaces.Tuple(tuple(obz_spaces))
             self.observation_space = observation_space
             return observation_space
         else:
             camera = self.cameras[0]
-            self.observation_space = spaces.Box(low=0, high=255, shape=(camera['capture_width'], camera['capture_height']),
-                       dtype=np.uint8)
+            self.observation_space = spaces.Box(
+                low=0, high=255,
+                shape=(camera['capture_width'], camera['capture_height']),
+                dtype=np.uint8)
 
     def change_has_control(self, has_control):
         if has_control:
@@ -1097,7 +1183,8 @@ class DeepDriveEnv(gym.Env):
             self.release_agent_control()
 
     def driving_wrong_way(self):
-        if None in [self.previous_distance_along_route, self.distance_along_route]:
+        if None in [self.previous_distance_along_route,
+                    self.distance_along_route]:
             return False
 
         if self.distance_along_route < self.previous_distance_along_route:
@@ -1118,7 +1205,8 @@ class DeepDriveEnv(gym.Env):
         self.register_cameras(cameras)
 
     def unregister_cameras(self):
-        if not deepdrive_client.unregister_camera(self.client_id, 0):  # 0 => Unregister all
+        if not deepdrive_client.unregister_camera(self.client_id, 0):
+            # 0 => Unregister all
             raise RuntimeError('Not able to unregister cameras')
         self.cameras = None
 

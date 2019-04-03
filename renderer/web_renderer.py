@@ -1,10 +1,13 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
+
+import sys
+
 from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
                              int, map, next, oct, open, pow, range, round,
                              str, super, zip)
 import time
-import multiprocessing
+from multiprocessing import Process
 import pyarrow
 from flask import Flask
 
@@ -38,7 +41,8 @@ class WebRenderer(Renderer):
 
     def __init__(self):
 
-        # TODO: Move source ZMQ to base renderer and replace pyglet renderer's use of multiprocessing
+        # TODO: Move source ZMQ to base renderer and replace
+        #  pyglet renderer's use of multiprocessing
         import zmq
 
         self.prev_render_time = None
@@ -48,13 +52,18 @@ class WebRenderer(Renderer):
         log.debug('Sending images over ZMQ to %s', conn_string)
 
         self.socket.connect(conn_string)
-        self.web_server_process = multiprocessing.Process(target=background_server_process, name='streaming server')
+        self.web_server_process = Process(target=background_server_process,
+                                          name='streaming server', daemon=True)
         self.web_server_process.start()
 
     def __del__(self):
         self.socket.close()
         self.context.term()
-        self.web_server_process.join()
+        try:
+            self.web_server_process.join()
+        except Exception as e:
+            print('Could not join web server process on close. ' + str(e),
+                  file=sys.stderr)
 
     def render(self, obz):
         now = time.time()

@@ -44,8 +44,10 @@ class UEPyClient(object):
             return None
         finally:
             if ret is None:
-                raise RuntimeError('Could not get response from lambda server. '
-                                   'Try restarting sim or Unreal Editor.')
+                raise RuntimeError(
+                    'Could not get response from lambda server. '
+                    'Ensure your Arrow/pyarrow versions are compatible.'
+                    'Try restarting sim or Unreal Editor. ')
             if not ret['success']:
                 log.error(ret['result'])
                 raise RuntimeError(

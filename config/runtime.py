@@ -100,24 +100,14 @@ YOU_GET_MY_JIST_URL = BUCKET_URL + '/yougetmyjist.json'
 
 # Sim
 if 'DEEPDRIVE_SIM_START_COMMAND' in os.environ:
-    # Can do something like `<your-unreal-path>\Engine\Binaries\Win32\UE4Editor.exe <your-deepdrive-sim-path>\DeepDrive.uproject -game ResX=640 ResY=480`
+    # Can do something like
+    # `<your-unreal-path>\Engine\Binaries\Win32\UE4Editor.exe <your-deepdrive-sim-path>\DeepDrive.uproject -game ResX=640 ResY=480`
     SIM_START_COMMAND = os.environ['DEEPDRIVE_SIM_START_COMMAND']
 else:
     SIM_START_COMMAND = None
 
 
-def get_sim_path():
-    orig_path = os.path.join(DEEPDRIVE_DIR, 'sim')
-    version_paths = glob(os.path.join(DEEPDRIVE_DIR, 'deepdrive-sim-*-%s.*' % config.version.MAJOR_MINOR_VERSION_STR))
-    version_paths = [vp for vp in version_paths if not vp.endswith('.zip')]
-    if version_paths:
-        return list(sorted(version_paths))[-1]
-    else:
-        return orig_path
-
-
 REUSE_OPEN_SIM = 'DEEPDRIVE_REUSE_OPEN_SIM' in os.environ
-SIM_PATH = get_sim_path()
 
 DEFAULT_CAM = dict(name='forward cam 227x227 60 FOV', field_of_view=60, capture_width=227, capture_height=227,
                    relative_position=[150, 1.0, 200],

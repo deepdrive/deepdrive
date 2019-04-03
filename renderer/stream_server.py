@@ -120,21 +120,27 @@ def frame_worker(socket, queue):
             cameras = pyarrow.deserialize(msg)
             all_cams_image = None
             if cameras is not None:
-                for cam_idx, cam in enumerate(cameras):
-                    image = cam['img_raw'] if 'img_raw' in cam else cam['image']
-                    depth = np.ascontiguousarray(utils.depth_heatmap(np.copy(cam['depth'])))
-                    try:
-                        image = np.concatenate((image, depth), axis=1)
-                    except ValueError as e:
-                        log.error('Could not concatenate image with shape %r and depth with shape %r %s',
-                                  image.shape, depth.shape, str(e))
-
-                    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                    if all_cams_image is None:
-                        all_cams_image = image
-                    else:
-                        all_cams_image = np.concatenate((all_cams_image, image), axis=0)
-
-                ret, jpeg = cv2.imencode('.jpg', all_cams_image)
+                jpeg = get_image_and_depth(all_cams_image, cameras)
                 queue.append(b'--frame\r\n'
-                             b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
+                             b'Content-Type: image/jpeg\r\n\r\n' +
+                             jpeg.tobytes() + b'\r\n\r\n')
+
+
+def get_image_and_depth(all_cams_image, cameras):
+    for cam_idx, cam in enumerate(cameras):
+        image = cam['img_raw'] if 'img_raw' in cam else cam['image']
+        depth = np.ascontiguousarray(utils.depth_heatmap(np.copy(cam['depth'])))
+        try:
+            image = np.concatenate((image, depth), axis=1)
+        except ValueError as e:
+            log.error('Could not concatenate image with shape %r '
+                      'and depth with shape %r %s',
+                      image.shape, depth.shape, str(e))
+
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        if all_cams_image is None:
+            all_cams_image = image
+        else:
+            all_cams_image = np.concatenate((all_cams_image, image), axis=0)
+    ret, jpeg = cv2.imencode('.jpg', all_cams_image)
+    return jpeg

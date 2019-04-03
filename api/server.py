@@ -1,5 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
+
+import pkg_resources
 from future.builtins import (str)
 
 import zmq
@@ -11,6 +13,7 @@ import logs
 import config as c
 import api.methods as m
 import sim
+import utils
 
 log = logs.get_log(__name__)
 
@@ -181,7 +184,45 @@ class Server(object):
         return resp
 
 
+def check_pyarrow_compatibility():
+    """
+    Different versions of pyarrow on serialization and deserialization ends
+    can cause segmentation faults in Unreal
+    :return: bool indicating whether the versions are the same
+    """
+    uepy_pyarrow_version = utils.get_uepy_pyarrow_version()
+    local_pyarrow_version = pkg_resources.get_distribution('pyarrow').version
+    versions_equal = uepy_pyarrow_version == local_pyarrow_version
+    if not versions_equal:
+        log.warn(r"""
+        
+                                 \\\///
+                                / _  _ \
+                              (| (.)(.) |)
+.---------------------------.OOOo--()--oOOO.---------------------------.
+|                                                                      |
+| Pyarrow version mismatch!                                            |
+|                                                                      |
+| UEPy version: %s                                   |
+| Local version: %s                                  |
+|                                                                      |
+| You may want to correct this if you see segfaults in UnrealEngine or |
+| other unexplained failures.                                          |
+|                                                                      |
+'---------------------------.oooO--------------------------------------'
+                             (   )   Oooo.
+                              \ (    (   )
+                               \_)    ) /
+                                     (_/
+
+""" % (uepy_pyarrow_version.ljust(20), local_pyarrow_version.ljust(20)))
+    # sudo apt-get install boxes
+    # gen cat <msg-file> | boxes -d ian_jones
+    return versions_equal
+
+
 def start():
+    check_pyarrow_compatibility()
     server = Server()
     server.run()
 
