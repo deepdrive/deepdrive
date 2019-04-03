@@ -29,7 +29,7 @@ class Recorder(object):
     """
 
     def __init__(self, recording_dir, should_record_agent_actions=True,
-                 should_record=True):
+                 should_record=True, eval_only=False):
         self.record_agent_actions = should_record_agent_actions  # type: bool
         self.should_record = should_record  # type: bool
         self.hdf5_dir = c.HDF5_SESSION_DIR  # type: str
@@ -39,6 +39,7 @@ class Recorder(object):
         self.recorded_obz_count = 0  # type: int
         self.num_saved_observations = 0  # type: int
         self.recording_dir = recording_dir  # type: str
+        self.eval_only = eval_only  # type: bool
         if self.should_record:
             log.info('Recording driving data to %s', self.hdf5_dir)
 
@@ -74,7 +75,7 @@ class Recorder(object):
 
     def close(self):
         log.info('Closing recorder')
-        if c.PY_ARGS.eval_only:
+        if self.eval_only:
             # Okay to have partial eval recordings
             self.save_unsaved_observations()
         else:
@@ -103,7 +104,7 @@ class Recorder(object):
         self.num_saved_observations = self.recorded_obz_count
 
     def save_unsaved_observations(self):
-        if self.should_record and self.num_saved_observations < self.recorded_obz_count:
+        if self.should_record and self.num_unsaved_observations():
             self.save_recordings()
 
     def should_record_obz(self, obz):
@@ -158,3 +159,6 @@ class Recorder(object):
         log.info('Wrote artifacts inventory to %s' % filename)
         # TODO: Upload to YouTube on pull request
         # TODO: Save a description file with the episode score summary, gist link, and s3 link
+
+    def num_unsaved_observations(self):
+        return self.recorded_obz_count - self.num_saved_observations

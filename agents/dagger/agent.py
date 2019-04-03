@@ -330,7 +330,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
         randomize_sun_speed=False, randomize_shadow_level=False,
         randomize_month=False, enable_traffic=True,
         view_mode_period=None, max_steps=None, max_episodes=1000,
-        agent_name=None):
+        agent_name=None,
+        eval_only=False):
     if should_record:
         path_follower = True
         randomize_sun_speed = True
@@ -347,7 +348,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
               run_mnet2_baseline_agent,
               run_ppo_baseline_agent, should_record, should_jitter_actions,
               env_id, render, fps, should_benchmark, is_remote, is_sync,
-              enable_traffic, view_mode_period, max_steps, image_resize_dims)
+              enable_traffic, view_mode_period, max_steps, image_resize_dims,
+              eval_only)
 
     reward = 0
     episode_done = False
@@ -434,7 +436,8 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
           run_mnet2_baseline_agent,
           run_ppo_baseline_agent, should_record, should_jitter_actions, env_id,
           render, fps, should_benchmark, is_remote, is_sync,
-          enable_traffic, view_mode_period, max_steps, image_resize_dims):
+          enable_traffic, view_mode_period, max_steps, image_resize_dims,
+          eval_only):
     if run_baseline_agent:
         net_path = ensure_mnet2_baseline_weights(net_path)
     elif run_mnet2_baseline_agent:
@@ -456,14 +459,19 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
 
     def start_env():
-        return sim.start(experiment=experiment, env_id=env_id, should_benchmark=should_benchmark,
-                         cameras=cameras, use_sim_start_command=use_sim_start_command_first_lap,
+        return sim.start(experiment=experiment, env_id=env_id,
+                         should_benchmark=should_benchmark, cameras=cameras,
+                         use_sim_start_command=use_sim_start_command_first_lap,
                          render=render, fps=fps, driving_style=driving_style,
                          is_sync=is_sync, reset_returns_zero=False,
-                         is_remote_client=is_remote, enable_traffic=enable_traffic,
+                         is_remote_client=is_remote,
+                         enable_traffic=enable_traffic,
                          view_mode_period=view_mode_period, max_steps=max_steps,
-                         should_record=should_record, recording_dir=recording_dir,
-                         image_resize_dims=image_resize_dims, should_normalize_image=True)
+                         should_record=should_record,
+                         recording_dir=recording_dir,
+                         image_resize_dims=image_resize_dims,
+                         should_normalize_image=True,
+                         eval_only=eval_only)
 
     env = start_env()
     agent = Agent(sess, should_jitter_actions=should_jitter_actions,

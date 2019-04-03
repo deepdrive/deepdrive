@@ -232,7 +232,8 @@ def show_camera(image, depth):
 
 
 def hdf5_to_mp4(fps=c.DEFAULT_FPS, png_dir=None, combine_all=False, sess_dir=None):
-    png_dir = save_hdf5_recordings_to_png(combine_all, sess_dir) if png_dir is None else png_dir
+    if png_dir is None:
+        png_dir = save_hdf5_recordings_to_png(combine_all, sess_dir)
     try:
         file_path = pngs_to_mp4(combine_all, fps, png_dir)
     finally:
@@ -241,7 +242,8 @@ def hdf5_to_mp4(fps=c.DEFAULT_FPS, png_dir=None, combine_all=False, sess_dir=Non
 
 
 def pngs_to_mp4(combine_all, fps, png_dir):
-    # TODO: Add FPS, frame number, run id, date str, g-forces, episode #, hdf5 #, etc... to this
+    # TODO: Add FPS, frame number, run id, date str,
+    #  g-forces, episode #, hdf5 #, etc... to this
     #  and rendered views for human interprettability
     log.info('Saved temp png\'s to ' + png_dir)
     file_path = None
@@ -266,7 +268,9 @@ def pngs_to_mp4(combine_all, fps, png_dir):
                       ' -crf 25'
                       ' -pix_fmt {pix_fmt}'
                       ' -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2"'
-                      ' {file_path}'.format(fps=fps, pix_fmt=pix_fmt, zfill_total=zfill_total, file_path=file_path,
+                      ' {file_path}'.format(fps=fps, pix_fmt=pix_fmt,
+                                            zfill_total=zfill_total,
+                                            file_path=file_path,
                                             temp_png_dir=png_dir))
         log.info('PNG=>MP4: ' + ffmpeg_cmd)
         ffmpeg_result = os.system(ffmpeg_cmd)
@@ -326,7 +330,9 @@ def save_hdf5_recordings_to_png(combine_all=False, sess_dir=None):
     save_dir = tempfile.mkdtemp()
     for i, f in enumerate(hdf5_filenames):
         try:
-            read_hdf5(f, save_png_dir=save_dir, save_prefix='hdf5_%s' % str(i).zfill(c.HDF5_DIR_ZFILL))
+            read_hdf5(f,
+                      save_png_dir=save_dir,
+                      save_prefix='hdf5_%s' % str(i).zfill(c.HDF5_DIR_ZFILL))
         except OSError as e:
             log.error(e)
     return save_dir

@@ -108,6 +108,8 @@ class Server(object):
             resp = self.env.metadata
         elif method == m.CHANGE_CAMERAS:
             resp = self.env.unwrapped.change_cameras(*args, **kwargs)
+        elif method == m.CLOSE:
+            resp = self.env.close()
         else:
             log.error('Invalid API method')
         serialized = self.serialize(resp)

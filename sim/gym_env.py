@@ -798,9 +798,11 @@ class DeepDriveEnv(gym.Env):
         # TODO: Generate random actions with this seed
 
     def preprocess_observation(self, observation):
+        def has_cams(_obs):
+            return getattr(_obs, 'cameras', None) is not None
         if observation and len(observation.cameras[0].image_data):
             ret = obj2dict(observation, exclude=['cameras'])
-            if observation.camera_count > 0 and getattr(observation, 'cameras', None) is not None:
+            if observation.camera_count > 0 and has_cams(observation):
                 cameras = observation.cameras
                 ret['cameras'] = self.preprocess_cameras(cameras)
             else:

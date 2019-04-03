@@ -25,28 +25,29 @@ def deserialize_space(resp):
 
 class Client(object):
     """
-    A Client object acts as a remote proxy to the deepdrive gym environment. Methods
-    that you would call on the env, like step() are also called on this object,
-    with communication over the network - rather than over shared memory (for
-    observations) and network (for transactions like reset) as is the case with
-    the locally run sim/gym_env.py.
+    A Client object acts as a remote proxy to the deepdrive gym environment.
+    Methods that you would call on the env, like step() are also called on
+    this object, with communication over the network -
+    rather than over shared memory (for observations) and network
+    (for transactions like reset) as is the case with the locally run
+    sim/gym_env.py.
     This allows the agent and environment to run on separate machines, but
     with the same API as a local agent, namely the gym API.
 
-    The local gym environment is then run by api/server.py which proxies RPC's from
-    this client to the local environment.
+    The local gym environment is then run by api/server.py which proxies
+    RPC's from this client to the local environment.
 
-    All network communication happens over ZMQ to take advantage of their highly optimized
-    cross-language / cross-OS sockets.
+    All network communication happens over ZMQ to take advantage of their
+    highly optimized cross-language / cross-OS sockets.
 
-    NOTE: This will obviously run more slowly than a local agent which communicates
-    sensor data over shared memory.
+    NOTE: This will obviously run more slowly than a local agent which
+    communicates sensor data over shared memory.
     """
     def __init__(self, **kwargs):
         self.socket = None
         self.last_obz = None
         self.create_socket()
-        self.should_render = 'render' in kwargs and kwargs['render'] is True
+        self.should_render = kwargs.get('client_render', False)
         if kwargs['cameras'] is None:
             kwargs['cameras'] = [c.DEFAULT_CAM]
         if self.should_render:
@@ -76,7 +77,8 @@ class Client(object):
         context = zmq.Context()
         socket = context.socket(zmq.PAIR)
 
-        # Creating a new socket on timeout is not working when other ZMQ connections are present in the process.
+        # Creating a new socket on timeout is not working when other ZMQ
+        # connections are present in the process.
         # socket.RCVTIMEO = c.API_TIMEOUT_MS
         # socket.SNDTIMEO = c.API_TIMEOUT_MS
 
@@ -110,6 +112,7 @@ class Client(object):
         return self._send(m.CHANGE_CAMERAS, args=[cameras])
 
     def close(self):
+        self._send(m.CLOSE)
         self.socket.close()
 
     @property

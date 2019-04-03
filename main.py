@@ -197,7 +197,8 @@ def run_agent(args, camera_rigs, driving_style):
               enable_traffic=args.enable_traffic,
               view_mode_period=args.view_mode_period,
               max_steps=args.max_steps,
-              max_episodes=args.max_episodes, agent_name=args.agent)
+              max_episodes=args.max_episodes, agent_name=args.agent,
+              eval_only=args.eval_only)
 
 
 def run_path_follower(args, driving_style, camera_rigs):

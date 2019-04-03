@@ -128,7 +128,7 @@ def frame_worker(socket, queue):
 
 def get_image_and_depth(all_cams_image, cameras):
     for cam_idx, cam in enumerate(cameras):
-        image = cam['img_raw'] if 'img_raw' in cam else cam['image']
+        image = cam['image_raw'] if 'image_raw' in cam else cam['image']
         depth = np.ascontiguousarray(utils.depth_heatmap(np.copy(cam['depth'])))
         try:
             image = np.concatenate((image, depth), axis=1)

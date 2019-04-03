@@ -65,7 +65,8 @@ def get_default_start_args():
                enable_traffic=False, ego_mph=None,
                view_mode_period=None, max_steps=None, should_record=False,
                recording_dir=c.RECORDING_DIR, image_resize_dims=None,
-               should_normalize_image=False)
+               should_normalize_image=False,
+               eval_only=False)
 
 
 def start_local_env(args):
@@ -98,7 +99,9 @@ def start_local_env(args):
     _env.max_steps = args.max_steps
     _env.set_use_sim_start_command(args.use_sim_start_command)
     _env.image_resize_dims = args.image_resize_dims
-    _env.recorder = Recorder(args.recording_dir, should_record=args.should_record)
+    _env.recorder = Recorder(args.recording_dir,
+                             should_record=args.should_record,
+                             eval_only=args.eval_only)
     _env.should_normalize_image = args.should_normalize_image
 
     connect_to_unreal(_env, args)

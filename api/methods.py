@@ -1,6 +1,7 @@
 STEP = 'step'
 RESET = 'reset'
 START = 'start'
+CLOSE = 'close'
 ACTION_SPACE = 'action_space'
 OBSERVATION_SPACE = 'observation_space'
 REWARD_RANGE = 'reward_range'

@@ -62,8 +62,7 @@ class WebRenderer(Renderer):
         try:
             self.web_server_process.join()
         except Exception as e:
-            print('Could not join web server process on close. ' + str(e),
-                  file=sys.stderr)
+            print('Could not join web server process on close.')
 
     def render(self, obz):
         now = time.time()
