@@ -281,15 +281,16 @@ def pngs_to_mp4(combine_all, fps, png_dir):
     return file_path
 
 
-def upload_to_gist(name: str, file_paths: list):
+def upload_to_gist(name: str, file_paths: list, public: bool):
+    files = ' '.join('"%s"' % f for f in file_paths)
     gist_env = os.environ.copy()
     gist_env['YOU_GET_MY_JIST'] = requests.get(c.YOU_GET_MY_JIST_URL).text.strip()
     if os.path.dirname(sys.executable) not in os.environ['PATH']:
         gist_env['PATH'] = os.path.dirname(sys.executable) + ':' + gist_env['PATH']
-    output, ret_code = run_command('gist create --public {gist_name} {files}'.format(
-        gist_name=name,
-        files=' '.join('"%s"' % f for f in file_paths),
-    ), env=gist_env, verbose=True)
+    opts = '--public' if public else ''
+    cmd = 'gist {opts} create {gist_name} {files}'
+    cmd = cmd.format(gist_name=name, files=files, opts=opts)
+    output, ret_code = run_command(cmd, env=gist_env, verbose=True)
     if ret_code != 0:
         log.warn('Could not upload gist. \n%s' % (output,))
     url = output if ret_code == 0 else None
@@ -302,11 +303,13 @@ def upload_to_youtube(file_path):
     # os.environ['PYTHONPATH'] = '%s:%s' % (youtube_upload_dir, python_path)
     import youtube_upload.main
     from box import Box
-    options = Box(title=file_path, privacy='unlisted', client_secrets='', credentials_file='',
-                  auth_browser=None, description='Deepdrive results for %s' % c.PY_ARGS)
+    options = Box(title=file_path, privacy='unlisted', client_secrets='',
+                  credentials_file='', auth_browser=None,
+                  description='Deepdrive results for %s' % c.PY_ARGS)
     youtube = youtube_upload.main.get_youtube_handler(options)
     youtube_upload.main.upload_youtube_video(youtube, options, file_path, 1, 0)
-    # TODO: Put link to s3 artifacts in description [hdf5, csv, diff, eventually ue-recording]
+    # TODO: Put link to s3 artifacts in description [hdf5, csv, diff,
+    #  eventually ue-recording]
     # cmd = '%s %s --title=test --privacy=unlisted %s' % (
     #     sys.executable,
     #     os.path.join(youtube_upload_dir, 'bin', 'youtube_upload'),
@@ -343,18 +346,21 @@ def save_random_hdf5_to_png(recording_dir=c.RECORDING_DIR):
     if not random_file:
         raise RuntimeError('No hdf5 files found')
     else:
-        save_png_dir = os.path.join(os.path.join(recording_dir, 'random_hdf5_view'),
-                                    os.path.basename(os.path.dirname(random_file)),
-                                    os.path.basename(random_file)[:-5])
+        p = os.path
+        save_png_dir = os.path.join(p.join(recording_dir, 'random_hdf5_view'),
+                                    p.basename(p.dirname(random_file)),
+                                    p.basename(random_file)[:-5])
         log.info('Saving random files to ' + save_png_dir)
         os.makedirs(save_png_dir, exist_ok=True)
-        read_hdf5(os.path.join(recording_dir, random_file), save_png_dir=save_png_dir)
+        read_hdf5(p.join(recording_dir, random_file),
+                  save_png_dir=save_png_dir)
 
 
 def read_hdf5_manual(recording_dir=c.RECORDING_DIR):
     save_png_dir = os.path.join(recording_dir, 'test_view')
     os.makedirs(save_png_dir, exist_ok=True)
-    read_hdf5(os.path.join(recording_dir, '2018-01-18__05-14-48PM', '0000000001.hdf5'), save_png_dir=save_png_dir)
+    read_hdf5(os.path.join(recording_dir, '2018-01-18__05-14-48PM',
+                           '0000000001.hdf5'), save_png_dir=save_png_dir)
 
 
 def is_debugging():
@@ -365,7 +371,9 @@ def is_debugging():
 
 
 def download(url, directory, warn_existing=True, overwrite=False):
-    """Useful for downloading a folder / zip file from dropbox/s3/cloudfront and unzipping it to path"""
+    """
+    Download and unzip
+    """
     if has_stuff(directory, warn_existing, overwrite):
         return
     else:
@@ -393,7 +401,8 @@ def download(url, directory, warn_existing=True, overwrite=False):
     try:
         zip_ref.extractall(directory)
     except Exception:
-        print('You may want to close all programs that may have these files open or delete existing '
+        print('You may want to close all programs that may have these files '
+              'open or delete existing '
               'folders this is trying to overwrite')
         raise
     finally:
@@ -472,6 +481,17 @@ def get_sim_bin_path(return_expected_path=False):
         return ret, expected_path
     else:
         return ret
+
+
+def download_weights(url):
+    folder = url.split('/')[-1].replace('.zip', '')
+    dest = os.path.join(c.WEIGHTS_DIR, folder)
+    if not glob.glob(dest + '/*'):
+        log.info('Downloading weights %s', folder)
+        download(url, dest)
+    else:
+        log.info('Found cached weights at %s', dest)
+    return dest
 
 
 def get_sim_project_dir():

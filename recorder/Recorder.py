@@ -29,7 +29,8 @@ class Recorder(object):
     """
 
     def __init__(self, recording_dir, should_record_agent_actions=True,
-                 should_record=True, eval_only=False):
+                 should_record=True, eval_only=False, should_upload_gist=False,
+                 public=False):
         self.record_agent_actions = should_record_agent_actions  # type: bool
         self.should_record = should_record  # type: bool
         self.hdf5_dir = c.HDF5_SESSION_DIR  # type: str
@@ -40,6 +41,8 @@ class Recorder(object):
         self.num_saved_observations = 0  # type: int
         self.recording_dir = recording_dir  # type: str
         self.eval_only = eval_only  # type: bool
+        self.should_upload_gist = should_upload_gist  # type: bool
+        self.public = public  # type: bool
         if self.should_record:
             log.info('Recording driving data to %s', self.hdf5_dir)
 
@@ -85,9 +88,13 @@ class Recorder(object):
                      self.num_saved_observations)
         if self.recorded_obz_count > 0:
             mp4_file = utils.hdf5_to_mp4()
-            gist_url = utils.upload_to_gist(
-                'deepdrive-results-' + c.DATE_STR,
-                [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME])
+            if self.should_upload_gist:
+                gist_url = utils.upload_to_gist(
+                    'deepdrive-results-' + c.DATE_STR,
+                    [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME],
+                    public=public)
+            else:
+                gist_url = 'not uploaded'
             self.create_artifacts_inventory(
                 gist_url=gist_url,
                 hdf5_dir=c.HDF5_SESSION_DIR,

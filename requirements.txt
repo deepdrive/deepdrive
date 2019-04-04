@@ -26,12 +26,11 @@ requests
 python-box
 
 # Install from Github, editable
-# Uncomment these to dev these packages within src/
 #-e git://github.com/deepdrive/gist.git#egg=python-gist
 #-e git://github.com/deepdrive/youtube-upload#egg=youtube-upload
 
 # Install from GitHub, non-editable
-git+git://github.com/deepdrive/gist.git#egg=python-gist
+git+git://github.com/deepdrive/gist.git#egg=python-gist==0.6.1.dev42
 git+git://github.com/deepdrive/youtube-upload#egg=youtube-upload
 
 # The deepdrive bindings are installed via install.py according to the VERSION file in this repo

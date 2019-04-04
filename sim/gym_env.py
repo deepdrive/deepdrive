@@ -660,46 +660,62 @@ class DeepDriveEnv(gym.Env):
                  os.path.normpath(c.SUMMARY_CSV_FILENAME))
 
     def write_result_csvs(self, average, diff_filename, high, low, median, std):
-        with open(c.EPISODES_CSV_FILENAME, 'w', newline='') as csv_file1:
-            writer = csv.writer(csv_file1)
-            for i, score in enumerate(self.trial_scores):
-                if i == 0:
-                    writer.writerow(['episode #', 'score', 'speed reward',
-                                     'lane deviation penalty', 'gforce penalty',
-                                     'got stuck', 'wrong way', 'start', 'end',
-                                     'lap time'])
-                writer.writerow([i + 1, score.total,
-                                 score.speed_reward,
-                                 score.lane_deviation_penalty,
-                                 score.gforce_penalty, score.got_stuck,
-                                 score.wrong_way,
-                                 str(arrow.get(score.start_time).to('local')),
-                                 str(arrow.get(score.end_time).to('local')),
-                                 score.episode_time])
+        import io
+        episodes_io = io.StringIO()
+        summary_io = io.StringIO()
+
+        writer = csv.writer(episodes_io)
+        for i, score in enumerate(self.trial_scores):
+            if i == 0:
+                writer.writerow(['episode #', 'score', 'speed reward',
+                                 'lane deviation penalty', 'gforce penalty',
+                                 'got stuck', 'wrong way', 'start', 'end',
+                                 'lap time'])
+            writer.writerow([i + 1, score.total,
+                             score.speed_reward,
+                             score.lane_deviation_penalty,
+                             score.gforce_penalty, score.got_stuck,
+                             score.wrong_way,
+                             str(arrow.get(score.start_time).to('local')),
+                             str(arrow.get(score.end_time).to('local')),
+                             score.episode_time])
+
         py_args = str(vars(c.PY_ARGS) if c.PY_ARGS else '')
-        with open(c.SUMMARY_CSV_FILENAME, 'w', newline='') as csv_file2:
-            writer = csv.writer(csv_file2)
-            writer.writerow(['Stat', 'Value'])
-            writer.writerow(['median score', median])
-            writer.writerow(['avg score', average])
-            writer.writerow(['std', std])
-            writer.writerow(['high score', high])
-            writer.writerow(['low score', low])
-            writer.writerow(['env', self.spec.id])
-            writer.writerow(['cmd args', ', '.join(sys.argv[1:])])
-            writer.writerow(['py args', py_args])
-            writer.writerow(['git commit', '@' + self.git_commit])
-            writer.writerow(['git diff', diff_filename])
-            writer.writerow(['experiment name', self.experiment or 'n/a'])
-            writer.writerow(['run id', c.RUN_ID])
+        writer = csv.writer(summary_io)
+        writer.writerow(['Stat', 'Value'])
+        writer.writerow(['median score', median])
+        writer.writerow(['avg score', average])
+        writer.writerow(['std', std])
+        writer.writerow(['high score', high])
+        writer.writerow(['low score', low])
+        writer.writerow(['env', self.spec.id])
+        writer.writerow(['cmd args', ', '.join(sys.argv[1:])])
+        writer.writerow(['py args', py_args])
+        writer.writerow(['git commit', '@' + self.git_commit])
+        writer.writerow(['git diff', diff_filename])
+        writer.writerow(['experiment name', self.experiment or 'n/a'])
+        writer.writerow(['run id', c.RUN_ID])
 
-            writer.writerow(['os', self.get_os_version()])
+        writer.writerow(['os', self.get_os_version()])
+        try:
+            gpus = ','.join([gpu.name for gpu in GPUtil.getGPUs()])
+        except:
+            gpus = 'n/a'
+        writer.writerow(['gpus', gpus])
 
-            try:
-                gpus = ','.join([gpu.name for gpu in GPUtil.getGPUs()])
-            except:
-                gpus = 'n/a'
-            writer.writerow(['gpus', gpus])
+        episodes_str = episodes_io.getvalue()
+        summary_str = summary_io.getvalue()
+
+        home = os.path.expanduser("~")
+        episodes_str = self.anonymize_user_home(episodes_str, home)
+        summary_str = self.anonymize_user_home(summary_str, home)
+        with open(c.EPISODES_CSV_FILENAME, 'w', newline='') as episodes_out:
+            episodes_out.write(episodes_str)
+        with open(c.SUMMARY_CSV_FILENAME, 'w', newline='') as summary_out:
+            summary_out.write(summary_str)
+
+    def anonymize_user_home(self, csv_content1, home):
+        return csv_content1.replace(home, '~')
 
     def get_os_version(self):
         os_version = platform.platform()

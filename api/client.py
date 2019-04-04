@@ -54,7 +54,7 @@ class Client(object):
             self.renderer = renderer_factory(cameras=kwargs['cameras'])
         else:
             self.renderer = None
-        log.info('===========> Queuing server start message ===========>')
+        log.info('Waiting for sim to start...')
         # TODO: Fix connecting to an open sim
         self._send(m.START, kwargs=kwargs)
         log.info('===========> Deepdrive started')

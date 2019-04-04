@@ -66,7 +66,7 @@ def get_default_start_args():
                view_mode_period=None, max_steps=None, should_record=False,
                recording_dir=c.RECORDING_DIR, image_resize_dims=None,
                should_normalize_image=False,
-               eval_only=False)
+               eval_only=False, upload_gist=False, public=False)
 
 
 def start_local_env(args):
@@ -101,7 +101,9 @@ def start_local_env(args):
     _env.image_resize_dims = args.image_resize_dims
     _env.recorder = Recorder(args.recording_dir,
                              should_record=args.should_record,
-                             eval_only=args.eval_only)
+                             eval_only=args.eval_only,
+                             should_upload_gist=args.upload_gist,
+                             public=args.public)
     _env.should_normalize_image = args.should_normalize_image
 
     connect_to_unreal(_env, args)

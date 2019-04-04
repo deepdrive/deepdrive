@@ -330,8 +330,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
         randomize_sun_speed=False, randomize_shadow_level=False,
         randomize_month=False, enable_traffic=True,
         view_mode_period=None, max_steps=None, max_episodes=1000,
-        agent_name=None,
-        eval_only=False):
+        agent_name=None, eval_only=False, upload_gist=False, public=False):
     if should_record:
         path_follower = True
         randomize_sun_speed = True
@@ -349,7 +348,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
               run_ppo_baseline_agent, should_record, should_jitter_actions,
               env_id, render, fps, should_benchmark, is_remote, is_sync,
               enable_traffic, view_mode_period, max_steps, image_resize_dims,
-              eval_only)
+              eval_only, upload_gist, public)
 
     reward = 0
     episode_done = False
@@ -437,7 +436,7 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
           run_ppo_baseline_agent, should_record, should_jitter_actions, env_id,
           render, fps, should_benchmark, is_remote, is_sync,
           enable_traffic, view_mode_period, max_steps, image_resize_dims,
-          eval_only):
+          eval_only, upload_gist, public):
     if run_baseline_agent:
         net_path = ensure_mnet2_baseline_weights(net_path)
     elif run_mnet2_baseline_agent:
@@ -471,7 +470,8 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
                          recording_dir=recording_dir,
                          image_resize_dims=image_resize_dims,
                          should_normalize_image=True,
-                         eval_only=eval_only)
+                         eval_only=eval_only, upload_gist=upload_gist,
+                         public=public)
 
     env = start_env()
     agent = Agent(sess, should_jitter_actions=should_jitter_actions,
@@ -539,8 +539,10 @@ def randomize_cameras(cameras):
                 cam['relative_position'][i] += (np.random.random() * 100 - 50)
 
         cam['field_of_view'] += (np.random.random() - 0.5)
-        cam['capture_height'] += round(np.random.random() * 0.01 * cam['capture_height'])
-        cam['capture_width'] += round(np.random.random() * 0.01 * cam['capture_width'])
+        cam['capture_height'] += round(np.random.random() *
+                                       0.01 * cam['capture_height'])
+        cam['capture_width'] += round(np.random.random() *
+                                      0.01 * cam['capture_width'])
 
 
 def random_use_sim_start_command(should_rotate_sim_types):
@@ -550,7 +552,8 @@ def random_use_sim_start_command(should_rotate_sim_types):
 
 def _ensure_baseline_weights(net_path, version, weights_dir, url):
     if net_path is not None:
-        raise ValueError('Net path should not be set when running the baseline agent as it has its own weights.')
+        raise ValueError('Net path should not be set when running the '
+                         'baseline agent as it has its own weights.')
     net_path = os.path.join(weights_dir, version)
     if not glob.glob(net_path + '*'):
         print('\n--------- Baseline weights not found, downloading ----------')
@@ -560,7 +563,8 @@ def _ensure_baseline_weights(net_path, version, weights_dir, url):
 
 
 def ensure_alexnet_baseline_weights(net_path):
-    return _ensure_baseline_weights(net_path, c.ALEXNET_BASELINE_WEIGHTS_VERSION, c.ALEXNET_BASELINE_WEIGHTS_DIR,
+    return _ensure_baseline_weights(net_path, c.ALEXNET_BASELINE_WEIGHTS_VERSION,
+                                    c.ALEXNET_BASELINE_WEIGHTS_DIR,
                                     c.ALEXNET_BASELINE_WEIGHTS_URL)
 
 
@@ -571,7 +575,8 @@ def ensure_mnet2_baseline_weights(net_path):
 
 
 def ensure_ppo_baseline_weights(net_path):
-    return _ensure_baseline_weights(net_path, c.PPO_BASELINE_WEIGHTS_VERSION, c.PPO_BASELINE_WEIGHTS_DIR,
+    return _ensure_baseline_weights(net_path, c.PPO_BASELINE_WEIGHTS_VERSION,
+                                    c.PPO_BASELINE_WEIGHTS_DIR,
                                     c.PPO_BASELINE_WEIGHTS_URL)
 
 

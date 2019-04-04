@@ -106,10 +106,25 @@ def main():
                         help='Maximum number of episodes')
     parser.add_argument('--server', action='store_true', default=False,
                         help='Run as an API server',)
+    parser.add_argument('--upload-gist', action='store_true', default=False,
+                        help='Upload a private gist with driving performance'
+                             'stats csv files',)
+    parser.add_argument('--public', action='store_true', default=False,
+                        help='Results will be made public, i.e. artifacts like https://gist.github.com/deepdrive-results/cce0a164498c17269ce2adea2a88ec95',)
 
     args = c.PY_ARGS = parser.parse_args()
     if args.verbose:
         logs.set_level(logging.DEBUG)
+
+    if args.public:
+        if 'DEEPDRIVE_PUBLIC' not in os.environ:
+            answer = input('Please confirm you want to make the results '
+                           'of the evaluation public')
+            should_upload = answer.lower() in ['y', 'yes']
+            if not should_upload:
+                print('Answer was not "y" or "yes", not uploading')
+                return 'not uploaded'
+            if should_upload:
 
     if args.hdf5_2_tfrecord:
         from agents.dagger.train import hdf5_to_tfrecord
@@ -159,8 +174,13 @@ def configure_net_args(args):
             args.resume_train = get_latest_model()
         else:
             args.net_path = get_latest_model()
-    elif args.net_path and os.path.isdir(args.net_path):
-        args.net_path = get_latest_model_from_path(args.net_path)
+    elif args.net_path:
+        if args.net_path.startswith('https://'):
+            url = str(args.net_path)
+            import utils
+            args.net_path = utils.download_weights(url)
+        if os.path.isdir(args.net_path):
+            args.net_path = get_latest_model_from_path(args.net_path)
 
     from agents.dagger import net
     if args.net_type is None:
@@ -198,7 +218,8 @@ def run_agent(args, camera_rigs, driving_style):
               view_mode_period=args.view_mode_period,
               max_steps=args.max_steps,
               max_episodes=args.max_episodes, agent_name=args.agent,
-              eval_only=args.eval_only)
+              eval_only=args.eval_only,
+              upload_gist=args.upload_gist, public=args.public)
 
 
 def run_path_follower(args, driving_style, camera_rigs):

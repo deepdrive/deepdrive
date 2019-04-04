@@ -132,7 +132,7 @@ def check_tensorflow_gpu():
     print('Checking for valid Tensorflow installation')
     # noinspection PyUnresolvedReferences
     if not check_nvidia_docker():
-        print(error_msg % 'Not using nvidia-docker runtime', file=sys.stderr)
+        print(error_msg % 'Using Docker but not nvidia-docker runtime', file=sys.stderr)
         ret = False
     else:
         import h5py  # importing tensorflow later causes seg faults
@@ -186,8 +186,7 @@ def is_docker():
 
 
 def has_nvidia_docker():
-    import distutils.spawn
-    return distutils.spawn.find_executable('nvidia-docker') is not None
+    return os.path.getsize('/usr/bin/nvidia-smi') != 0
 
 
 if __name__ == '__main__':

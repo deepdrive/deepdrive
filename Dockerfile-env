@@ -27,7 +27,9 @@ RUN apt-get update; apt-get install -y \
         python3-venv \
         python3-pip \
         python3-dev \
+        ffmpeg \
         git \
+        vim \
       && cd /usr/local/bin \
       && ln -s /usr/bin/python3 python \
       && pip3 install --upgrade pip \
@@ -63,6 +65,9 @@ RUN pip install tensorflow-gpu
 
 # Install OpenCV for web renderer
 RUN pip install opencv-python
+
+# Nice to have ipython in the container for bashing in
+RUN pip install ipython
 
 # Set Deepdrive directory so that we are not prompted to enter it interactively
 ENV DEEPDRIVE_DIR=/home/$user/Deepdrive
