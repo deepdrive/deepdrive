@@ -13,6 +13,7 @@ import logs
 import config as c
 import api.methods as m
 import sim
+import util.ensure_sim
 import utils
 
 log = logs.get_log(__name__)
@@ -72,9 +73,10 @@ class Server(object):
     def run(self):
         self.create_socket()
         log.info('Environment server started at %s', CONN_STRING)
-        while True:
+        done = False
+        while not done:
             try:
-                self.dispatch()
+                done = self.dispatch()
             except zmq.error.Again:
                 log.info('Waiting for client')
                 self.create_socket()
@@ -90,6 +92,7 @@ class Server(object):
             return
         method, args, kwargs = pyarrow.deserialize(msg)
         resp = None
+        done = False
         if self.env is None and method != m.START:
             resp = 'No environment started, please send start request'
             log.error('Client sent request with no environment started')
@@ -110,12 +113,14 @@ class Server(object):
             resp = self.env.unwrapped.change_cameras(*args, **kwargs)
         elif method == m.CLOSE:
             resp = self.env.close()
+            done = True
         else:
             log.error('Invalid API method')
         serialized = self.serialize(resp)
         if serialized is None:
             raise RuntimeError('Could not serialize response. Check above for details')
         self.socket.send(serialized.to_buffer())
+        return done
 
     def serialize(self, resp):
         serialized = None
@@ -192,7 +197,7 @@ def check_pyarrow_compatibility():
     can cause segmentation faults in Unreal
     :return: bool indicating whether the versions are the same
     """
-    uepy_pyarrow_version = utils.get_uepy_pyarrow_version()
+    uepy_pyarrow_version = util.ensure_sim.get_uepy_pyarrow_version()
     local_pyarrow_version = pkg_resources.get_distribution('pyarrow').version
     versions_equal = uepy_pyarrow_version == local_pyarrow_version
     if not versions_equal:

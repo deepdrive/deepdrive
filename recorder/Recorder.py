@@ -1,6 +1,8 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import sys
+
 from future.builtins import (dict, input,
                              str)
 
@@ -14,6 +16,7 @@ import numpy as np
 import config as c
 import logs
 import utils
+from util.anonymize import anonymize_user_home
 
 log = logs.get_log(__name__)
 
@@ -31,6 +34,7 @@ class Recorder(object):
     def __init__(self, recording_dir, should_record_agent_actions=True,
                  should_record=True, eval_only=False, should_upload_gist=False,
                  public=False):
+        self.save_threads = []  # type list
         self.record_agent_actions = should_record_agent_actions  # type: bool
         self.should_record = should_record  # type: bool
         self.hdf5_dir = c.HDF5_SESSION_DIR  # type: str
@@ -78,6 +82,9 @@ class Recorder(object):
 
     def close(self):
         log.info('Closing recorder')
+        print('printing traceback')
+        import traceback
+        traceback.print_stack(file=sys.stdout)
         if self.eval_only:
             # Okay to have partial eval recordings
             self.save_unsaved_observations()
@@ -86,13 +93,17 @@ class Recorder(object):
                      'frames in recorded datasets. '
                      'Pass --eval-only to save all observations.' %
                      self.num_saved_observations)
+
         if self.recorded_obz_count > 0:
+            for save_thread in self.save_threads:
+                # Wait for HDF5 saves to complete
+                save_thread.join()
             mp4_file = utils.hdf5_to_mp4()
             if self.should_upload_gist:
                 gist_url = utils.upload_to_gist(
                     'deepdrive-results-' + c.DATE_STR,
                     [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME],
-                    public=public)
+                    public=self.public)
             else:
                 gist_url = 'not uploaded'
             self.create_artifacts_inventory(
@@ -105,7 +116,9 @@ class Recorder(object):
     def save_recordings(self):
         name = str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10)
         filepath = os.path.join(self.hdf5_dir, '%s.hdf5' % name)
-        utils.save_hdf5(self.obz_recording, filename=filepath, background=True)
+        thread = utils.save_hdf5(self.obz_recording, filename=filepath,
+                                 background=True)
+        self.save_threads.append(thread)
         log.info('Flushing output data')
         self.obz_recording = []
         self.num_saved_observations = self.recorded_obz_count
@@ -153,19 +166,21 @@ class Recorder(object):
                                    mp4_file: str):
         # TODO: Add list of artifacts results file with:
         filename = os.path.join(c.RESULTS_DIR, 'artifact-inventory.json')
+        anon = anonymize_user_home
         with open(filename, 'w') as out_file:
-            observations: list = glob.glob(hdf5_dir + '/*.hdf5')
+            hdf5_observations: list = glob.glob(hdf5_dir + '/*.hdf5')
             data = {'artifacts': {
-                'mp4': mp4_file,
-                'gist': gist_url,
-                'performance_summary': summary_file,
-                'episodes': episodes_file,
-                'observations': observations,
+                'mp4': anon(mp4_file),
+                'gist': anon(gist_url),
+                'performance_summary': anon(summary_file),
+                'episodes': anon(episodes_file),
+                'hdf5_observations': [anon(o) for o in hdf5_observations],
             }}
             json.dump(data, out_file, indent=2)
-        log.info('Wrote artifacts inventory to %s' % filename)
+        log.info('Wrote artifacts inventory to %s' % anon(filename))
         # TODO: Upload to YouTube on pull request
-        # TODO: Save a description file with the episode score summary, gist link, and s3 link
+        # TODO: Save a description file with the episode score summary,
+        #  gist link, and s3 link
 
     def num_unsaved_observations(self):
         return self.recorded_obz_count - self.num_saved_observations

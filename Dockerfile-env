@@ -72,15 +72,24 @@ RUN pip install ipython
 # Set Deepdrive directory so that we are not prompted to enter it interactively
 ENV DEEPDRIVE_DIR=/home/$user/Deepdrive
 
-# Copy files needed for install, so that docker will cache our dependencies
-COPY config/ ./config/
-COPY VERSION requirements.txt logs.py utils.py install.py ./
+# Cache pip requirements
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
 
+# Copy files needed for sim download
+COPY config/ ./config/
+COPY util/anonymize.py ./util/anonymize.py
+COPY util/run_command.py ./util/run_command.py
+COPY util/download.py ./util/download.py
+COPY util/ensure_sim.py ./util/ensure_sim.py
+COPY VERSION logs.py ./
+
+# Download sim
+RUN python -c "from util.ensure_sim import ensure_sim; ensure_sim();"
 
 # Install
+COPY install.py ./
 RUN python -u install.py
-
-RUN python -c "import utils; utils.ensure_sim();"
 
 # Commands useful for debugging
 #ENV PYTHONPATH=/home/$user/src/deepdrive:$PYTHONPATH

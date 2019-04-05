@@ -20,7 +20,7 @@ from agents.dagger.train.data_utils import get_dataset
 from agents.dagger.train.train_mobilenet_v2 import train_mobile_net
 
 from agents.dagger.train.train_mobilenet_v2 import eval_mobile_net
-from utils import download, has_stuff
+from util.download import download, has_stuff
 import logs
 
 log = logs.get_log(__name__)
@@ -215,8 +215,9 @@ def train_batch(agent_net, i, sess, summary_op, sv, targets_tensor, train_data_p
                 _, summ, loss = sess.run([train_op, summary_op, total_loss], feed_dict)
             except ValueError as e:
                 print('Error processing batch, skipping - error was %r' % e)
-            sv.summary_computed(sess, summ)
-            sv.summary_writer.flush()
+            else:
+                sv.summary_computed(sess, summ)
+                sv.summary_writer.flush()
         else:
             # print('evaluating %r' % feed_dict)
             try:

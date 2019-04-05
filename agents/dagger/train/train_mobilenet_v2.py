@@ -12,6 +12,7 @@ import sys
 from multiprocessing import Process
 
 import config as c
+import util.download
 import utils
 from agents.dagger.net import MOBILENET_V2_SLIM_NAME
 from agents.dagger.train import hdf5_to_tfrecord
@@ -50,8 +51,8 @@ def train_mobile_net(data_dir, resume_dir=None,
     train_args = TRAIN_ARG_COLLECTIONS.get(train_args_collection_name, {})
 
     if not os.path.exists(c.MNET2_PRETRAINED_PATH + '.meta'):
-        utils.download(c.MNET2_PRETRAINED_URL + '?cache_bust=1', c.WEIGHTS_DIR,
-                       warn_existing=False, overwrite=True)
+        util.download.download(c.MNET2_PRETRAINED_URL + '?cache_bust=1', c.WEIGHTS_DIR,
+                               warn_existing=False, overwrite=True)
 
     if not glob.glob(data_dir + '/*.tfrecord'):
         if glob.glob(data_dir + '/*/*.hdf5'):

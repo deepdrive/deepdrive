@@ -119,12 +119,10 @@ def main():
     if args.public:
         if 'DEEPDRIVE_PUBLIC' not in os.environ:
             answer = input('Please confirm you want to make the results '
-                           'of the evaluation public')
-            should_upload = answer.lower() in ['y', 'yes']
-            if not should_upload:
-                print('Answer was not "y" or "yes", not uploading')
-                return 'not uploaded'
-            if should_upload:
+                           'of this evaluation public')
+            args.public = answer.lower() in ['y', 'yes']
+            if not args.public:
+                print('Answer was not "y" or "yes", not making public')
 
     if args.hdf5_2_tfrecord:
         from agents.dagger.train import hdf5_to_tfrecord

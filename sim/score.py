@@ -6,6 +6,7 @@ from future.builtins import (int, open, round,
 import time
 
 from util.sampler import Sampler
+import utils
 
 
 class Score(object):
@@ -29,6 +30,14 @@ class Score(object):
         self.episode_time = 0
         self.speed_sampler = Sampler()
         self.gforce_sampler = Sampler()
+
+    def serialize(self):
+        defaults = utils.obj2dict(Score)
+        prop_names = defaults.keys()
+        ret = {}
+        for k in prop_names:
+            ret[k] = getattr(self, k, defaults[k])
+        return ret
 
 
 def main():

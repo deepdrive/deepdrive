@@ -19,7 +19,7 @@ from sim.driving_style import DrivingStyle
 from sim.action import Action
 from sim import world
 from agents.dagger.net import AlexNet, MobileNetV2, MOBILENET_V2_IMAGE_SHAPE
-from utils import download
+from util.download import download
 import logs
 
 log = logs.get_log(__name__)

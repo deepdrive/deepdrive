@@ -3,7 +3,7 @@ import tensorflow as tf
 from agents.dagger.layers import conv2d, max_pool_2x2, linear, lrn
 import config as c
 import logs
-from utils import download, has_stuff
+from util.download import download, has_stuff
 from vendor.tensorflow.models.research.slim.nets import nets_factory
 from vendor.tensorflow.models.research.slim.preprocessing import preprocessing_factory
 

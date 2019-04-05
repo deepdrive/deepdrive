@@ -11,28 +11,24 @@ import re
 import ctypes
 import platform
 import shutil
-import traceback
 
 import glob
 import inspect
 import os
-import stat
 import sys
 import threading
 import time
-import zipfile
-import tempfile
 
 import numpy as np
 
 import h5py
-import pkg_resources
 import requests
-from clint.textui import progress
-from subprocess import Popen, PIPE
-from boto.s3.connection import S3Connection
 import config as c
 import logs
+from util.anonymize import anonymize_user_home
+from util.download import download
+from util.ensure_sim import get_sim_path, ensure_sim
+from util.run_command import run_command
 
 log = logs.get_log(__name__)
 
@@ -100,10 +96,11 @@ def obj2dict(obj, exclude=None):
 def save_hdf5(out, filename, background=True):
     assert_disk_space(os.path.dirname(filename))
     if 'DEEPDRIVE_NO_THREAD_SAVE' in os.environ or not background:
-        save_hdf5_task(out, filename)
+        return save_hdf5_task(out, filename)
     else:
         thread = threading.Thread(target=save_hdf5_task, args=(out, filename))
         thread.start()
+        return thread
 
 
 def save_hdf5_task(out, filename):
@@ -145,7 +142,8 @@ def add_score_to_hdf5(frame, frame_grp):
     defaults = obj2dict(Score)
     prop_names = defaults.keys()
     for k in prop_names:
-        score_grp.attrs[k] = score.get(k, defaults[k])
+        if 'sampler' not in k.lower():
+            score_grp.attrs[k] = score.get(k, defaults[k])
     del frame['score']
 
 
@@ -245,7 +243,7 @@ def pngs_to_mp4(combine_all, fps, png_dir):
     # TODO: Add FPS, frame number, run id, date str,
     #  g-forces, episode #, hdf5 #, etc... to this
     #  and rendered views for human interprettability
-    log.info('Saved temp png\'s to ' + png_dir)
+    log.info('Saved png\'s to ' + png_dir)
     file_path = None
     import distutils.spawn
     ffmpeg_path = distutils.spawn.find_executable('ffmpeg')
@@ -275,7 +273,7 @@ def pngs_to_mp4(combine_all, fps, png_dir):
         log.info('PNG=>MP4: ' + ffmpeg_cmd)
         ffmpeg_result = os.system(ffmpeg_cmd)
         if ffmpeg_result == 0:
-            log.info('Wrote mp4 to: ' + file_path)
+            log.info('Wrote mp4 to: ' + anonymize_user_home(file_path))
         else:
             file_path = None
     return file_path
@@ -330,7 +328,8 @@ def save_hdf5_recordings_to_png(combine_all=False, sess_dir=None):
     else:
         sess_dir = sess_dir or c.HDF5_SESSION_DIR
         hdf5_filenames = sorted(glob.glob(sess_dir + '/*.hdf5', recursive=True))
-    save_dir = tempfile.mkdtemp()
+    save_dir = os.path.join(c.RECORDING_DIR, 'pngs', c.DATE_STR)
+    os.makedirs(save_dir)
     for i, f in enumerate(hdf5_filenames):
         try:
             read_hdf5(f,
@@ -370,119 +369,6 @@ def is_debugging():
     return False
 
 
-def download(url, directory, warn_existing=True, overwrite=False):
-    """
-    Download and unzip
-    """
-    if has_stuff(directory, warn_existing, overwrite):
-        return
-    else:
-        os.makedirs(directory, exist_ok=True)
-
-    log.info('Downloading %s to %s...', url, directory)
-
-    request = requests.get(url, stream=True)
-    filename = url.split('/')[-1]
-    if '?' in filename:
-        filename = filename[:filename.index('?')]
-    location = os.path.join(tempfile.gettempdir(), filename)
-    with open(location, 'wb') as f:
-        if request.status_code == 404:
-            raise RuntimeError('Download URL not accessible %s' % url)
-        total_length = int(request.headers.get('content-length'))
-        for chunk in progress.bar(request.iter_content(chunk_size=1024), expected_size=(total_length / 1024) + 1):
-            if chunk:
-                f.write(chunk)
-                f.flush()
-
-    log.info('done.')
-    zip_ref = zipfile.ZipFile(location, 'r')
-    log.info('Unzipping temp file %s to %s...', location, directory)
-    try:
-        zip_ref.extractall(directory)
-    except Exception:
-        print('You may want to close all programs that may have these files '
-              'open or delete existing '
-              'folders this is trying to overwrite')
-        raise
-    finally:
-        zip_ref.close()
-        os.remove(location)
-        log.info('Removed temp file %s', location)
-
-
-def dir_has_stuff(path):
-    return os.path.isdir(path) and os.listdir(path)
-
-
-def file_has_stuff(path):
-    return os.path.isfile(path) and os.path.getsize(path) > 0
-
-
-def has_stuff(path, warn_existing=False, overwrite=False):
-    # TODO: Remove overwrite as a parameter, doesn't make sense here.
-    if os.path.exists(path) and (dir_has_stuff(path) or file_has_stuff(path)):
-        if warn_existing:
-            print('%s exists, do you want to re-download and overwrite any existing files (y/n)?' % path, end=' ')
-            overwrite = input()
-            if 'n' in overwrite.lower():
-                print('USING EXISTING %s - Try rerunning and overwriting if you run into problems.' % path)
-                return True
-        elif not overwrite:
-            return True
-    return False
-
-
-def ensure_executable(path):
-    if c.IS_UNIX:
-        st = os.stat(path)
-        os.chmod(path, st.st_mode | stat.S_IEXEC)
-
-
-def get_sim_bin_path(return_expected_path=False):
-    expected_path = None
-
-    def get_from_glob(search_path):
-        paths = glob.glob(search_path) or [search_path]
-        paths = [p for p in paths
-                 if not (p.endswith('.debug') or p.endswith('.sym'))]
-        if len(paths) > 1:
-            log.warn('Found multiple sim binaries in search directory - '
-                     'picking the first from %r', paths)
-        if not paths:
-            ret_path = None
-        else:
-            ret_path = paths[0]
-        return ret_path
-
-    sim_path = get_sim_path()
-    if c.REUSE_OPEN_SIM:
-        return None
-    elif c.IS_LINUX:
-        if os.path.exists(sim_path + '/LinuxNoEditor'):
-            expected_path = sim_path + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive*'
-        else:
-            expected_path = sim_path + '/DeepDrive/Binaries/Linux/DeepDrive'
-    elif c.IS_MAC:
-        raise NotImplementedError('Sim does not yet run on OSX, see FAQs / '
-                                  'running a remote agent in /api.')
-    elif c.IS_WINDOWS:
-        expected_path = os.path.join(
-            sim_path, 'WindowsNoEditor', 'DeepDrive', 'Binaries', 'Win64',
-            'DeepDrive*.exe')
-
-    path = get_from_glob(expected_path)
-    if path and not os.path.exists(path):
-        ret = None
-    else:
-        ret = path
-
-    if return_expected_path:
-        return ret, expected_path
-    else:
-        return ret
-
-
 def download_weights(url):
     folder = url.split('/')[-1].replace('.zip', '')
     dest = os.path.join(c.WEIGHTS_DIR, folder)
@@ -492,126 +378,6 @@ def download_weights(url):
     else:
         log.info('Found cached weights at %s', dest)
     return dest
-
-
-def get_sim_project_dir():
-    if c.REUSE_OPEN_SIM:
-        path = input('What is the path to your simulator project directory?'
-                     '\n\ti.e. for sources something like ~/src/deepdrive-sim '
-                     '\n\tor for packaged binaries, something like ~/Deepdrive/sim/LinuxNoEditor/DeepDrive')
-    elif c.IS_LINUX:
-        path = os.path.join(get_sim_path(), 'LinuxNoEditor/DeepDrive')
-    elif c.IS_MAC:
-        raise NotImplementedError('Sim does not yet run on OSX, see FAQs / running a remote agent in /api.')
-    elif c.IS_WINDOWS:
-        path = os.path.join(get_sim_path(), 'WindowsNoEditor', 'DeepDrive')
-    else:
-        raise RuntimeError('OS not recognized')
-
-    return path
-
-
-def run_command(cmd, cwd=None, env=None, throw=True, verbose=False, print_errors=True):
-    def say(*args):
-        if verbose:
-            print(*args)
-    say(cmd)
-    if not isinstance(cmd, list):
-        cmd = cmd.split()
-    process = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=cwd, env=env)
-    result, err = process.communicate()
-    if not isinstance(result, str):
-        result = ''.join(map(chr, result))
-    result = result.strip()
-    say(result)
-    if process.returncode != 0:
-        if not isinstance(err, str):
-            err = ''.join(map(chr, err))
-        err_msg = ' '.join(cmd) + ' finished with error ' + err.strip()
-        if throw:
-            raise RuntimeError(err_msg)
-        elif print_errors:
-            print(err_msg)
-    return result, process.returncode
-
-
-def get_sim_url():
-    sim_prefix = 'sim/' + c.SIM_PREFIX
-    conn = S3Connection(anon=True)
-    bucket = conn.get_bucket('deepdrive')
-    bucket_search_str = sim_prefix + '-' + c.MAJOR_MINOR_VERSION_STR
-    sim_versions = list(bucket.list(bucket_search_str))
-    if not sim_versions:
-        raise RuntimeError('Could not find a sim version matching %s '
-                           'in bucket %s' % (bucket_search_str, c.BUCKET_URL))
-    latest_sim_file, path_version = \
-        sorted([(x.name, x.name.split('.')[-2]) for x in sim_versions],
-               key=lambda y: y[1])[-1]
-    return '/' + latest_sim_file
-
-
-def ensure_sim():
-    actual_path, expected_path = get_sim_bin_path(return_expected_path=True)
-    if actual_path is None:
-        print('\n--------- Simulator not found in %s, downloading ----------'
-              % expected_path)
-        if c.IS_LINUX or c.IS_WINDOWS:
-            if os.environ.get('SIM_URL', 'latest') == 'latest':
-                log.info('Downloading latest sim')
-                url = c.BUCKET_URL + get_sim_url()
-            else:
-                url = os.environ['SIM_URL']
-            sim_path = os.path.join(c.DEEPDRIVE_DIR, url.split('/')[-1][:-4])
-            download(url, sim_path, warn_existing=False, overwrite=False)
-        else:
-            raise NotImplementedError(
-                'Sim download not yet implemented for this OS')
-    ensure_executable(get_sim_bin_path())
-    ensure_sim_python_binaries()
-
-
-def ensure_sim_python_binaries():
-    base_url = c.BUCKET_URL + '/embedded_python_for_unreal/'
-    if c.IS_WINDOWS:
-        # These include Python and our requirements
-        lib_url = base_url + 'windows/python_bin_with_libs.zip'
-        lib_path = os.path.join(get_sim_project_dir(), 'Binaries', 'Win64')
-        if not os.path.exists(lib_path) or not os.path.exists(
-                os.path.join(lib_path, 'python3.dll')):
-            print('Unreal embedded Python not found. Downloading...')
-            download(lib_url, lib_path, overwrite=True, warn_existing=False)
-    elif c.IS_LINUX:
-        # Python is already embedded, however ensure_requirements
-        # fails with pip-req-tracker errors
-        uepy = ensure_uepy_executable()
-        os.system('{uepy} -m pip install pyzmq pyarrow==0.12.1 requests'.
-                  format(uepy=uepy))
-        log.info('Installed UEPy python dependencies')
-    elif c.IS_MAC:
-        raise NotImplementedError(
-            'Sim does not yet run on OSX, see FAQs /'
-            ' running a remote agent in /api.')
-
-
-def ensure_uepy_executable(path=None):
-    """
-    Ensure the UEPY python binary is executable
-    :param path:
-    :return:
-    """
-    uepy = path or get_uepy_path()
-    st = os.stat(uepy)
-    os.chmod(uepy, st.st_mode | stat.S_IEXEC)
-    return uepy
-
-
-def get_uepy_pyarrow_version():
-    uepy = ensure_uepy_executable(get_uepy_path())
-    show, ret_code = run_command(
-        '{uepy} -m pip show pyarrow'.format(uepy=uepy))
-    version_line = [x for x in show.split('\n') if x.startswith('Version')][0]
-    version = version_line.replace('Version: ', '').strip()
-    return version
 
 
 def is_docker():
@@ -687,35 +453,19 @@ def kill_process(process_to_kill):
                 # Die!
                 log.warn('Forcefully killing process')
                 process_to_kill.kill()
-                break
+                return False
             i += 1
+        return True
+
     except Exception as e:
         log.error('Error closing process', str(e))
+        return False
 
 
 def get_valid_filename(s):
     s = str(s).strip().replace(' ', '_')
     return re.sub(r'(?u)[^-\w.]', '', s)
 
-
-def get_sim_path():
-    orig_path = os.path.join(c.DEEPDRIVE_DIR, 'sim')
-    version_paths = glob.glob(
-        os.path.join(c.DEEPDRIVE_DIR, 'deepdrive-sim-*-%s.*'
-                                      % c.version.MAJOR_MINOR_VERSION_STR))
-    version_paths = [vp for vp in version_paths if not vp.endswith('.zip')]
-    if version_paths:
-        return list(sorted(version_paths))[-1]
-    else:
-        return orig_path
-
-
-def get_uepy_path(sim_path=None):
-    sim_path = sim_path or get_sim_path()
-    ret = os.path.join(
-        sim_path,
-        'Engine/Plugins/UnrealEnginePython/EmbeddedPython/Linux/bin/python3')
-    return ret
 
 if __name__ == '__main__':
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
@@ -728,4 +478,9 @@ if __name__ == '__main__':
     # print(save_recordings_to_png_and_mp4(png_dir='/tmp/tmp30zl8ouq'))
     # print(save_hdf5_recordings_to_png())
     # print(upload_to_gist('asdf', ['/home/c2/src/deepdrive/results/2018-05-30__02-40-01PM.csv', '/home/c2/src/deepdrive/results/2019-03-14__06-08-38PM.diff']))
-    print(check_pyarrow_compatibility())
+    # log.info('testing %s', os.path.expanduser('~'))
+    import traceback
+
+    traceback.print_stack(file=sys.stdout)
+    log.info('testing %d', 1234)
+    ensure_sim()

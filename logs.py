@@ -4,13 +4,14 @@ from logging.handlers import RotatingFileHandler
 import sys
 
 import config as c
-
+from util.anonymize import anonymize_user_home
 
 os.makedirs(c.LOG_DIR, exist_ok=True)
 log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log_level = logging.INFO
 all_loggers = []
 rotators = {}
+
 
 def get_log(namespace, filename='log.txt'):
     """
@@ -19,6 +20,7 @@ def get_log(namespace, filename='log.txt'):
     """
     rotator = get_log_rotator(filename)
     ret = logging.getLogger(namespace)
+    ret.addFilter(AnonymizeFilter())
     if ret.parent != ret.root:
         # Avoid duplicate log messages in multiprocessing scenarios
         # where module is imported twice
@@ -55,3 +57,11 @@ def log_manual():
     log2 = get_log('log2', rotator=test_log_rotator)
     log1.info('asdf')
     log2.info('zxcv')
+
+
+class AnonymizeFilter(logging.Filter):
+    def filter(self, record):
+        anon = anonymize_user_home
+        record.msg = anonymize_user_home(record.msg)
+        record.args = tuple(anon(a) for a in record.args)
+        return True

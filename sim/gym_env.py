@@ -33,6 +33,8 @@ import deepdrive_simulation
 
 import config as c
 import logs
+import util.ensure_sim
+import util.run_command
 from recorder.Recorder import Recorder
 import utils
 from sim import world
@@ -42,6 +44,7 @@ from sim.reward_calculator import RewardCalculator
 from sim.score import Score
 from sim.view_mode import ViewModeController
 from renderer import renderer_factory, base_renderer
+from util.anonymize import anonymize_user_home
 from utils import obj2dict
 from dashboard import dashboard_fn, DashboardPub
 
@@ -103,9 +106,10 @@ class DeepDriveEnv(gym.Env):
         self.recorder = None  # type: Recorder
         self.image_resize_dims = None  # type: np.ndarray
         self.should_normalize_image = False  # type: bool
+        self.tried_to_close = False  # type: bool
 
         if not c.REUSE_OPEN_SIM:
-            utils.ensure_sim()
+            util.ensure_sim.ensure_sim()
 
         self.client_version = pkg_resources.get_distribution('deepdrive').version
 
@@ -129,7 +133,7 @@ class DeepDriveEnv(gym.Env):
         self.trial_scores = []
 
         try:
-            self.git_commit = str(utils.run_command(
+            self.git_commit = str(util.run_command.run_command(
                 'git rev-parse --short HEAD')[0])
         except:
             self.git_commit = 'n/a'
@@ -137,7 +141,7 @@ class DeepDriveEnv(gym.Env):
                         'results with code state')
 
         try:
-            self.git_diff = utils.run_command('git diff')[0]
+            self.git_diff = util.run_command.run_command('git diff')[0]
         except:
             self.git_diff = None
             log.warning('Could not get git diff for associating benchmark '
@@ -189,12 +193,12 @@ class DeepDriveEnv(gym.Env):
 
             pass
         else:
-            cmd = utils.get_sim_bin_path()
+            cmd = util.ensure_sim.get_sim_bin_path()
 
             if log.getEffectiveLevel() < 20:  # More verbose than info (i.e. debug)
                 cmd += ' -LogCmds="LogPython Verbose, LogSharedMemoryImpl_Linux VeryVerbose, LogDeepDriveAgent VeryVerbose"'
 
-            self.sim_process = Popen(utils.get_sim_bin_path())
+            self.sim_process = Popen(util.ensure_sim.get_sim_bin_path())
             log.info('Starting simulator at %s '
                      '(takes a few seconds the first time).', cmd)
 
@@ -203,22 +207,23 @@ class DeepDriveEnv(gym.Env):
         self.connection_props = None
         process_to_kill = self.sim_process
         if process_to_kill is not None:
-            utils.kill_process(process_to_kill)
+            if utils.kill_process(process_to_kill):
+                log.info('Sim closed')
 
     def _kill_competing_procs(self):
         # TODO: Allow for many environments on the same machine by using
         #  registry DB for this and sharedmem
-        path = utils.get_sim_bin_path()
+        path = util.ensure_sim.get_sim_bin_path()
         if path is None:
             return
-        process_name = os.path.basename(utils.get_sim_bin_path())
+        process_name = os.path.basename(util.ensure_sim.get_sim_bin_path())
         if c.IS_WINDOWS:
             cmd = 'taskkill /IM %s /F' % process_name
         elif c.IS_LINUX or c.IS_MAC:
             cmd = 'pkill %s' % process_name
         else:
             raise NotImplementedError('OS not supported')
-        utils.run_command(cmd, verbose=False, throw=False, print_errors=False)
+        util.run_command.run_command(cmd, verbose=False, throw=False, print_errors=False)
         time.sleep(1)
         # TODO: Don't rely on time for shared mem to go away,
         #  we should have a unique name on startup.
@@ -644,7 +649,10 @@ class DeepDriveEnv(gym.Env):
                 diff_file.write(self.git_diff)
 
         self.write_result_csvs(average, diff_filename, high, low, median, std)
-
+        summary_file = anonymize_user_home(
+            os.path.normpath(c.EPISODES_CSV_FILENAME))
+        episodes_file = anonymize_user_home(
+            os.path.normpath(c.EPISODES_CSV_FILENAME))
         log.info('median score %r', median)
         log.info('avg score %r', average)
         log.info('std %r', std)
@@ -656,8 +664,7 @@ class DeepDriveEnv(gym.Env):
         log.info('time_penalty %r', self.score.time_penalty)
         log.info('gforce_penalty %r', self.score.gforce_penalty)
         log.info('episode_time %r', self.score.episode_time)
-        log.info('wrote results to %s and %s', os.path.normpath(c.EPISODES_CSV_FILENAME),
-                 os.path.normpath(c.SUMMARY_CSV_FILENAME))
+        log.info('wrote results to %s and %s', summary_file, episodes_file)
 
     def write_result_csvs(self, average, diff_filename, high, low, median, std):
         import io
@@ -706,22 +713,18 @@ class DeepDriveEnv(gym.Env):
         episodes_str = episodes_io.getvalue()
         summary_str = summary_io.getvalue()
 
-        home = os.path.expanduser("~")
-        episodes_str = self.anonymize_user_home(episodes_str, home)
-        summary_str = self.anonymize_user_home(summary_str, home)
+        episodes_str = anonymize_user_home(episodes_str)
+        summary_str = anonymize_user_home(summary_str)
         with open(c.EPISODES_CSV_FILENAME, 'w', newline='') as episodes_out:
             episodes_out.write(episodes_str)
         with open(c.SUMMARY_CSV_FILENAME, 'w', newline='') as summary_out:
             summary_out.write(summary_str)
 
-    def anonymize_user_home(self, csv_content1, home):
-        return csv_content1.replace(home, '~')
-
     def get_os_version(self):
         os_version = platform.platform()
         if c.IS_LINUX:
             try:
-                lsb_release = utils.run_command('lsb_release -a')[0].split()
+                lsb_release = util.run_command.run_command('lsb_release -a')[0].split()
                 os_version = ' '.join(lsb_release + [os_version])
             except:
                 log.debug('Could not get os version from lsb_release')
@@ -773,6 +776,12 @@ class DeepDriveEnv(gym.Env):
         self.close()
 
     def close(self):
+        # Only try to close things once, i.e. if __del__ is called after close()
+        if self.tried_to_close:
+            return
+        else:
+            self.tried_to_close = True
+
         if self.recorder is not None:
             self.recorder.close()
         if self.dashboard_pub is not None:
@@ -971,7 +980,7 @@ class DeepDriveEnv(gym.Env):
         log.error(
             'Server client version mismatch server@%s client@%s - closed sim' %
             (server_version_str, self.client_version))
-        sim_url = utils.get_sim_url()
+        sim_url = util.ensure_sim.get_sim_url()
         if sim_url:
             answer = input('We\'ve found a version of the sim which matches your '
                            'client. Would you like to download it now? [y/n] ')
@@ -980,8 +989,8 @@ class DeepDriveEnv(gym.Env):
                     c.DEEPDRIVE_DIR,
                     '%s-%s' % (c.SIM_PREFIX, server_version_str))
                 log.warn('Backing up old sim to %s', backup_dir)
-                shutil.move(utils.get_sim_path(), backup_dir)
-                utils.ensure_sim()
+                shutil.move(util.ensure_sim.get_sim_path(), backup_dir)
+                util.ensure_sim.ensure_sim()
                 self.open_sim()
 
     def connect(self, cameras=None):
