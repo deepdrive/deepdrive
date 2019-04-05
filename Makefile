@@ -1,20 +1,36 @@
-.PHONY: package install commit clean bash version
+.PHONY: package install commit clean bash version rerun server
+
+# Build and run Deepdrive in Docker
 
 VERSION:=$(shell bin/get_version.sh)
-DEEPDRIVE_DIR:=$(shell cat ~/.deepdrive/deepdrive_dir | sed 's/ //g')
+CREATE_DIR:=$(shell DEEPDRIVE_DOCKER_HOST=1 python -c "import util.get_directories")
+DEEPDRIVE_DIR:=$(shell docker/get_deepdrive_dir.sh)
 DOCKER_DEEPDRIVE_DIR=/home/ue4/Deepdrive
 TAG=deepdriveio/deepdrive:env-${VERSION}
 
 # Volumes
 DEEPDRIVE_VOL=-v $(DEEPDRIVE_DIR):/home/ue4/Deepdrive
-LOG_VOL=-v $(DEEPDRIVE_DIR)/log:$(DOCKER_DEEPDRIVE_DIR)/log
-RECORDINGS_VOL=-v $(DEEPDRIVE_DIR)/recordings:$(DOCKER_DEEPDRIVE_DIR)/recordings
-RESULTS_VOL=-v $(DEEPDRIVE_DIR)/results:$(DOCKER_DEEPDRIVE_DIR)/results
-TF_VOL=-v $(DEEPDRIVE_DIR)/tensorflow:$(DOCKER_DEEPDRIVE_DIR)/tensorflow
-WEIGHTS_VOL=-v $(DEEPDRIVE_DIR)/weights:$(DOCKER_DEEPDRIVE_DIR)/weights
-ARTIFACTS_VOLUMES=$(LOG_VOL) $(RECORDINGS_VOL) $(RESULTS_VOL) $(TF_VOL) $(WEIGHTS_VOL)
 
-DOCKER_OPTS=$(ARTIFACTS_VOLUMES) --net=host --runtime=nvidia
+LOG_DIR=$(DEEPDRIVE_DIR)/log
+LOG_VOL=-v $(LOG_DIR):$(DOCKER_DEEPDRIVE_DIR)/log
+
+RECORDINGS_DIR=$(DEEPDRIVE_DIR)/recordings
+RECORDINGS_VOL=-v $(RECORDINGS_DIR):$(DOCKER_DEEPDRIVE_DIR)/recordings
+
+RESULTS_DIR=$(DEEPDRIVE_DIR)/results
+RESULTS_VOL=-v $(RESULTS_DIR):$(DOCKER_DEEPDRIVE_DIR)/results
+
+TF_DIR=$(DEEPDRIVE_DIR)/tensorflow
+TF_VOL=-v $(TF_DIR):$(DOCKER_DEEPDRIVE_DIR)/tensorflow
+
+WEIGHTS_DIR=$(DEEPDRIVE_DIR)/weights
+WEIGHTS_VOL=-v $(WEIGHTS_DIR):$(DOCKER_DEEPDRIVE_DIR)/weights
+
+ARTIFACTS_DIRS=$(LOG_DIR) $(RECORDINGS_DIR) $(RESULTS_DIR) $(TF_DIR) $(WEIGHTS_DIR)
+ARTIFACTS_VOLUMES:=$(LOG_VOL) $(RECORDINGS_VOL) $(RESULTS_VOL) $(TF_VOL) $(WEIGHTS_VOL)
+MAKE_DIRS:=$(shell mkdir -p $(ARTIFACTS_DIRS))
+
+DOCKER_OPTS=$(ARTIFACTS_VOLUMES) $(RUN_AS_ME) --net=host --runtime=nvidia
 DD_RUN=docker run -it $(DOCKER_OPTS) deepdriveio/deepdrive:env-3.0
 
 # Pass args to make command, i.e.
@@ -22,6 +38,9 @@ DD_RUN=docker run -it $(DOCKER_OPTS) deepdriveio/deepdrive:env-3.0
 args=
 
 install: build
+
+dirs:
+	echo $(ARTIFACTS_DIRS)
 
 version:
 	echo $(VERSION)

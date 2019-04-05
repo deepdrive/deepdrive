@@ -76,12 +76,13 @@ ENV DEEPDRIVE_DIR=/home/$user/Deepdrive
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
-# Copy files needed for sim download
+# Copy minimum files needed for sim download
 COPY config/ ./config/
 COPY util/anonymize.py ./util/anonymize.py
 COPY util/run_command.py ./util/run_command.py
 COPY util/download.py ./util/download.py
 COPY util/ensure_sim.py ./util/ensure_sim.py
+COPY util/get_directories.py ./util/get_directories.py
 COPY VERSION logs.py ./
 
 # Download sim

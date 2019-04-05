@@ -82,9 +82,6 @@ class Recorder(object):
 
     def close(self):
         log.info('Closing recorder')
-        print('printing traceback')
-        import traceback
-        traceback.print_stack(file=sys.stdout)
         if self.eval_only:
             # Okay to have partial eval recordings
             self.save_unsaved_observations()
