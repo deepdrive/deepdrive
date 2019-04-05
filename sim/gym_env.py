@@ -299,7 +299,7 @@ class DeepDriveEnv(gym.Env):
             self.report_score(info)
 
         if obz is not None:
-            obz['score'] = utils.obj2dict(self.score)
+            obz['score'] = self.score.serialize()
 
         self.regulate_fps()
         self.view_mode_controller.step(self.client_id)
