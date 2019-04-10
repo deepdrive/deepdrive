@@ -12,6 +12,7 @@ import numpy as np
 import logs
 log = logs.get_log(__name__)
 
+
 class Action(object):
     STEERING_INDEX = 0
     THROTTLE_INDEX = 1

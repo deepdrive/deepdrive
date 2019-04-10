@@ -96,7 +96,9 @@ class Recorder(object):
                 # Wait for HDF5 saves to complete
                 save_thread.join()
             mp4_file = utils.hdf5_to_mp4()
-            if self.should_upload_gist:
+            if self.should_upload_gist and self.public:
+                # Gists will be accessible via YOUTGETMYJIST token
+                # regardless of whether they are 'public' gists.
                 gist_url = utils.upload_to_gist(
                     'deepdrive-results-' + c.DATE_STR,
                     [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME],
