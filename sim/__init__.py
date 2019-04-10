@@ -10,7 +10,7 @@ import gym
 import logs
 
 import config as c
-from api.client import Client
+from deepdrive_api.client import Client
 
 # noinspection PyUnresolvedReferences
 from sim.action import gym_action as action

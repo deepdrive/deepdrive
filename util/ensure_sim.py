@@ -10,6 +10,7 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
                              int, map, next, oct, open, pow, range, round,
                              str, super, zip)
 
+import deepdrive_api.utils
 import config as c
 import logs
 from util.run_command import run_command
@@ -51,7 +52,7 @@ def ensure_sim_python_binaries():
     elif c.IS_LINUX:
         # Python is already embedded, however ensure_requirements
         # fails with pip-req-tracker errors
-        uepy = ensure_uepy_executable()
+        uepy = deepdrive_api.utils.ensure_uepy_executable(get_sim_path())
         os.system('{uepy} -m pip install pyzmq pyarrow==0.12.1 requests'.
                   format(uepy=uepy))
         log.info('Installed UEPy python dependencies')

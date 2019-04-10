@@ -15,8 +15,11 @@ import config.check_bindings
 from config import camera_config
 import config as c
 from sim.driving_style import DrivingStyle
+from util.ensure_sim import get_sim_path
 import sim
 import logs
+
+
 log = logs.get_log(__name__)
 
 
@@ -130,8 +133,8 @@ def main():
                                 experiment=args.experiment)
         return
     elif args.server:
-        from api import server
-        server.start()
+        from deepdrive_api import server
+        server.start(sim, get_sim_path(), c.IS_CHALLENGE)
         return
     else:
         camera_rigs = get_camera_rigs(args)
