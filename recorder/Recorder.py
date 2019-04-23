@@ -1,17 +1,16 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import shutil
 import sys
 
 from future.builtins import (dict, input,
                              str)
 
 import os
-import time
 import glob
 import json
 
-import numpy as np
 
 import config as c
 import logs
@@ -103,11 +102,14 @@ class Recorder(object):
                     'deepdrive-results-' + c.DATE_STR,
                     [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME],
                     public=self.public)
+                log.info('gist uploaded to %s', gist_url)
             else:
                 gist_url = 'not uploaded'
+
+            hdf5_observations = glob.glob(c.HDF5_SESSION_DIR + '/*.hdf5')
             self.create_artifacts_inventory(
                 gist_url=gist_url,
-                hdf5_dir=c.HDF5_SESSION_DIR,
+                hdf5_observations=hdf5_observations,
                 episodes_file=c.EPISODES_CSV_FILENAME,
                 summary_file=c.SUMMARY_CSV_FILENAME,
                 mp4_file=mp4_file)
@@ -159,15 +161,15 @@ class Recorder(object):
 
     @staticmethod
     def create_artifacts_inventory(gist_url: str,
-                                   hdf5_dir: str,
+                                   hdf5_observations: list,
                                    episodes_file: str,
                                    summary_file: str,
                                    mp4_file: str):
         # TODO: Add list of artifacts results file with:
-        filename = os.path.join(c.RESULTS_DIR, 'artifact-inventory.json')
         anon = anonymize_user_home
-        with open(filename, 'w') as out_file:
-            hdf5_observations: list = glob.glob(hdf5_dir + '/*.hdf5')
+        p = os.path
+        filename = p.join(c.RESULTS_DIR, 'artifacts.json')
+        with open(filename, 'w+') as out_file:
             data = {'artifacts': {
                 'mp4': anon(mp4_file),
                 'gist': anon(gist_url),
@@ -177,6 +179,12 @@ class Recorder(object):
             }}
             json.dump(data, out_file, indent=2)
         log.info('Wrote artifacts inventory to %s' % anon(filename))
+        latest_artifacts_filename = p.join(c.RESULTS_BASE_DIR,
+                                           'latest-artifacts.json')
+        shutil.copy2(filename, latest_artifacts_filename)
+        print('\n****\nARTIFACTS INVENTORY COPIED TO: "%s"' +
+              anon(latest_artifacts_filename))
+
         # TODO: Upload to YouTube on pull request
         # TODO: Save a description file with the episode score summary,
         #  gist link, and s3 link
