@@ -1,9 +1,27 @@
 .PHONY: package install commit clean bash version rerun server
 
-# Build and run Deepdrive in Docker
+# Short-cuts to build and run Deepdrive in Docker
+
+# Usage:
+#  make server  # runs sim
+#  make run args="bin/domain_randomization_short_test.sh"  # run some agent
+#
+# Build and output artifacts:
+# make artifacts
+#
+# Dev:
+# make rerun args="python main.py --server"  # rebuilds container with local changes and runs
+#
+# To check the contents of last run container
+# make commit args="mydebugcontainername"
+# docker run -it mydebugcontainername bash
 
 VERSION:=$(shell bin/get_version.sh)
+
+# Non-lazy assignment to ensures the necessary directories are created,
+#  i.e. ~/Deepdrive/*
 CREATE_DIR:=$(shell DEEPDRIVE_DOCKER_HOST=1 python -c "import util.get_directories")
+
 DEEPDRIVE_DIR:=$(shell docker/get_deepdrive_dir.sh)
 DOCKER_DEEPDRIVE_DIR=/home/ue4/Deepdrive
 TAG=deepdriveio/deepdrive:env-${VERSION}
@@ -53,7 +71,11 @@ echo_dir:
 
 rerun: build run
 
-server: run
+server:
+	$(DD_RUN) python main.py --server
+
+artifacts: build server
+	find $(RESULTS_DIR)/latest-artifacts.json 2> /dev/null
 
 run:
 	$(DD_RUN) $(args)
@@ -62,7 +84,7 @@ bash:
 	$(DD_RUN) bash
 
 commit:
-	docker commit `docker ps --latest --format "{{.ID}}"` $(TAG)
+	docker commit `docker ps --latest --format "{{.ID}}"` $(args)
 
 build:
 	docker build --build-arg version=$(VERSION) -t $(TAG) -f Dockerfile-env .
