@@ -150,6 +150,8 @@ PY_ARGS = None
 SESS_RESULTS_CSV_FILENAME_TEMPLATE = '{RESULTS_DIR}{os_path_sep}{DATE_STR}_{prefix}_{name}.csv'
 
 SUMMARY_CSV_FILENAME = SESS_RESULTS_CSV_FILENAME_TEMPLATE.format(
-    RESULTS_DIR=RESULTS_DIR, os_path_sep=os.path.sep, prefix='r0', name='summary', DATE_STR=DATE_STR)
+    RESULTS_DIR=RESULTS_DIR, os_path_sep=os.path.sep, prefix='r0',
+    name='summary', DATE_STR=DATE_STR)
 EPISODES_CSV_FILENAME = SESS_RESULTS_CSV_FILENAME_TEMPLATE.format(
-    RESULTS_DIR=RESULTS_DIR, os_path_sep=os.path.sep, prefix='r1', name='episodes', DATE_STR=DATE_STR)
+    RESULTS_DIR=RESULTS_DIR, os_path_sep=os.path.sep, prefix='r1',
+    name='episodes', DATE_STR=DATE_STR)

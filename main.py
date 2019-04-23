@@ -322,4 +322,3 @@ def get_latest_model_from_path(model_dir):
 
 if __name__ == '__main__':
     main()
-

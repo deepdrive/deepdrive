@@ -295,7 +295,21 @@ def upload_to_gist(name: str, file_paths: list, public: bool):
     return url
 
 
+def in_home(name):
+    p = os.path
+    return p.exists(p.join(p.expanduser('~'), name))
+
+
 def upload_to_youtube(file_path):
+    youtube_creds_name = 'youtube-upload-credentials.json'
+    client_secrets_name = 'client_secrets.json'
+    youtube_creds_exists = in_home(youtube_creds_name)
+    client_secrets_exists = in_home(client_secrets_name)
+    if not youtube_creds_exists or not client_secrets_exists:
+        log.error('Need %s and %s in your home directory to upload to YouTube.',
+                  youtube_creds_name, client_secrets_name)
+        return False
+
     # python_path = os.environ['PYTHONPATH']
     # youtube_upload_dir = os.path.join(c.ROOT_DIR, 'vendor', 'youtube_upload')
     # os.environ['PYTHONPATH'] = '%s:%s' % (youtube_upload_dir, python_path)
@@ -305,7 +319,7 @@ def upload_to_youtube(file_path):
                   credentials_file='', auth_browser=None,
                   description='Deepdrive results for %s' % c.PY_ARGS)
     youtube = youtube_upload.main.get_youtube_handler(options)
-    youtube_upload.main.upload_youtube_video(youtube, options, file_path, 1, 0)
+    video_id = youtube_upload.main.upload_youtube_video(youtube, options, file_path, 1, 0)
     # TODO: Put link to s3 artifacts in description [hdf5, csv, diff,
     #  eventually ue-recording]
     # cmd = '%s %s --title=test --privacy=unlisted %s' % (
@@ -319,6 +333,8 @@ def upload_to_youtube(file_path):
     # TODO: Mount client_secret.json and credentials into a container somehow
     # PYTHONPATH=. python vendor/youtube_upload/bin/youtube_upload --title=test --privacy=unlisted test.mp4
     # TODO: Remove temp_dir if TEMP
+
+    return video_id
 
 
 def save_hdf5_recordings_to_png(combine_all=False, sess_dir=None):

@@ -114,6 +114,9 @@ class Recorder(object):
                 summary_file=c.SUMMARY_CSV_FILENAME,
                 mp4_file=mp4_file)
 
+            if 'DEEPDRIVE_UPLOAD_ARTIFACTS' in os.environ:
+                self.upload_artifacts(mp4_file, c.HDF5_SESSION_DIR)
+
     def save_recordings(self):
         name = str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10)
         filepath = os.path.join(self.hdf5_dir, '%s.hdf5' % name)
@@ -191,3 +194,17 @@ class Recorder(object):
 
     def num_unsaved_observations(self):
         return self.recorded_obz_count - self.num_saved_observations
+
+    @staticmethod
+    def upload_artifacts(mp4_file, hdf5_observations):
+        youtube_id = utils.upload_to_youtube(mp4_file)
+        if youtube_id:
+            log.info('Successfully uploaded to YouTube! %s', youtube_id)
+        from ue4helpers import AWSUtils
+        for hdf5_file in hdf5_observations:
+            s3path = 'artifacts/' + os.path.basename(c.RESULTS_DIR)
+            key = s3path + '/hdf5/' + os.path.basename(hdf5_file)
+            AWSUtils.upload_file('deepdrive', key=key, filename=hdf5_file)
+
+
+
