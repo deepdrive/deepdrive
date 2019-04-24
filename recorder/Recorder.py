@@ -172,7 +172,7 @@ class Recorder(object):
         anon = anonymize_user_home
         p = os.path
         filename = p.join(c.RESULTS_DIR, 'artifacts.json')
-        with open(filename, 'w+') as out_file:
+        with open(filename, 'w') as out_file:
             data = {'artifacts': {
                 'mp4': anon(mp4_file),
                 'gist': anon(gist_url),
