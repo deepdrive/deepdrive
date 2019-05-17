@@ -2,6 +2,8 @@
 #
 # Build (automated on dockerhub, so just use for local testing, don't push):
 #
+# Local usage: See Makefile
+#
 # VERSION=`cat VERSION | sed 's/ //g'`
 # docker build --build-arg version=$VERSION -t deepdriveio/deepdrive:env-$VERSION -f Dockerfile-env .
 #

@@ -7,7 +7,8 @@ import config as c
 from util.anonymize import anonymize_user_home
 
 os.makedirs(c.LOG_DIR, exist_ok=True)
-log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+log_format = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log_level = logging.INFO
 all_loggers = []
 rotators = {}
@@ -15,7 +16,8 @@ rotators = {}
 
 def get_log(namespace, filename='log.txt'):
     """
-    Use separate filenames for separate processes to avoid rollover errors on Windows
+    Use separate filenames for separate processes to avoid rollover
+    errors on Windows
     https://stackoverflow.com/questions/16712638
     """
     rotator = get_log_rotator(filename)
@@ -24,7 +26,8 @@ def get_log(namespace, filename='log.txt'):
     if ret.parent != ret.root:
         # Avoid duplicate log messages in multiprocessing scenarios
         # where module is imported twice
-        print('Warning, using parent logger to avoid nested loggers and duplicate errors messages')
+        print('Warning, using parent logger to avoid nested'
+              ' loggers and duplicate errors messages')
         return ret.parent
     ret.setLevel(log_level)
     ch = logging.StreamHandler(sys.stdout)
@@ -38,7 +41,8 @@ def get_log(namespace, filename='log.txt'):
 def get_log_rotator(filename):
     if filename in rotators:
         return rotators[filename]
-    rotator = RotatingFileHandler(os.path.join(c.LOG_DIR, filename), maxBytes=(1048576 * 5), backupCount=7)
+    rotator = RotatingFileHandler(os.path.join(c.LOG_DIR, filename),
+                                  maxBytes=(1048576 * 5), backupCount=7)
     rotator.setFormatter(log_format)
     rotators[filename] = rotator
     return rotator

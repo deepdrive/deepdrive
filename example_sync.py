@@ -2,10 +2,9 @@ import sim
 
 
 def main():
-    env = sim.start(is_sync=True)
+    env = sim.start(is_sync=True, render=True)
     forward = sim.action(throttle=1, steering=0, brake=0)
-    done = False
-    while not done:
+    while True:
         observation, reward, done, info = env.step(forward)
 
 
