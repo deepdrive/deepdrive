@@ -201,3 +201,6 @@ to py.test.
 
 Special thanks to [Rafał Józefowicz](https://scholar.google.com/citations?user=C7zfAI4AAAAJ) for contributing the original [training](#tensorflow_agent/train) code used for the baseline agent
 
+[License](LICENSE.md)
+
+
