@@ -1,3 +1,8 @@
+########################################################
+# New agents in this repo should just use the Dockerfile
+# Agents outside this repo should use the deepdrive-api:
+#     https://github.com/deepdrive/deepdrive-api
+########################################################
 # Build (automated on dockerhub, so just use for local testing, don't push):
 #     docker build -t deepdriveio/deepdrive:agents-2.1 -f Dockerfile-agents .
 # Usage:
