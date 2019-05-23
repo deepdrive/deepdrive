@@ -127,27 +127,6 @@ def get_sim_url():
     return '/' + latest_sim_file
 
 
-def ensure_uepy_executable(path=None):
-    """
-    Ensure the UEPY python binary is executable
-    :param path:
-    :return:
-    """
-    uepy = path or get_uepy_path()
-    st = os.stat(uepy)
-    os.chmod(uepy, st.st_mode | stat.S_IEXEC)
-    return uepy
-
-
-def get_uepy_pyarrow_version():
-    uepy = ensure_uepy_executable(get_uepy_path())
-    show, ret_code = run_command(
-        '{uepy} -m pip show pyarrow'.format(uepy=uepy))
-    version_line = [x for x in show.split('\n') if x.startswith('Version')][0]
-    version = version_line.replace('Version: ', '').strip()
-    return version
-
-
 def get_sim_path():
     orig_path = os.path.join(c.DEEPDRIVE_DIR, 'sim')
     version_paths = glob.glob(
@@ -158,14 +137,6 @@ def get_sim_path():
         return list(sorted(version_paths))[-1]
     else:
         return orig_path
-
-
-def get_uepy_path(sim_path=None):
-    sim_path = sim_path or get_sim_path()
-    ret = os.path.join(
-        sim_path,
-        'Engine/Plugins/UnrealEnginePython/EmbeddedPython/Linux/bin/python3')
-    return ret
 
 
 def get_sim_project_dir():
