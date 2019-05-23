@@ -348,7 +348,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
               run_ppo_baseline_agent, should_record, should_jitter_actions,
               env_id, render, fps, should_benchmark, is_remote, is_sync,
               enable_traffic, view_mode_period, max_steps, image_resize_dims,
-              eval_only, upload_gist, public)
+              eval_only, upload_gist, public, agent_name)
 
     reward = 0
     episode_done = False
@@ -436,13 +436,31 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
           run_ppo_baseline_agent, should_record, should_jitter_actions, env_id,
           render, fps, should_benchmark, is_remote, is_sync,
           enable_traffic, view_mode_period, max_steps, image_resize_dims,
-          eval_only, upload_gist, public):
+          eval_only, upload_gist, public, agent_name):
+    if net_path and (run_baseline_agent or
+                     run_mnet2_baseline_agent or
+                     run_ppo_baseline_agent):
+        raise RuntimeError('Running a baseline agent does not require a '
+                           'net_path. Please remove net_path or baseline '
+                           'argument')
+    if not net_path:
+        if agent_name == c.DAGGER:
+            log.info('Running alexnet dagger agent')
+            run_baseline_agent = True
+        elif agent_name == c.DAGGER_MNET2:
+            log.info('Running mnet2 dagger agent')
+            run_mnet2_baseline_agent = True
+        elif agent_name == c.BOOTSTRAPPED_PPO2:
+            log.info('Running baseline ppo2 agent')
+            run_ppo_baseline_agent = True
+
     if run_baseline_agent:
         net_path = ensure_mnet2_baseline_weights(net_path)
     elif run_mnet2_baseline_agent:
         net_path = ensure_mnet2_baseline_weights(net_path)
     elif run_ppo_baseline_agent:
         net_path = ensure_ppo_baseline_weights(net_path)
+
     sess = config_tensorflow_memory(net_name)
     if camera_rigs:
         cameras = camera_rigs[0]
