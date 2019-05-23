@@ -16,7 +16,7 @@
 #     docker run -v /baselines_results_dir/openai-2018-06-22-00-00-21-866205/checkpoints:/baselines_results_dir/openai-2018-06-22-00-00-21-866205/checkpoints --runtime=nvidia --net=host -it deepdrive python3 main.py --agent bootstrapped_ppo2 --experiment bootstrap --train --sync --remote
 #
 #     ppo run:
-#     docker run --runtime=nvidia --net=host -it deepdrive python3 main.py --agent bootstrapped_ppo2 --experiment bootstrap --eval-only --sync --remote
+#     docker run --runtime=nvidia --net=host -it deepdrive python3 main.py --ppo-baseline --experiment bootstrap --eval-only --sync --remote
 #
 #     view:
 #     http://localhost:5558

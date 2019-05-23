@@ -151,10 +151,11 @@ def run_tf_based_models(args, camera_rigs, driving_style):
         raise RuntimeError('Tensorflow not installed, cannot run or '
                            'trained tensorflow agents')
     configure_net_args(args)
-    if args.train:
+    if args.train or args.agent == c.BOOTSTRAPPED_PPO2:
+        # Training and running are more tightly linked in RL, so we
+        # call train_agent even for eval_only.
         train_agent(args, driving_style)
     else:
-        # TODO: Run PPO agent here, not with c.TEST_PPO
         run_agent(args, camera_rigs, driving_style)
 
 
@@ -188,6 +189,12 @@ def configure_net_args(args):
         args.net_type = net.MOBILENET_V2_NAME
     if args.mnet2_baseline:
         args.net_type = net.MOBILENET_V2_NAME
+
+    if args.ppo_baseline and not args.agent:
+        # args.agent / agent_name are use in training, but
+        # training and running are more tightly linked in RL, so we
+        # want to make sure agent is set here even for just running a baseline.
+        args.agent = c.BOOTSTRAPPED_PPO2
 
 
 def run_agent(args, camera_rigs, driving_style):

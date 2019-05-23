@@ -331,6 +331,9 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
         randomize_month=False, enable_traffic=True,
         view_mode_period=None, max_steps=None, max_episodes=1000,
         agent_name=None, eval_only=False, upload_gist=False, public=False):
+    """
+    Run inference for agents
+    """
     if should_record:
         path_follower = True
         randomize_sun_speed = True

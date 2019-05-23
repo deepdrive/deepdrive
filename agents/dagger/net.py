@@ -81,7 +81,8 @@ class MobileNetV2(Net):
         return image
 
     def _init_net(self):
-        in_tensor = tf.placeholder(tf.uint8, [None] + list(MOBILENET_V2_IMAGE_SHAPE))
+        in_tensor = tf.placeholder(
+            tf.uint8, [None] + list(MOBILENET_V2_IMAGE_SHAPE))
         network_fn = nets_factory.get_network_fn(
             MOBILENET_V2_SLIM_NAME,
             num_classes=None,
