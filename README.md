@@ -51,9 +51,9 @@ If you run into issues, try starting the sim directly as Unreal may need to inst
 
 #### Running
 
-Run the **baseline** agent
+Run the **mnet2 baseline** agent
 ```
-python main.py --baseline --experiment my-baseline-test
+python main.py --mnet2-baseline --experiment my-baseline-test
 ```
 
 Run in-game path follower
