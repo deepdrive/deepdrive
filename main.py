@@ -267,9 +267,9 @@ def run_path_follower(args, driving_style, camera_rigs):
 
 def train_agent(args, driving_style):
     from agents.dagger.agent import ensure_mnet2_baseline_weights
-    if args.agent == 'dagger' or args.agent == 'dagger_mobilenet_v2':
+    if args.agent == c.DAGGER or args.agent == c.DAGGER_MNET2:
         train_dagger(args)
-    elif args.agent == 'bootstrapped_ppo2':
+    elif args.agent == c.BOOTSTRAPPED_PPO2:
         from agents.bootstrap_rl.train import train
         net_path = args.net_path
         if not net_path:
