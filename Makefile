@@ -24,7 +24,7 @@ CREATE_DIR:=$(shell DEEPDRIVE_DOCKER_HOST=1 python -c "import util.get_directori
 
 DEEPDRIVE_DIR:=$(shell docker/get_deepdrive_dir.sh)
 DOCKER_DEEPDRIVE_DIR=/home/ue4/Deepdrive
-TAG=deepdriveio/deepdrive:env-${VERSION}
+TAG=deepdriveio/deepdrive:${VERSION}
 
 # Volumes
 DEEPDRIVE_VOL=-v $(DEEPDRIVE_DIR):/home/ue4/Deepdrive
@@ -49,7 +49,7 @@ ARTIFACTS_VOLUMES:=$(LOG_VOL) $(RECORDINGS_VOL) $(RESULTS_VOL) $(TF_VOL) $(WEIGH
 MAKE_DIRS:=$(shell mkdir -p $(ARTIFACTS_DIRS))
 
 DOCKER_OPTS=$(ARTIFACTS_VOLUMES) $(RUN_AS_ME) --net=host --runtime=nvidia
-DD_RUN=docker run -it $(DOCKER_OPTS) deepdriveio/deepdrive:env-3.0
+DD_RUN=docker run -it $(DOCKER_OPTS) deepdriveio/deepdrive:$(VERSION)
 
 # Pass args to make command, i.e.
 #  make run args="echo yo did it!"
@@ -62,9 +62,6 @@ dirs:
 
 version:
 	echo $(VERSION)
-
-print_version: version
-	echo ${VERSION}
 
 echo_dir:
 	echo $(LOG_VOL)
@@ -87,4 +84,4 @@ commit:
 	docker commit `docker ps --latest --format "{{.ID}}"` $(args)
 
 build:
-	docker build --build-arg version=$(VERSION) -t $(TAG) -f Dockerfile-env .
+	docker build --build-arg version=$(VERSION) -t $(TAG) -f Dockerfile .

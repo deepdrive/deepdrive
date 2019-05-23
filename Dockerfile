@@ -5,11 +5,11 @@
 # Local usage: See Makefile
 #
 # VERSION=`cat VERSION | sed 's/ //g'`
-# docker build --build-arg version=$VERSION -t deepdriveio/deepdrive:env-$VERSION -f Dockerfile-env .
+# docker build --build-arg version=$VERSION -t deepdriveio/deepdrive:$VERSION -f Dockerfile .
 #
 # Usage:
 # VERSION=`cat VERSION | sed 's/ //g
-# docker run -it --net=host --runtime=nvidia deepdriveio/deepdrive:env-$VERSION
+# docker run -it --net=host --runtime=nvidia deepdriveio/deepdrive:$VERSION
 
 # Ubuntu 18
 FROM adamrehn/ue4-runtime:tensorflow-virtualgl

@@ -1,10 +1,11 @@
+# WIP
 version: '3'
 services:
   server:
-    image: deepdriveio/deepdrive:env-3.0
+    image: deepdriveio/deepdrive:3.0
     network_mode: "host"
     command: python main.py --server
   agent:
-    image: deepdriveio/deepdrive:env-3.0
+    image: deepdriveio/deepdrive:3.0
     network_mode: "host"
     command: bin/domain_randomization_short_test.sh
