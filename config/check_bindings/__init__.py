@@ -5,7 +5,9 @@ import config as c
 
 
 def check_bindings_version():
-    bindings_version = semvar(pkg_resources.get_distribution('deepdrive').version).version[:2]
+    # TODO: Bindings name change
+    bindings_version = semvar(pkg_resources.get_distribution(
+        c.BINDINGS_PACKAGE_NAME).version).version[:2]
     client_version = c.MAJOR_MINOR_VERSION
     if bindings_version != client_version:
         print("""ERROR: Python bindings version mismatch. 
