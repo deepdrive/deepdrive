@@ -11,13 +11,11 @@ def main():
     forward = Action(throttle=1)
     done = False
     while True:
-        # time.sleep(1)
-        # print('sleeping')
         while not done:
             observation, reward, done, info = env.step(forward)
-
+        env.reset()
         print('Episode finished')
-        done = env.reset()
+        done = False
 
 
 if __name__ == '__main__':
