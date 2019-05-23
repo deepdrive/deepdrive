@@ -455,7 +455,7 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
             run_ppo_baseline_agent = True
 
     if run_baseline_agent:
-        net_path = ensure_mnet2_baseline_weights(net_path)
+        net_path = ensure_alexnet_baseline_weights(net_path)
     elif run_mnet2_baseline_agent:
         net_path = ensure_mnet2_baseline_weights(net_path)
     elif run_ppo_baseline_agent:
