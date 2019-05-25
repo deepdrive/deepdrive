@@ -87,7 +87,8 @@ PPO_BASELINE_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR,
 PPO_BASELINE_WEIGHTS_VERSION = '03125'
 
 # Urls
-BUCKET_URL = 'https://s3-us-west-1.amazonaws.com/deepdrive'
+AWS_BUCKET = 'deepdrive'
+BUCKET_URL = 'https://s3-us-west-1.amazonaws.com/' + AWS_BUCKET
 BASE_WEIGHTS_URL = BUCKET_URL + '/weights'
 ALEXNET_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/baseline_agent_weights.zip'
 ALEXNET_PRETRAINED_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, ALEXNET_PRETRAINED_NAME)
