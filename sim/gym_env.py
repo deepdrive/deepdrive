@@ -688,7 +688,10 @@ class DeepDriveEnv(gym.Env):
                              str(arrow.get(score.end_time).to('local')),
                              score.episode_time])
 
-        py_args = str(vars(c.PY_ARGS) if c.PY_ARGS else '')
+        if self.recorder.main_args:
+            main_args = str(vars(self.recorder.main_args))
+        else:
+            main_args = ''
         writer = csv.writer(summary_io)
         writer.writerow(['Stat', 'Value'])
         writer.writerow(['median score', median])
@@ -698,7 +701,7 @@ class DeepDriveEnv(gym.Env):
         writer.writerow(['low score', low])
         writer.writerow(['env', self.spec.id])
         writer.writerow(['cmd args', ', '.join(sys.argv[1:])])
-        writer.writerow(['py args', py_args])
+        writer.writerow(['main args', main_args])
         writer.writerow(['git commit', '@' + self.git_commit])
         writer.writerow(['git diff', diff_filename])
         writer.writerow(['experiment name', self.experiment or 'n/a'])

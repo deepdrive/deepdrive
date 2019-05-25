@@ -317,7 +317,7 @@ def upload_to_youtube(file_path):
     from box import Box
     options = Box(title=file_path, privacy='unlisted', client_secrets='',
                   credentials_file='', auth_browser=None,
-                  description='Deepdrive results for %s' % c.PY_ARGS)
+                  description='Deepdrive results for %s' % c.MAIN_ARGS)
     youtube = youtube_upload.main.get_youtube_handler(options)
     video_id = youtube_upload.main.upload_youtube_video(youtube, options, file_path, 1, 0)
     # TODO: Put link to s3 artifacts in description [hdf5, csv, diff,

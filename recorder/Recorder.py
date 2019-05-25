@@ -32,7 +32,7 @@ class Recorder(object):
 
     def __init__(self, recording_dir, should_record_agent_actions=True,
                  should_record=True, eval_only=False, should_upload_gist=False,
-                 public=False):
+                 public=False, main_args=None):
         self.save_threads = []  # type list
         self.record_agent_actions = should_record_agent_actions  # type: bool
         self.should_record = should_record  # type: bool
@@ -46,6 +46,7 @@ class Recorder(object):
         self.eval_only = eval_only  # type: bool
         self.should_upload_gist = should_upload_gist  # type: bool
         self.public = public  # type: bool
+        self.main_args = main_args  # type: dict
         if self.should_record:
             log.info('Recording driving data to %s', self.hdf5_dir)
 

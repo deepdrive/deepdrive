@@ -46,7 +46,8 @@ def start(**kwargs):
     if args.is_remote_client:
         if not isinstance(args.driving_style, str):
             args.driving_style = args.driving_style.name
-        env = Client(**(args.to_dict()))
+        args.client_main_args = c.MAIN_ARGS
+        env = Client(**args)
     else:
         env = start_local_env(args)
     return env
@@ -99,11 +100,7 @@ def start_local_env(args):
     _env.max_steps = args.max_steps
     _env.set_use_sim_start_command(args.use_sim_start_command)
     _env.image_resize_dims = args.image_resize_dims
-    _env.recorder = Recorder(args.recording_dir,
-                             should_record=args.should_record,
-                             eval_only=args.eval_only,
-                             should_upload_gist=args.upload_gist,
-                             public=args.public)
+    add_recorder(_env, args)
     _env.should_normalize_image = args.should_normalize_image
 
     connect_to_unreal(_env, args)
@@ -122,6 +119,19 @@ def start_local_env(args):
 
     env.reset()
     return env
+
+
+def add_recorder(_env, args):
+    if args.is_remote_client:
+        main_args = args.client_main_args
+    else:
+        main_args = c.MAIN_ARGS
+    _env.recorder = Recorder(args.recording_dir,
+                             should_record=args.should_record,
+                             eval_only=args.eval_only,
+                             should_upload_gist=args.upload_gist,
+                             public=args.public,
+                             main_args=main_args)
 
 
 def monkey_patch_env_api(env):
