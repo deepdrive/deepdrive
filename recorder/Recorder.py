@@ -212,11 +212,78 @@ class Recorder(object):
         youtube_id = utils.upload_to_youtube(mp4_file)
         if youtube_id:
             log.info('Successfully uploaded to YouTube! %s', youtube_id)
-        from ue4helpers import AWSUtils
-        for hdf5_file in hdf5_observations:
-            s3path = 'artifacts/' + os.path.basename(c.RESULTS_DIR)
-            key = s3path + '/hdf5/' + os.path.basename(hdf5_file)
-            AWSUtils.upload_file('deepdrive', key=key, filename=hdf5_file)
+
+        mp4_url = upload_artifacts_to_s3(mp4_file, 'mp4')[0]
+        hdf5_urls = upload_artifacts_to_s3(hdf5_observations, 'hdf5')
+        return youtube_id, mp4_url, hdf5_urls
 
 
+def upload_artifacts_to_s3(file_paths, directory) -> List[str]:
+    from ue4helpers import AWSUtils
+    ret = []
+    for file_path in file_paths:
+        s3path = 'artifacts/' + os.path.basename(c.RESULTS_DIR)
+        key = s3path + ('/%s/' % directory) + os.path.basename(file_path)
+        AWSUtils.upload_file(c.AWS_BUCKET, key=key, filename=file_path)
+        ret.append('%s%s' % (c.BUCKET_URL, key))
+    return ret
 
+
+def create_botleague_results(total_score, episode_scores, gist_url, youtube_id,
+                             mp4_url, hdf5_urls, episodes_file, summary_file,):
+    ret = Box()
+    ret.score = total_score.median
+    ret.youtube_id = youtube_id
+    ret.mp4 = mp4_url
+    ret.gist = gist_url
+    ret.sensorimotor_specific.num_episodes = len(episode_scores)
+    ret.problem_specific.summary = summary_file
+    ret.problem_specific.episodes = episodes_file
+    ret.problem_specific.observations = hdf5_urls
+    """
+    {
+
+    # Added by botleague liaison
+  "problem": "domain_randomization",
+  "username": "curie",
+  "botname": "forward-agent",
+  "status": "success",
+  "utc_timestamp": 87600000,
+  "docker_digest": "qewrqwerqwer",
+
+  # Added by Adam using docker logs
+  "log": "https://gist.githubusercontent.com/crizCraig/38f19d2e3226a822c6ce09ea618ac7ab/raw/32108e3a290a4bccea38b1bade31d6a4b42b32ce/gistfile1.txt",
+  
+  # Added by Adam
+  "docker_image_url": "https://s3-us-west-1.amazonaws.com/ci/build/12341234/agent.tar",
+  
+  
+  "json_commit": "https://github.com/deepdrive/agent-zoo/commit/4a0e6af15c5ee05b62c6705d40aece250112a57d",
+  "source_commit": "https://github.com/curie/forward-agent/commit/defc93d95944099d3e61cda6542bb4ffe7a28abf",
+
+  "youtube": "https://www.youtube.com/watch?v=rjZCjosEFpI&t=2575s",
+  "mp4": "https://s3-us-west-1.amazonaws.com/ci/build/12341234/asdf.mp4",
+  "sensorimotor_specific": {
+      "average_fps": 7.9,
+      "max_step_milliseconds": 500.134323,
+      "total_number_of_steps": 1234,
+      "dropped_steps": 34,
+      "num_episodes": 1234,
+  },
+
+  "driving_specific": {
+    "avg_kph": 12.812343,
+    "max_g_forces": 4.2,
+    "max_kph": 22.33333
+  },
+  "$comment1": "Non driving tasks are possible but not yet implemented",
+  "problem_specific": {
+    "summary": "https://s3-us-west-1.amazonaws.com/ci/build/12341234/2019-04-04__11-48-55PM_r0_summary.csv",
+    "episodes": "https://s3-us-west-1.amazonaws.com/ci/build/12341234/2019-04-04__11-48-55PM_r0_episodes.csv",
+    "observations": [
+      "https://s3-us-west-1.amazonaws.com/ci/build/12341234/hdf5/000000.mp4"
+    ]
+  }
+}
+    """
+    return ret.to_dict()
