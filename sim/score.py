@@ -1,5 +1,9 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
+
+from typing import List
+
+import numpy as np
 from future.builtins import (int, open, round,
                              str)
 
@@ -9,7 +13,7 @@ from util.sampler import Sampler
 import utils
 
 
-class Score(object):
+class EpisodeScore(object):
     total = 0
     gforce_penalty = 0
     lane_deviation_penalty = 0
@@ -32,7 +36,7 @@ class Score(object):
         self.gforce_sampler = Sampler()
 
     def serialize(self):
-        defaults = utils.obj2dict(Score)
+        defaults = utils.obj2dict(EpisodeScore)
         prop_names = defaults.keys()
         ret = {}
         for k in prop_names:
@@ -40,8 +44,23 @@ class Score(object):
         return ret
 
 
+class TotalScore(object):
+    median: float
+    average: float
+    high: float
+    low: float
+    std: float
+
+    def __init__(self, episode_scores):
+        self.median = float(np.median(episode_scores))
+        self.average = float(np.mean(episode_scores))
+        self.high = float(max(episode_scores))
+        self.low = float(min(episode_scores))
+        self.std = float(np.std(episode_scores))
+
+
 def main():
-    score = Score()
+    score = EpisodeScore()
     from utils import obj2dict
     now = time.time()
     ser = obj2dict(score)

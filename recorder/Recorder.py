@@ -3,7 +3,9 @@ from __future__ import (absolute_import, division,
 
 import shutil
 import sys
+from typing import List
 
+from box import Box
 from future.builtins import (dict, input,
                              str)
 
@@ -15,6 +17,7 @@ import json
 import config as c
 import logs
 import utils
+from sim.score import TotalScore, EpisodeScore
 from util.anonymize import anonymize_user_home
 
 log = logs.get_log(__name__)
@@ -80,7 +83,7 @@ class Recorder(object):
         ):
             self.save_recordings()
 
-    def close(self):
+    def close(self, total_score:TotalScore, episode_scores:List[EpisodeScore]):
         log.info('Closing recorder')
         if self.eval_only:
             # Okay to have partial eval recordings
@@ -99,6 +102,7 @@ class Recorder(object):
             local_public_run = self.should_upload_gist and self.public
             server_public_run = c.UPLOAD_ARTIFACTS
             public_run = local_public_run or server_public_run
+
             if public_run:
                 # Gists will be accessible via YOUTGETMYJIST token
                 # regardless of whether they are 'public' gists.

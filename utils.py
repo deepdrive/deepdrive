@@ -136,10 +136,10 @@ def add_cams_to_hdf5(frame, frame_grp, opts):
 
 
 def add_score_to_hdf5(frame, frame_grp):
-    from sim.score import Score
+    from sim.score import EpisodeScore
     score = frame['score']
     score_grp = frame_grp.create_group('score')
-    defaults = obj2dict(Score)
+    defaults = obj2dict(EpisodeScore)
     prop_names = defaults.keys()
     for k in prop_names:
         if 'sampler' not in k.lower():
