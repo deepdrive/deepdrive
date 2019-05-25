@@ -67,7 +67,8 @@ def get_default_start_args():
                view_mode_period=None, max_steps=None, should_record=False,
                recording_dir=c.RECORDING_DIR, image_resize_dims=None,
                should_normalize_image=False,
-               eval_only=False, upload_gist=False, public=False)
+               eval_only=False, upload_gist=False, public=False,
+               client_main_args=None)
 
 
 def start_local_env(args):

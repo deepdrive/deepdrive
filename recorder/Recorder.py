@@ -96,27 +96,38 @@ class Recorder(object):
                 # Wait for HDF5 saves to complete
                 save_thread.join()
             mp4_file = utils.hdf5_to_mp4()
-            if self.should_upload_gist and self.public:
+            local_public_run = self.should_upload_gist and self.public
+            server_public_run = c.UPLOAD_ARTIFACTS
+            public_run = local_public_run or server_public_run
+            if public_run:
                 # Gists will be accessible via YOUTGETMYJIST token
                 # regardless of whether they are 'public' gists.
                 gist_url = utils.upload_to_gist(
                     'deepdrive-results-' + c.DATE_STR,
                     [c.SUMMARY_CSV_FILENAME, c.EPISODES_CSV_FILENAME],
-                    public=self.public)
+                    public=True)
                 log.info('gist uploaded to %s', gist_url)
             else:
                 gist_url = 'not uploaded'
 
             hdf5_observations = glob.glob(c.HDF5_SESSION_DIR + '/*.hdf5')
             self.create_artifacts_inventory(
-                gist_url=gist_url,
                 hdf5_observations=hdf5_observations,
                 episodes_file=c.EPISODES_CSV_FILENAME,
                 summary_file=c.SUMMARY_CSV_FILENAME,
                 mp4_file=mp4_file)
 
             if 'DEEPDRIVE_UPLOAD_ARTIFACTS' in os.environ:
-                self.upload_artifacts(mp4_file, c.HDF5_SESSION_DIR)
+                self.upload_artifacts(mp4_file, hdf5_observations)
+
+            # TODO: Create a Botleague compatible results.json file with
+            #  - YouTube link
+            #  - HDF5 links
+            #  - artifacts.json stuff (gist_url) etc..
+
+            # TODO: Upload to YouTube on pull request
+            # TODO: Save a description file with the episode score summary,
+            #  gist link, and s3 link
 
     def save_recordings(self):
         name = str(self.recorded_obz_count // c.FRAMES_PER_HDF5_FILE).zfill(10)

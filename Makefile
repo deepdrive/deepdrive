@@ -51,6 +51,12 @@ MAKE_DIRS:=$(shell mkdir -p $(ARTIFACTS_DIRS))
 DOCKER_OPTS=$(ARTIFACTS_VOLUMES) $(RUN_AS_ME) --net=host --runtime=nvidia
 DD_RUN=docker run -it $(DOCKER_OPTS) deepdriveio/deepdrive:$(VERSION)
 
+ARTIFACTS_FILE=$(RESULTS_DIR)/latest-artifacts.json
+SERVER=$(DD_RUN) python main.py --server
+PUBLIC=DEEPDRIVE_PUBLIC=true
+EVAL=$(DEEPDRIVE_UPLOAD_ARTIFACTS=true)
+
+
 # Pass args to make command, i.e.
 #  make run args="echo yo did it!"
 args=
@@ -69,10 +75,13 @@ echo_dir:
 rerun: build run
 
 server:
-	$(DD_RUN) python main.py --server
+	$(SERVER)
+
+eval_server:
+	$(EVAL) $(SERVER)
 
 artifacts: build server
-	find $(RESULTS_DIR)/latest-artifacts.json 2> /dev/null
+	find $(ARTIFACTS_FILE) 2> /dev/null
 
 run:
 	$(DD_RUN) $(args)
@@ -85,3 +94,9 @@ commit:
 
 build:
 	docker build --build-arg version=$(VERSION) -t $(TAG) -f Dockerfile .
+
+
+### Tests
+
+public_domain_randomization:
+	$(DD_RUN) bin/domain_randomization_short_test.sh
