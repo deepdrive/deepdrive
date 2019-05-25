@@ -122,15 +122,18 @@ class Recorder(object):
                 mp4_file=mp4_file)
 
             if 'DEEPDRIVE_UPLOAD_ARTIFACTS' in os.environ:
-                self.upload_artifacts(mp4_file, hdf5_observations)
-
+                uploaded = self.upload_artifacts(mp4_file, hdf5_observations)
+                youtube_id, mp4_url, hdf5_urls = uploaded
+                create_botleague_results(total_score, episode_scores, gist_url,
+                                         youtube_id, mp4_url, hdf5_urls,
+                                         episodes_file=c.EPISODES_CSV_FILENAME,
+                                         summary_file=c.SUMMARY_CSV_FILENAME,)
             # TODO: Create a Botleague compatible results.json file with
             #  - YouTube link
             #  - HDF5 links
             #  - artifacts.json stuff (gist_url) etc..
 
-            # TODO: Upload to YouTube on pull request
-            # TODO: Save a description file with the episode score summary,
+            # TODO: Add YouTube description file with the episode score summary,
             #  gist link, and s3 link
 
     def save_recordings(self):
@@ -205,7 +208,7 @@ class Recorder(object):
         return self.recorded_obz_count - self.num_saved_observations
 
     @staticmethod
-    def upload_artifacts(mp4_file, hdf5_observations):
+    def upload_artifacts(mp4_file, hdf5_observations) -> (str, str, List[str]):
         youtube_id = utils.upload_to_youtube(mp4_file)
         if youtube_id:
             log.info('Successfully uploaded to YouTube! %s', youtube_id)
