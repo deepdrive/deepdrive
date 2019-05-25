@@ -585,8 +585,6 @@ class DeepDriveEnv(gym.Env):
         if 'TEST_END_OF_EPISODE' in os.environ and self.step_num >= 9:
             log.warn('TEST_END_OF_EPISODE is set triggering end of episode'
                      ' via is_stuck!')
-            self.score.got_stuck = True
-            self.log_benchmark_trial()
             ret = True
         elif obz is None:
             log.debug('obz is None, not checking if stuck')
