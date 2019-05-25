@@ -175,19 +175,16 @@ class Recorder(object):
         return obz['is_game_driving'] == 1
 
     @staticmethod
-    def create_artifacts_inventory(gist_url: str,
-                                   hdf5_observations: list,
+    def create_artifacts_inventory(hdf5_observations: list,
                                    episodes_file: str,
                                    summary_file: str,
                                    mp4_file: str):
-        # TODO: Add list of artifacts results file with:
         anon = anonymize_user_home
         p = os.path
         filename = p.join(c.RESULTS_DIR, 'artifacts.json')
         with open(filename, 'w') as out_file:
             data = {'artifacts': {
                 'mp4': anon(mp4_file),
-                'gist': anon(gist_url),
                 'performance_summary': anon(summary_file),
                 'episodes': anon(episodes_file),
                 'hdf5_observations': [anon(o) for o in hdf5_observations],
@@ -199,10 +196,6 @@ class Recorder(object):
         shutil.copy2(filename, latest_artifacts_filename)
         print('\n****\nARTIFACTS INVENTORY COPIED TO: "%s"' +
               anon(latest_artifacts_filename))
-
-        # TODO: Upload to YouTube on pull request
-        # TODO: Save a description file with the episode score summary,
-        #  gist link, and s3 link
 
     def num_unsaved_observations(self):
         return self.recorded_obz_count - self.num_saved_observations
