@@ -47,7 +47,7 @@ def start(**kwargs):
         if not isinstance(args.driving_style, str):
             args.driving_style = args.driving_style.name
         args.client_main_args = c.MAIN_ARGS
-        env = Client(**args)
+        env = Client(**(args.to_dict()))
     else:
         env = start_local_env(args)
     return env
