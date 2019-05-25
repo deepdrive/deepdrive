@@ -145,7 +145,7 @@ IS_CHALLENGE = False
 STREAM_PORT = 5558
 
 # Set via main
-MAIN_ARGS = None
+MAIN_ARGS:dict = {}
 
 # Upload results to github
 SESS_RESULTS_CSV_FILENAME_TEMPLATE = '{RESULTS_DIR}{os_path_sep}{DATE_STR}_{prefix}_{name}.csv'

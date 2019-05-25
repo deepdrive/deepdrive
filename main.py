@@ -115,7 +115,8 @@ def main():
     parser.add_argument('--public', action='store_true', default=False,
                         help='Results will be made public, i.e. artifacts like https://gist.github.com/deepdrive-results/cce0a164498c17269ce2adea2a88ec95',)
 
-    args = c.MAIN_ARGS = parser.parse_args()
+    args = parser.parse_args()
+    c.MAIN_ARGS = vars(args)  # For documenting runs
     if args.verbose:
         logs.set_level(logging.DEBUG)
 
