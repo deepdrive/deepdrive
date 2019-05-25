@@ -695,7 +695,7 @@ class DeepDriveEnv(gym.Env):
                              score.episode_time])
 
         if self.recorder.main_args:
-            main_args = str(vars(self.recorder.main_args))
+            main_args = str(self.recorder.main_args)
         else:
             main_args = ''
         writer = csv.writer(summary_io)
