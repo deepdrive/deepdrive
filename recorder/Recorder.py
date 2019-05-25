@@ -1,13 +1,9 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
 import shutil
 import sys
 from typing import List
 
 from box import Box
-from future.builtins import (dict, input,
-                             str)
+
 
 import os
 import glob
@@ -208,31 +204,33 @@ class Recorder(object):
         return self.recorded_obz_count - self.num_saved_observations
 
     @staticmethod
-    def upload_artifacts(mp4_file, hdf5_observations) -> (str, str, List[str]):
+    def upload_artifacts(mp4_file:str,
+                         hdf5_observations: List[str]) -> (str, str, List[str]):
         youtube_id = utils.upload_to_youtube(mp4_file)
         if youtube_id:
             log.info('Successfully uploaded to YouTube! %s', youtube_id)
 
-        mp4_url = upload_artifacts_to_s3(mp4_file, 'mp4')[0]
+        mp4_url = upload_artifacts_to_s3([mp4_file], 'mp4')[0]
         hdf5_urls = upload_artifacts_to_s3(hdf5_observations, 'hdf5')
         return youtube_id, mp4_url, hdf5_urls
 
 
-def upload_artifacts_to_s3(file_paths, directory) -> List[str]:
+def upload_artifacts_to_s3(file_paths:List[str], directory:str) -> List[str]:
     from ue4helpers import AWSUtils
     ret = []
     for file_path in file_paths:
         s3path = 'artifacts/' + os.path.basename(c.RESULTS_DIR)
         key = s3path + ('/%s/' % directory) + os.path.basename(file_path)
         AWSUtils.upload_file(c.AWS_BUCKET, key=key, filename=file_path)
-        ret.append('%s%s' % (c.BUCKET_URL, key))
+        ret.append('%s/%s' % (c.BUCKET_URL, key))
     return ret
 
 
 def create_botleague_results(total_score, episode_scores, gist_url, youtube_id,
                              mp4_url, hdf5_urls, episodes_file, summary_file,):
-    ret = Box()
+    ret = Box(default_box=True)
     ret.score = total_score.median
+    ret.youtube = 'https://www.youtube.com/watch?v=%s' % youtube_id
     ret.youtube_id = youtube_id
     ret.mp4 = mp4_url
     ret.gist = gist_url
