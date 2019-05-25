@@ -43,6 +43,7 @@ from sim.graphics import set_capture_graphics
 from sim.reward_calculator import RewardCalculator
 from sim.score import EpisodeScore, TotalScore
 from sim.view_mode import ViewModeController
+from sim import DrivingStyle
 from renderer import renderer_factory, base_renderer
 from util.anonymize import anonymize_user_home
 from utils import obj2dict
