@@ -301,8 +301,8 @@ def in_home(name):
 
 
 def upload_to_youtube(file_path):
-    youtube_creds_name = 'youtube-upload-credentials.json'
-    client_secrets_name = 'client_secrets.json'
+    youtube_creds_name = '.youtube-upload-credentials.json'
+    client_secrets_name = '.client_secrets.json'
     youtube_creds_exists = in_home(youtube_creds_name)
     client_secrets_exists = in_home(client_secrets_name)
     if not youtube_creds_exists or not client_secrets_exists:
@@ -314,12 +314,16 @@ def upload_to_youtube(file_path):
     # youtube_upload_dir = os.path.join(c.ROOT_DIR, 'vendor', 'youtube_upload')
     # os.environ['PYTHONPATH'] = '%s:%s' % (youtube_upload_dir, python_path)
     import youtube_upload.main
-    from box import Box
-    options = Box(title=file_path, privacy='unlisted', client_secrets='',
-                  credentials_file='', auth_browser=None,
-                  description='Deepdrive results for %s' % c.MAIN_ARGS)
+    _, options, _ = youtube_upload.main.get_options([])
+    options._update_careful(dict(
+        default_box=True,
+        title=file_path, privacy='unlisted', client_secrets='',
+        credentials_file='', auth_browser=None,
+        description='Deepdrive results for %s' % c.MAIN_ARGS))
+
     youtube = youtube_upload.main.get_youtube_handler(options)
-    video_id = youtube_upload.main.upload_youtube_video(youtube, options, file_path, 1, 0)
+    video_id = youtube_upload.main.upload_youtube_video(youtube, options,
+                                                        file_path, 1, 0)
     # TODO: Put link to s3 artifacts in description [hdf5, csv, diff,
     #  eventually ue-recording]
     # cmd = '%s %s --title=test --privacy=unlisted %s' % (
