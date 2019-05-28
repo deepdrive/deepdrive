@@ -1,5 +1,5 @@
 import shutil
-from typing import List
+from typing import List, Tuple
 
 from box import Box
 
@@ -209,8 +209,8 @@ class Recorder(object):
         return self.recorded_obz_count - self.num_saved_observations
 
     @staticmethod
-    def upload_artifacts(mp4_file:str,
-                         hdf5_observations: List[str]) -> (str, str, List[str]):
+    def upload_artifacts(mp4_file:str, hdf5_observations: List[str]) \
+            -> Tuple[str, str, str, List[str]]:
         youtube_id = utils.upload_to_youtube(mp4_file)
         if youtube_id:
             youtube_url = 'https://www.youtube.com/watch?v=%s' % youtube_id
@@ -250,18 +250,6 @@ def create_botleague_results(total_score, episode_scores, gist_url,
 
     # Add items to be uploaded by privileged code
     artifact_dir = c.PUBLIC_ARTIFACTS_DIR
-
-    """
-    {
-        "needs_upload": [
-            {
-                "relative_filepath": "asdf.mp4",
-                "upload_to": ["aws", "youtube"]
-            },
-            
-        ]
-    }
-    """
     s3_upload = 's3'
     youtube_upload = 'youtube'
 
