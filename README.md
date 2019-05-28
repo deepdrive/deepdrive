@@ -99,7 +99,9 @@ Where `<your-deepdrive-home>` below is by default in `$HOME/Deepdrive` and can b
 
 #### Unit Tests
 
-pytest tests/test_sanity.py
+```
+pytest tests/unit_tests/test_sanity.py
+```
 
 ### Key binds 
 
