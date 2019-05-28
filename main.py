@@ -138,6 +138,8 @@ def main():
         return
     elif args.server:
         from deepdrive_api import server
+        if c.UPLOAD_ARTIFACTS:
+            log.info('Starting a public evaluation')
         server.start(sim, get_sim_path(), c.IS_CHALLENGE)
         return
     else:

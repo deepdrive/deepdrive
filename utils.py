@@ -18,6 +18,7 @@ import os
 import sys
 import threading
 import time
+from os.path import exists, expanduser
 
 import numpy as np
 
@@ -27,7 +28,7 @@ import config as c
 import logs
 from util.anonymize import anonymize_user_home
 from util.download import download
-from util.ensure_sim import get_sim_path, ensure_sim
+from util.ensure_sim import ensure_sim
 from util.run_command import run_command
 
 log = logs.get_log(__name__)
@@ -235,7 +236,7 @@ def hdf5_to_mp4(fps=c.DEFAULT_FPS, png_dir=None, combine_all=False, sess_dir=Non
     try:
         file_path = pngs_to_mp4(combine_all, fps, png_dir)
     finally:
-        shutil.rmtree(png_dir)
+        guarded_rmtree(png_dir)
     return file_path
 
 
@@ -487,6 +488,28 @@ def get_valid_filename(s):
     return re.sub(r'(?u)[^-\w.]', '', s)
 
 
+def copy_dir_clean(src, dest):
+    if exists(dest):
+        log.info('Removing %s', dest)
+        guarded_rmtree(dest)
+    log.info('Copying static files to %s', dest)
+    shutil.copytree(src, dest)
+
+
+def guarded_rmtree(dest, allow_small_paths=False):
+    msg = 'Not letting you delete %s' % dest
+    if dest in ['/', '\\', '/root', '~', expanduser('~')]:
+        raise RuntimeError(msg)
+    elif len(dest.split(os.path.sep)) <= 2:
+        raise RuntimeError(msg)
+    elif in_home(dest) and len(dest) < 10 and not allow_small_paths:
+        raise RuntimeError(msg)
+    elif not in_home(dest) and len(dest) < 5 and not allow_small_paths:
+        raise RuntimeError(msg)
+    else:
+        return shutil.rmtree(dest)
+
+
 if __name__ == '__main__':
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
     # read_hdf5_manual()
@@ -504,3 +527,4 @@ if __name__ == '__main__':
     traceback.print_stack(file=sys.stdout)
     log.info('testing %d', 1234)
     ensure_sim()
+

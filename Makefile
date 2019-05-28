@@ -48,13 +48,14 @@ ARTIFACTS_DIRS=$(LOG_DIR) $(RECORDINGS_DIR) $(RESULTS_DIR) $(TF_DIR) $(WEIGHTS_D
 ARTIFACTS_VOLUMES:=$(LOG_VOL) $(RECORDINGS_VOL) $(RESULTS_VOL) $(TF_VOL) $(WEIGHTS_VOL)
 MAKE_DIRS:=$(shell mkdir -p $(ARTIFACTS_DIRS))
 
-DOCKER_OPTS=$(ARTIFACTS_VOLUMES) $(RUN_AS_ME) --net=host --runtime=nvidia
-DD_RUN=docker run -it $(DOCKER_OPTS) deepdriveio/deepdrive:$(VERSION)
+DOCKER_OPTS=$(ARTIFACTS_VOLUMES) --net=host --runtime=nvidia
+EVAL=--env DEEPDRIVE_UPLOAD_ARTIFACTS=true
+DD_RUN=docker run -it $(DOCKER_OPTS) $(TAG)
+DD_EVAL=docker run -it $(DOCKER_OPTS) $(EVAL) $(TAG)
 
 ARTIFACTS_FILE=$(RESULTS_DIR)/latest-artifacts.json
-SERVER=$(DD_RUN) python main.py --server
+SERVER=python main.py --server
 PUBLIC=DEEPDRIVE_PUBLIC=true
-EVAL=$(DEEPDRIVE_UPLOAD_ARTIFACTS=true)
 
 
 # Pass args to make command, i.e.
@@ -75,10 +76,10 @@ echo_dir:
 rerun: build run
 
 server:
-	$(SERVER)
+	$(DD_RUN) $(SERVER)
 
 eval_server:
-	$(EVAL) $(SERVER)
+	$(DD_EVAL) $(SERVER)
 
 artifacts: build server
 	find $(ARTIFACTS_FILE) 2> /dev/null

@@ -1,5 +1,4 @@
 import shutil
-import sys
 from typing import List
 
 from box import Box
@@ -8,13 +7,14 @@ from box import Box
 import os
 import glob
 import json
-from os.path import join
+from os.path import join, basename
 
 import config as c
 import logs
 import utils
 from sim.score import TotalScore, EpisodeScore
 from util.anonymize import anonymize_user_home
+from utils import copy_dir_clean
 
 log = logs.get_log(__name__)
 
@@ -118,11 +118,15 @@ class Recorder(object):
                 summary_file=c.SUMMARY_CSV_FILENAME,
                 mp4_file=mp4_file)
 
-            if 'DEEPDRIVE_UPLOAD_ARTIFACTS' in os.environ:
-                uploaded = self.upload_artifacts(mp4_file, hdf5_observations)
-                youtube_id, mp4_url, hdf5_urls = uploaded
+            if not c.UPLOAD_ARTIFACTS:
+                log.info('DEEPDRIVE_UPLOAD_ARTIFACTS not in environment, not '
+                         'uploading.')
+            else:
+                # uploaded = self.upload_artifacts(mp4_file, hdf5_observations)
+                # youtube_id, mp4_url, hdf5_urls = uploaded
                 create_botleague_results(total_score, episode_scores, gist_url,
-                                         youtube_id, mp4_url, hdf5_urls,
+                                         hdf5_observations,
+                                         mp4_file,
                                          episodes_file=c.EPISODES_CSV_FILENAME,
                                          summary_file=c.SUMMARY_CSV_FILENAME,
                                          median_fps=median_fps)
@@ -209,12 +213,13 @@ class Recorder(object):
                          hdf5_observations: List[str]) -> (str, str, List[str]):
         youtube_id = utils.upload_to_youtube(mp4_file)
         if youtube_id:
-            log.info('Successfully uploaded to YouTube! '
-                     'https://www.youtube.com/watch?v=%s', youtube_id)
-
+            youtube_url = 'https://www.youtube.com/watch?v=%s' % youtube_id
+            log.info('Successfully uploaded to YouTube! %s', youtube_url)
+        else:
+            youtube_url = ''
         mp4_url = upload_artifacts_to_s3([mp4_file], 'mp4')[0]
         hdf5_urls = upload_artifacts_to_s3(hdf5_observations, 'hdf5')
-        return youtube_id, mp4_url, hdf5_urls
+        return youtube_id, youtube_url, mp4_url, hdf5_urls
 
 
 def upload_artifacts_to_s3(file_paths:List[str], directory:str) -> List[str]:
@@ -228,13 +233,11 @@ def upload_artifacts_to_s3(file_paths:List[str], directory:str) -> List[str]:
     return ret
 
 
-def create_botleague_results(total_score, episode_scores, gist_url, youtube_id,
-                             mp4_url, hdf5_urls, episodes_file, summary_file,
-                             median_fps):
+def create_botleague_results(total_score, episode_scores, gist_url,
+                             hdf5_observations, mp4_file, episodes_file,
+                             summary_file, median_fps):
     ret = Box(default_box=True)
     ret.score = total_score.median
-    ret.youtube = 'https://www.youtube.com/watch?v=%s' % youtube_id
-    ret.mp4 = mp4_url
     ret.gist = gist_url
 
     ret.sensorimotor_specific.num_episodes = len(episode_scores)
@@ -245,9 +248,49 @@ def create_botleague_results(total_score, episode_scores, gist_url, youtube_id,
     ret.driving_specific.max_kph = total_score.max_kph
     ret.driving_specific.avg_kph = total_score.avg_kph
 
-    ret.problem_specific.summary = summary_file
-    ret.problem_specific.episodes = episodes_file
-    ret.problem_specific.observations = hdf5_urls
+    # Add items to be uploaded by privileged code
+    artifact_dir = c.PUBLIC_ARTIFACTS_DIR
+
+    """
+    {
+        "needs_upload": [
+            {
+                "relative_filepath": "asdf.mp4",
+                "upload_to": ["aws", "youtube"]
+            },
+            
+        ]
+    }
+    """
+    s3_upload = 's3'
+    youtube_upload = 'youtube'
+
+    # Add csvs that need to be uploaded
+    csv_relative_dir = 'csvs'
+    ret.problem_specific.summary = make_needs_upload(
+        base_dir=artifact_dir, relative_dir=csv_relative_dir, file=summary_file,
+        upload_to=s3_upload)
+    ret.problem_specific.episodes = make_needs_upload(
+        base_dir=artifact_dir, relative_dir=csv_relative_dir, file=episodes_file,
+        upload_to=s3_upload)
+
+    # Add hdf5 files that need to be uploaded
+    hdf5_out = []
+    for hdf5_file in hdf5_observations:
+        hdf5_out.append(make_needs_upload(
+            base_dir=artifact_dir, relative_dir='hdf5_observations',
+            file=hdf5_file, upload_to=s3_upload))
+    ret.problem_specific.hdf5_observations = hdf5_out
+
+    # Add mp4 as a file which needs to be uploaded
+    ret.mp4 = make_needs_upload(
+        base_dir=artifact_dir, relative_dir='', file=mp4_file,
+        upload_to=s3_upload)
+
+    ret.youtube = make_needs_upload(
+        base_dir=artifact_dir, relative_dir='', file=mp4_file,
+        upload_to=youtube_upload)
+
     """
     {
 
@@ -279,9 +322,23 @@ def create_botleague_results(total_score, episode_scores, gist_url, youtube_id,
 }
     """
 
-    filename = join(c.RESULTS_DIR, 'botleague-results.json')
-    ret.to_json(filename=filename, indent=2)
-    log.info('Wrote results to %s' % filename)
-    latest_results = join(c.RESULTS_BASE_DIR, 'latest-botleague-results.json')
-    shutil.copy2(filename, latest_results)
-    print('\n****\nRESULTS COPIED TO: "%s"' + latest_results)
+    results_json_filename = join(artifact_dir, 'results.json')
+    ret.to_json(filename=results_json_filename, indent=2)
+    log.info('Wrote results to %s' % results_json_filename)
+    copy_dir_clean(src=c.PUBLIC_ARTIFACTS_DIR,
+                   dest=c.LATEST_PUBLIC_ARTIFACTS_DIR)
+
+
+def make_needs_upload(base_dir:str, relative_dir:str, file:str,
+                      upload_to:str) -> Box:
+    ret = Box(default_box=True)
+    upload = ret.needs_upload
+    abs_dir = join(base_dir, relative_dir)
+    os.makedirs(abs_dir, exist_ok=True)
+    shutil.copy2(file, abs_dir)
+    if relative_dir:
+        upload.relative_path = '/'.join([relative_dir, basename(file)])
+    else:
+        upload.relative_path = basename(file)
+    upload.upload_to = upload_to
+    return ret
