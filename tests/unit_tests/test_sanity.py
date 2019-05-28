@@ -64,21 +64,21 @@ def test_gforce_penalty():
 
 
 def test_progress_reward():
-    progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress=100, time_passed=0.1)
+    progress_reward, speed_reward, _ = RewardCalculator.get_progress_and_speed_reward(progress=100, time_passed=0.1)
     assert progress_reward == pytest.approx(1.) and speed_reward == pytest.approx(1.5)
-    progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress=100, time_passed=1)
+    progress_reward, speed_reward, _ = RewardCalculator.get_progress_and_speed_reward(progress=100, time_passed=1)
     assert progress_reward == pytest.approx(1.) and speed_reward == pytest.approx(0.15)
-    progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress=3, time_passed=0.1)
+    progress_reward, speed_reward, _ = RewardCalculator.get_progress_and_speed_reward(progress=3, time_passed=0.1)
     assert progress_reward == pytest.approx(0.03) and speed_reward == pytest.approx(0.00135)
-    progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress=3, time_passed=1e-8)
+    progress_reward, speed_reward, _ = RewardCalculator.get_progress_and_speed_reward(progress=3, time_passed=1e-8)
     assert progress_reward == pytest.approx(0.03, abs=1e-6) and speed_reward == pytest.approx(100.0)  # Should clip
-    progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress=0, time_passed=0.1)
+    progress_reward, speed_reward, _ = RewardCalculator.get_progress_and_speed_reward(progress=0, time_passed=0.1)
     assert progress_reward == pytest.approx(0.) and speed_reward == pytest.approx(0.)
-    progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress=-10, time_passed=0.1)
+    progress_reward, speed_reward, _ = RewardCalculator.get_progress_and_speed_reward(progress=-10, time_passed=0.1)
     assert progress_reward == pytest.approx(-0.1) and speed_reward == pytest.approx(-0.015)
-    progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress=1e8, time_passed=0.1)
+    progress_reward, speed_reward, _ = RewardCalculator.get_progress_and_speed_reward(progress=1e8, time_passed=0.1)
     assert progress_reward == pytest.approx(100.) and speed_reward == pytest.approx(100.)  # Should clip
-    progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress=-1e8, time_passed=0.1)
+    progress_reward, speed_reward, _ = RewardCalculator.get_progress_and_speed_reward(progress=-1e8, time_passed=0.1)
     assert progress_reward == pytest.approx(0.) and speed_reward == pytest.approx(0.)  # lap complete, zero out
 
     # Test invariance of sampling frequency
@@ -93,7 +93,7 @@ def episode_progress_reward(hz, total_secs):
     time_passed = 1 / hz
     progress = 1000 / hz
     for i in range(int(total_secs * hz)):
-        progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress=progress,
+        progress_reward, speed_reward, _ = RewardCalculator.get_progress_and_speed_reward(progress=progress,
                                                                                        time_passed=time_passed)
         total_progress += progress_reward
         total_speed_reward += speed_reward

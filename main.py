@@ -49,6 +49,9 @@ def main():
                         help='Show the cameras as seen your agents in Python')
     parser.add_argument('--sync', action='store_true', default=False,
                         help='Use synchronous stepping mode where the simulation advances only when calling step')
+    parser.add_argument('--sim-step-time', type=float,
+                        default=c.DEFAULT_SIM_STEP_TIME,
+                        help='Time to pause sim in synchronous stepping mode')
     parser.add_argument('--enable-traffic', action='store_true', default=False,
                         help='Enable traffic within the simulator')
     parser.add_argument('--jitter-actions', action='store_true', default=False,
@@ -94,7 +97,7 @@ def main():
     parser.add_argument('--experiment', nargs='?', default=None,
                         help='Name of your experiment')
     parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS,
-                        help='Frames / steps per second')
+                        help='Frames or steps per second')
     parser.add_argument('--ego-mph', type=float, default=25,
                         help='Ego (i.e. main) agent vehicle miles per hour')
     parser.add_argument('--agent', nargs='?', default=c.DAGGER_MNET2,
@@ -228,7 +231,8 @@ def run_agent(args, camera_rigs, driving_style):
               max_steps=args.max_steps,
               max_episodes=args.max_episodes, agent_name=args.agent,
               eval_only=args.eval_only,
-              upload_gist=args.upload_gist, public=args.public)
+              upload_gist=args.upload_gist, public=args.public,
+              sim_step_time=args.sim_step_time)
 
 
 def run_path_follower(args, driving_style, camera_rigs):

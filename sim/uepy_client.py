@@ -39,15 +39,15 @@ class UEPyClient(object):
             self.socket.send(msg)
             ret = pyarrow.deserialize(self.socket.recv())
         except zmq.error.Again:
-            print('Waiting for lambda uepy server')
+            print('Waiting for uepy server')
             self.create_socket()
             return None
         finally:
             if ret is None:
                 raise RuntimeError(
-                    'Could not get response from lambda server. '
-                    'Ensure your Arrow/pyarrow versions are compatible.'
-                    'Try restarting sim or Unreal Editor. ')
+                    'Could not get response from uepy server. '
+                    'Ensure your Arrow/pyarrow versions are compatible, and/or '
+                    'try restarting sim or Unreal Editor. ')
             if not ret['success']:
                 log.error(ret['result'])
                 raise RuntimeError(

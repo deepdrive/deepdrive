@@ -5,6 +5,10 @@ import platform
 import shutil
 
 # noinspection PyUnresolvedReferences
+from typing import List
+
+from tensorflow.python.client.session import SessionInterface
+
 import config.check_bindings
 
 
@@ -46,6 +50,7 @@ from sim.view_mode import ViewModeController
 from sim import DrivingStyle
 from renderer import renderer_factory, base_renderer
 from util.anonymize import anonymize_user_home
+from util.sampler import Sampler
 from utils import obj2dict
 from dashboard import dashboard_fn, DashboardPub
 
@@ -60,15 +65,21 @@ class DeepDriveEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
-        self.is_discrete = None
-        self.is_sync = None
-        self.sync_step_time = None
-        self.discrete_actions = None
-        self.preprocess_with_tensorflow = None
-        self.sess = None
-        self.start_time = time.time()
-        self.step_num = 0
-        self.prev_step_time = None
+        # Whether to use discrete or continuous actions
+        self.is_discrete:bool = None
+
+        # Whether to pause the sim between steps
+        self.is_sync:bool = None
+
+        # The amount of time to pause Unreal
+        self.sim_step_time:float = None
+
+        self.discrete_actions:DiscreteActions = None
+        self.preprocess_with_tensorflow:bool = None
+        self.sess:SessionInterface = None
+        self.start_time:float = time.time()
+        self.step_num:int = 0
+        self.prev_step_time:float = None
         self.display_stats = OrderedDict()
         self.display_stats['g-forces']                = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 3,    'units': 'g'}
         self.display_stats['gforce penalty']          = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 0,    'units': ''}
@@ -78,36 +89,43 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['episode #']               = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5,    'units': ''}
         self.display_stats['time']                    = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 500,  'units': 's'}
         self.display_stats['episode score']           = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 4000, 'units': ''}
-        self.dashboard_process = None
-        self.dashboard_pub = None
-        self.should_exit = False
+        self.dashboard_process:Process = None
+        self.dashboard_pub:DashboardPub = None
+        self.should_exit:bool = False
         self.sim_process = None
-        self.client_id = None
-        self.has_control = None
-        self.cameras = None
-        self.use_sim_start_command = None
-        self.connection_props = None
-        self.should_render = False  # type: bool
-        self.ep_time_balance_coeff = 10.  # type: float
-        self.previous_action_time = None  # type: time.time
-        self.fps = None  # type: int
-        self.period = None  # type: float
-        self.experiment = None  # type: str
-        self.driving_style = None  # type: DrivingStyle
-        self.reset_returns_zero = None  # type: bool
-        self.started_driving_wrong_way_time = None  # type: bool
-        self.previous_distance_along_route = None  # type: float
-        self.renderer = None  # type: base_renderer.Renderer
-        self.np_random = None  # type: tuple
-        self.last_obz = None  # type: dict
-        self.view_mode_controller = None  # type: ViewModeController
-        self.enable_traffic = False  # type: bool
-        self.ego_mph = None  # type: float
-        self.max_steps = None  # type: int
-        self.recorder = None  # type: Recorder
-        self.image_resize_dims = None  # type: np.ndarray
-        self.should_normalize_image = False  # type: bool
-        self.tried_to_close = False  # type: bool
+        self.client_id:int = None
+        self.has_control:bool = None
+        self.cameras:List[dict] = None
+        self.use_sim_start_command:bool = None
+        self.connection_props:dict = None
+        self.should_render:bool = False
+        self.ep_time_balance_coeff:float = 10.
+        self.previous_action_time:time.time = None
+
+        # The FPS you wish to run the agent at, including sim + agent step time
+        self.target_fps:float = None
+
+        self.fps_tracker:Sampler = Sampler()
+
+        # Inverse of target_fps
+        self.period:float = None
+
+        self.experiment:str = None
+        self.driving_style:DrivingStyle = None
+        self.reset_returns_zero:bool = None
+        self.started_driving_wrong_way_time:bool = None
+        self.previous_distance_along_route:float = None
+        self.renderer:base_renderer.Renderer = None
+        self.np_random:tuple = None
+        self.last_obz:dict = None
+        self.view_mode_controller:ViewModeController = None
+        self.enable_traffic:bool = False
+        self.ego_mph:float = None
+        self.max_steps:int = None
+        self.recorder:Recorder = None
+        self.image_resize_dims:np.ndarray = None
+        self.should_normalize_image:bool = False
+        self.tried_to_close:bool = False
 
         if not c.REUSE_OPEN_SIM:
             util.ensure_sim.ensure_sim()
@@ -123,8 +141,8 @@ class DeepDriveEnv(gym.Env):
         self.previous_distance_along_route = 0  # type: float
 
         # reward
-        self.episode_score = EpisodeScore()
-        self.total_score = None
+        self.episode_score:EpisodeScore = EpisodeScore()
+        self.total_score:TotalScore = TotalScore()
 
         # laps
         self.lap_number = None
@@ -133,7 +151,7 @@ class DeepDriveEnv(gym.Env):
 
         # benchmarking - carries over across resets
         self.should_benchmark = False
-        self.episode_scores = []
+        self.episode_scores:List[EpisodeScore] = []
 
         try:
             self.git_commit = str(util.run_command.run_command(
@@ -365,21 +383,21 @@ class DeepDriveEnv(gym.Env):
         if self.previous_action_time:
             delta = now - self.previous_action_time
             fps = 1. / max(delta, 1E-9)
+            self.fps_tracker.sample(fps)
             log.debug('step duration delta actual %f desired %f', delta, self.period)
             if delta < self.period:
-                self.sync_step_time = self.period
+                # Simulator step was quicker than we want
                 if not self.is_sync:
                     sleep_time = max(0., self.period - delta - 0.001)
                     log.debug('regulating fps by sleeping for %f', sleep_time)
                     time.sleep(sleep_time)
-                    # TODO: Set environment capture FPS
+                    # TODO: Change capture FPS within Unreal
                     #  so that sleep is not needed here.
             else:
                 log.debug('step longer than desired')
-                self.sync_step_time = self.period / 2
-                if self.step_num > 5 and fps < self.fps / 2:
+                if self.step_num > 5 and fps < self.target_fps / 2:
                     log.warning('Step %r took %rs - target is %rs',
-                                self.step_num, delta, 1 / self.fps)
+                                self.step_num, delta, 1 / self.target_fps)
         self.previous_action_time = now
 
     def compute_lap_statistics(self, obz):
@@ -390,7 +408,7 @@ class DeepDriveEnv(gym.Env):
             lap_number = obz.get('lap_number')
             lap_via_progress = self.episode_score.progress > 99.9
             if lap_via_progress:
-                median_meters_per_sec = self.episode_score.speed_sampler.mean() / 100
+                median_meters_per_sec = self.episode_score.cm_per_second_sampler.mean() / 100
                 est_travel_cm = median_meters_per_sec * self.episode_score.episode_time * 100  # cm travelled
                 took_shortcut = est_travel_cm < (obz['route_length'] * 0.9)
                 if took_shortcut:
@@ -415,7 +433,7 @@ class DeepDriveEnv(gym.Env):
         gforce_done = False
         if obz:
             if self.is_sync:
-                step_time = self.sync_step_time
+                step_time = self.period
             elif self.prev_step_time is not None:
                 step_time = now - self.prev_step_time
             else:
@@ -432,11 +450,12 @@ class DeepDriveEnv(gym.Env):
                 lane_deviation_penalty = self.get_lane_deviation_penalty(
                     obz, step_time)
                 time_penalty = self.get_time_penalty(obz, step_time)
-                progress_reward, speed = self.get_progress_and_speed_reward(
-                    obz, step_time, gforce_penalty, lane_deviation_penalty)
+                progress_reward, speed_reward = \
+                    self.get_progress_and_speed_reward(
+                        obz, step_time, gforce_penalty, lane_deviation_penalty)
                 reward = self.combine_rewards(
                     progress_reward, gforce_penalty, lane_deviation_penalty,
-                    time_penalty, speed)
+                    time_penalty, speed_reward)
 
             self.episode_score.wrong_way = self.driving_wrong_way()
             if self.episode_score.wrong_way:
@@ -450,7 +469,7 @@ class DeepDriveEnv(gym.Env):
                 # if obz['last_collision'].time_utc:
                 #     reward *= obz['last_collision'].speed
 
-            self.episode_score.speed_sampler.sample(obz['speed'])
+            self.episode_score.cm_per_second_sampler.sample(obz['speed'])
             self.episode_score.total += reward + lap_bonus
             self.display_stats['time']['value'] = self.episode_score.episode_time
             self.display_stats['time']['total'] = self.episode_score.episode_time
@@ -501,6 +520,10 @@ class DeepDriveEnv(gym.Env):
             if time_passed is not None:
                 a = obz['acceleration']
                 gs = np.sqrt(a.dot(a)) / 980  # g = 980 cm/s**2
+                self.episode_score.max_gforce = \
+                    max(gs, self.episode_score.max_gforce)
+                self.total_score.max_gforce = \
+                    max(gs, self.total_score.max_gforce)
                 sampler = self.episode_score.gforce_sampler
                 sampler.sample(gs)
                 three_second_avg = self.average_gs(sampler, secs=3)
@@ -510,7 +533,6 @@ class DeepDriveEnv(gym.Env):
                              'Recent g\'s were: %r',
                              list(reversed(list(sampler.q)[-10:])))
                     done = True
-
                 self.display_stats['g-forces']['value'] = gs
                 self.display_stats['g-forces']['total'] = gs
                 gforce_penalty = RewardCalculator.get_gforce_penalty(
@@ -530,23 +552,30 @@ class DeepDriveEnv(gym.Env):
             if self.start_distance_along_route is None:
                 self.start_distance_along_route = obz['distance_along_route']
             if obz['distance_along_route'] < self.start_distance_along_route:
-                dist = (obz['route_length'] - self.start_distance_along_route) + obz['distance_along_route']
+                dist = (obz['route_length'] - self.start_distance_along_route) +\
+                       obz['distance_along_route']
             else:
                 dist = obz['distance_along_route'] - self.start_distance_along_route
             progress = dist - self.distance_along_route
             if self.distance_along_route:
                 self.previous_distance_along_route = self.distance_along_route
             self.distance_along_route = dist
-            progress_reward, speed_reward = RewardCalculator.get_progress_and_speed_reward(progress, time_passed)
+            progress_reward, speed_reward, meters_per_second = \
+                RewardCalculator.get_progress_and_speed_reward(
+                    progress, time_passed)
+            kph = meters_per_second * 3.6
+            self.episode_score.max_kph = max(kph, self.episode_score.max_kph)
+            self.total_score.max_kph = max(kph, self.total_score.max_kph)
             self.episode_score.prev_progress = self.episode_score.progress
-            self.episode_score.progress = 100 * self.distance_along_route / obz['route_length']
+            self.episode_score.progress = \
+                100 * self.distance_along_route / obz['route_length']
 
         progress_reward *= self.driving_style.value.progress_weight
         speed_reward *= self.driving_style.value.speed_weight
 
         if self.episode_score.episode_time < 2:
-            # Speed reward is too big at reset due to small offset between origin and spawn, so clip it to
-            # avoid incenting resets
+            # Speed reward is too big at reset due to small offset between
+            # origin and spawn, so clip it to avoid incenting resets
             speed_reward = min(max(speed_reward, -1), 1)
             progress_reward = min(max(progress_reward, -1), 1)
 
@@ -631,13 +660,15 @@ class DeepDriveEnv(gym.Env):
 
     def aggregate_scores(self):
         self.episode_score.end_time = time.time()
+        self.episode_score.num_steps = self.step_num
+
+        self.total_score.num_steps += self.step_num
         log.info('episode time %r', self.episode_score.episode_time)
         self.episode_scores.append(self.episode_score)
-        totals = [s.total for s in self.episode_scores]
-        total_score = TotalScore(totals)
+        self.total_score.update(self.episode_scores)
         log.info('benchmark lap #%d score: %f - average: %f',
                  len(self.episode_scores), self.episode_score.total,
-                 total_score.average)
+                 self.total_score.average)
         file_prefix = self.experiment + '_' if self.experiment else ''
         diff_filename = '%s%s.diff' % (file_prefix, c.DATE_STR)
         diff_filepath = os.path.join(c.RESULTS_DIR, diff_filename)
@@ -646,18 +677,18 @@ class DeepDriveEnv(gym.Env):
             with open(diff_filepath, 'w', encoding='utf-8') as diff_file:
                 diff_file.write(self.git_diff)
 
-        self.write_result_csvs(total_score.average, diff_filename,
-                               total_score.high, total_score.low,
-                               total_score.median, total_score.std)
+        self.write_result_csvs(self.total_score.average, diff_filename,
+                               self.total_score.high, self.total_score.low,
+                               self.total_score.median, self.total_score.std)
         summary_file = anonymize_user_home(
             os.path.normpath(c.EPISODES_CSV_FILENAME))
         episodes_file = anonymize_user_home(
             os.path.normpath(c.EPISODES_CSV_FILENAME))
-        log.info('median score %r', total_score.median)
-        log.info('avg score %r', total_score.average)
-        log.info('std %r', total_score.std)
-        log.info('high score %r', total_score.high)
-        log.info('low score %r', total_score.low)
+        log.info('median score %r', self.total_score.median)
+        log.info('avg score %r', self.total_score.average)
+        log.info('std %r', self.total_score.std)
+        log.info('high score %r', self.total_score.high)
+        log.info('low score %r', self.total_score.low)
         log.info('progress_reward %r',
                  self.episode_score.progress_reward)
         log.info('speed_reward %r',
@@ -671,7 +702,6 @@ class DeepDriveEnv(gym.Env):
         log.info('episode_time %r',
                  self.episode_score.episode_time)
         log.info('wrote results to %s and %s', summary_file, episodes_file)
-        self.total_score = total_score
 
     def write_result_csvs(self, average, diff_filename, high, low, median, std):
         import io
@@ -794,7 +824,8 @@ class DeepDriveEnv(gym.Env):
 
         if self.recorder is not None:
             self.recorder.close(total_score=self.total_score,
-                                episode_scores=self.episode_scores)
+                                episode_scores=self.episode_scores,
+                                median_fps=self.fps_tracker.median(), )
         if self.dashboard_pub is not None:
             try:
                 self.dashboard_pub.put({'should_stop': True})
@@ -948,7 +979,7 @@ class DeepDriveEnv(gym.Env):
         if self.is_sync:
             sync_start = time.time()
             seq_number = deepdrive_client.advance_synchronous_stepping(
-                self.client_id, self.sync_step_time, action.steering,
+                self.client_id, self.sim_step_time, action.steering,
                 action.throttle, action.brake, action.handbrake)
             log.debug('sync step took %fs',  time.time() - sync_start)
         else:
@@ -1250,7 +1281,7 @@ class DeepDriveEnv(gym.Env):
 
     def average_gs(self, gforce_sampler, secs):
         total = 0
-        steps = secs * self.fps
+        steps = secs * self.target_fps
         if len(gforce_sampler.q) < steps:
             return 0
         for i in range(steps):

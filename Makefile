@@ -95,6 +95,9 @@ commit:
 build:
 	docker build --build-arg version=$(VERSION) -t $(TAG) -f Dockerfile .
 
+push:
+	docker push $(TAG)
+
 
 ### Tests
 

@@ -8,7 +8,7 @@ from box import Box
 import os
 import glob
 import json
-
+from os.path import join
 
 import config as c
 import logs
@@ -79,7 +79,8 @@ class Recorder(object):
         ):
             self.save_recordings()
 
-    def close(self, total_score:TotalScore, episode_scores:List[EpisodeScore]):
+    def close(self, total_score:TotalScore, episode_scores:List[EpisodeScore],
+              median_fps:float, ):
         log.info('Closing recorder')
         if self.eval_only:
             # Okay to have partial eval recordings
@@ -123,7 +124,8 @@ class Recorder(object):
                 create_botleague_results(total_score, episode_scores, gist_url,
                                          youtube_id, mp4_url, hdf5_urls,
                                          episodes_file=c.EPISODES_CSV_FILENAME,
-                                         summary_file=c.SUMMARY_CSV_FILENAME,)
+                                         summary_file=c.SUMMARY_CSV_FILENAME,
+                                         median_fps=median_fps)
             # TODO: Create a Botleague compatible results.json file with
             #  - YouTube link
             #  - HDF5 links
@@ -183,8 +185,7 @@ class Recorder(object):
                                    summary_file: str,
                                    mp4_file: str):
         anon = anonymize_user_home
-        p = os.path
-        filename = p.join(c.RESULTS_DIR, 'artifacts.json')
+        filename = join(c.RESULTS_DIR, 'artifacts.json')
         with open(filename, 'w') as out_file:
             data = {'artifacts': {
                 'mp4': anon(mp4_file),
@@ -194,8 +195,8 @@ class Recorder(object):
             }}
             json.dump(data, out_file, indent=2)
         log.info('Wrote artifacts inventory to %s' % anon(filename))
-        latest_artifacts_filename = p.join(c.RESULTS_BASE_DIR,
-                                           'latest-artifacts.json')
+        latest_artifacts_filename = join(c.RESULTS_BASE_DIR,
+                                         'latest-artifacts.json')
         shutil.copy2(filename, latest_artifacts_filename)
         print('\n****\nARTIFACTS INVENTORY COPIED TO: "%s"' +
               anon(latest_artifacts_filename))
@@ -208,7 +209,8 @@ class Recorder(object):
                          hdf5_observations: List[str]) -> (str, str, List[str]):
         youtube_id = utils.upload_to_youtube(mp4_file)
         if youtube_id:
-            log.info('Successfully uploaded to YouTube! %s', youtube_id)
+            log.info('Successfully uploaded to YouTube! '
+                     'https://www.youtube.com/watch?v=%s', youtube_id)
 
         mp4_url = upload_artifacts_to_s3([mp4_file], 'mp4')[0]
         hdf5_urls = upload_artifacts_to_s3(hdf5_observations, 'hdf5')
@@ -227,14 +229,22 @@ def upload_artifacts_to_s3(file_paths:List[str], directory:str) -> List[str]:
 
 
 def create_botleague_results(total_score, episode_scores, gist_url, youtube_id,
-                             mp4_url, hdf5_urls, episodes_file, summary_file,):
+                             mp4_url, hdf5_urls, episodes_file, summary_file,
+                             median_fps):
     ret = Box(default_box=True)
     ret.score = total_score.median
     ret.youtube = 'https://www.youtube.com/watch?v=%s' % youtube_id
-    ret.youtube_id = youtube_id
     ret.mp4 = mp4_url
     ret.gist = gist_url
+
     ret.sensorimotor_specific.num_episodes = len(episode_scores)
+    ret.sensorimotor_specific.median_fps = median_fps
+    ret.sensorimotor_specific.num_steps = total_score.num_steps
+
+    ret.driving_specific.max_gforce = total_score.max_gforce
+    ret.driving_specific.max_kph = total_score.max_kph
+    ret.driving_specific.avg_kph = total_score.avg_kph
+
     ret.problem_specific.summary = summary_file
     ret.problem_specific.episodes = episodes_file
     ret.problem_specific.observations = hdf5_urls
@@ -262,26 +272,16 @@ def create_botleague_results(total_score, episode_scores, gist_url, youtube_id,
   "youtube": "https://www.youtube.com/watch?v=rjZCjosEFpI&t=2575s",
   "mp4": "https://s3-us-west-1.amazonaws.com/ci/build/12341234/asdf.mp4",
   "sensorimotor_specific": {
-      "average_fps": 7.9,
       "max_step_milliseconds": 500.134323,
-      "total_number_of_steps": 1234,
       "dropped_steps": 34,
-      "num_episodes": 1234,
   },
 
-  "driving_specific": {
-    "avg_kph": 12.812343,
-    "max_g_forces": 4.2,
-    "max_kph": 22.33333
-  },
-  "$comment1": "Non driving tasks are possible but not yet implemented",
-  "problem_specific": {
-    "summary": "https://s3-us-west-1.amazonaws.com/ci/build/12341234/2019-04-04__11-48-55PM_r0_summary.csv",
-    "episodes": "https://s3-us-west-1.amazonaws.com/ci/build/12341234/2019-04-04__11-48-55PM_r0_episodes.csv",
-    "observations": [
-      "https://s3-us-west-1.amazonaws.com/ci/build/12341234/hdf5/000000.mp4"
-    ]
-  }
 }
     """
-    return ret.to_dict()
+
+    filename = join(c.RESULTS_DIR, 'botleague-results.json')
+    ret.to_json(filename=filename, indent=2)
+    log.info('Wrote results to %s' % filename)
+    latest_results = join(c.RESULTS_BASE_DIR, 'latest-botleague-results.json')
+    shutil.copy2(filename, latest_results)
+    print('\n****\nRESULTS COPIED TO: "%s"' + latest_results)

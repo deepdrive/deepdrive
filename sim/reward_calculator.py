@@ -46,18 +46,19 @@ class RewardCalculator(object):
     @staticmethod
     def get_progress_and_speed_reward(progress, time_passed):
         if not time_passed:
-            progress = speed_reward = 0
+            progress = speed_reward = meters_per_second = 0
         else:
             progress = progress / 100.  # cm=>meters
-            speed = progress / time_passed
-            if speed < -400:
+            meters_per_second = progress / time_passed
+            if meters_per_second < -400:
                 # Lap completed
                 # TODO: Read the lap length on reset and
                 log.debug('assuming lap complete, progress zero')
-                progress = speed = 0
+                progress = meters_per_second = 0
 
-            # Square speed to outweigh advantage of longer lap time from going slower
-            speed_reward = np.sign(speed) * speed ** 2 * time_passed  # i.e. sign(progress) * progress ** 2 / time_passed
+            # Square the speed so to greatly outweigh the advantage
+            # of getting more rewards by going slower.
+            speed_reward = np.sign(meters_per_second) * meters_per_second ** 2 * time_passed
 
         progress_balance_coeff = 1.0
         progress_reward = progress * progress_balance_coeff
@@ -67,6 +68,6 @@ class RewardCalculator(object):
 
         progress_reward = RewardCalculator.clip(progress_reward)
         speed_reward = RewardCalculator.clip(speed_reward)
-        return progress_reward, speed_reward
+        return progress_reward, speed_reward, meters_per_second
 
 

@@ -330,7 +330,8 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
         randomize_sun_speed=False, randomize_shadow_level=False,
         randomize_month=False, enable_traffic=True,
         view_mode_period=None, max_steps=None, max_episodes=1000,
-        agent_name=None, eval_only=False, upload_gist=False, public=False):
+        agent_name=None, eval_only=False, upload_gist=False, public=False,
+        sim_step_time=c.DEFAULT_SIM_STEP_TIME):
     """
     Run inference for agents
     """
@@ -351,7 +352,7 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
               run_ppo_baseline_agent, should_record, should_jitter_actions,
               env_id, render, fps, should_benchmark, is_remote, is_sync,
               enable_traffic, view_mode_period, max_steps, image_resize_dims,
-              eval_only, upload_gist, public, agent_name)
+              eval_only, upload_gist, public, agent_name, sim_step_time)
 
     reward = 0
     episode_done = False
@@ -439,7 +440,7 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
           run_ppo_baseline_agent, should_record, should_jitter_actions, env_id,
           render, fps, should_benchmark, is_remote, is_sync,
           enable_traffic, view_mode_period, max_steps, image_resize_dims,
-          eval_only, upload_gist, public, agent_name):
+          eval_only, upload_gist, public, agent_name, sim_step_time):
     if net_path and (run_baseline_agent or
                      run_mnet2_baseline_agent or
                      run_ppo_baseline_agent):
@@ -471,7 +472,7 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
         cameras = None
     if should_record and camera_rigs is not None and len(camera_rigs) >= 1:
         should_rotate_camera_rigs = True
-        log.info('Rotating cameras while recording to encourage camera robustness')
+        log.info('Rotating cameras while recording to encourage visual robustness')
     else:
         should_rotate_camera_rigs = False
     if should_rotate_camera_rigs:
@@ -492,7 +493,7 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
                          image_resize_dims=image_resize_dims,
                          should_normalize_image=True,
                          eval_only=eval_only, upload_gist=upload_gist,
-                         public=public)
+                         public=public, sim_step_time=sim_step_time)
 
     env = start_env()
     agent = Agent(sess, should_jitter_actions=should_jitter_actions,

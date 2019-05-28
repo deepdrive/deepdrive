@@ -1,11 +1,7 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
 from typing import List
 
 import numpy as np
-from future.builtins import (int, open, round,
-                             str)
+
 
 import time
 
@@ -15,24 +11,28 @@ import utils
 
 class EpisodeScore(object):
     total = 0
-    gforce_penalty = 0
-    lane_deviation_penalty = 0
-    time_penalty = 0
-    progress_reward = 0
-    speed_reward = 0
-    progress = 0
-    prev_progress = 0
+    gforce_penalty:float = 0
+    max_gforce:float = 0
+    max_kph:float = 0
+    avg_kph:float = 0
+    lane_deviation_penalty:float = 0
+    time_penalty:float = 0
+    progress_reward:float = 0
+    speed_reward:float = 0
+    progress:float = 0
+    prev_progress:float = 0
     got_stuck = False
     wrong_way = False
-    start_time = 0
-    end_time = 0
-    episode_time = 0
+    start_time:float = 0
+    end_time:float = 0
+    episode_time:float = 0
+    num_steps:int = 0
 
     def __init__(self):
         self.start_time = time.time()
         self.end_time = 0
         self.episode_time = 0
-        self.speed_sampler = Sampler()
+        self.cm_per_second_sampler = Sampler()
         self.gforce_sampler = Sampler()
 
     def serialize(self):
@@ -45,18 +45,29 @@ class EpisodeScore(object):
 
 
 class TotalScore(object):
-    median: float
-    average: float
-    high: float
-    low: float
-    std: float
+    median:float
+    average:float
+    high:float
+    low:float
+    std:float
+    num_episodes:int = 0
+    num_steps:int = 0
+    max_gforce:float = 0
+    max_kph:float = 0
+    avg_kph:float = 0
 
-    def __init__(self, episode_scores):
-        self.median = float(np.median(episode_scores))
-        self.average = float(np.mean(episode_scores))
-        self.high = float(max(episode_scores))
-        self.low = float(min(episode_scores))
-        self.std = float(np.std(episode_scores))
+    def update(self, episode_scores:List[EpisodeScore]):
+        totals = [e.total for e in episode_scores]
+        self.median = float(np.median(totals))
+        self.average = float(np.mean(totals))
+        self.high = float(max(totals))
+        self.low = float(min(totals))
+        self.std = float(np.std(totals))
+        self.num_episodes = len(episode_scores)
+        cm_per_second_means = \
+            [e.cm_per_second_sampler.mean() for e in episode_scores]
+        cm_per_second_avg = float(np.mean(cm_per_second_means))
+        self.avg_kph = cm_per_second_avg * 0.036
 
 
 def main():

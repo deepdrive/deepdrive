@@ -68,7 +68,7 @@ def get_default_start_args():
                recording_dir=c.RECORDING_DIR, image_resize_dims=None,
                should_normalize_image=False,
                eval_only=False, upload_gist=False, public=False,
-               client_main_args=None)
+               client_main_args=None, sim_step_time=c.DEFAULT_SIM_STEP_TIME)
 
 
 def start_local_env(args):
@@ -90,9 +90,10 @@ def start_local_env(args):
     _env.is_sync = args.is_sync
     _env.reset_returns_zero = args.reset_returns_zero
     _env.init_action_space()
-    _env.fps = args.fps
+    _env.target_fps = args.fps
     _env.experiment = args.experiment.replace(' ', '_')
-    _env.period = _env.sync_step_time = 1. / args.fps
+    _env.sim_step_time = args.sim_step_time
+    _env.period = 1. / args.fps
     _env.driving_style = args.driving_style
     _env.should_render = args.render
     _env.enable_traffic = args.enable_traffic
