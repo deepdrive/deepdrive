@@ -1,6 +1,8 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import sys
+
 import h5py  # Needs to be imported before tensorflow to avoid seg faults
 
 import argparse
@@ -18,107 +20,171 @@ from sim.driving_style import DrivingStyle
 from util.ensure_sim import get_sim_path
 import sim
 import logs
-
+from util.args import Args
 
 log = logs.get_log(__name__)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('-e', '--env-id', nargs='?', default='Deepdrive-v0',
-                        help='Select the environment to run')
-    parser.add_argument('-r', '--record', action='store_true', default=False,
-                        help='Records game driving, including recovering from random actions')
-    parser.add_argument('--baseline', action='store_true', default=False,
-                        help='Runs pretrained alexnet-based imitation learning based agent')
-    parser.add_argument('--mnet2-baseline', action='store_true', default=False,
-                        help='Runs pretrained mnet2-based imitation learning based agent')
-    parser.add_argument('--ppo-baseline', action='store_true', default=False,
-                        help='Runs pretrained ppo-based imitation learning based agent')
-    parser.add_argument('-t', '--train', action='store_true', default=False,
-                        help='Trains tensorflow agent on stored driving data')
-    parser.add_argument('--hdf5-2-tfrecord', action='store_true', default=False,
-                        help='Converts all recorded hdf5 files to a tfrecord dataset')
-    parser.add_argument('--discrete-actions', action='store_true', default=False,
-                        help='Trains tensorflow agent on stored driving data')
-    parser.add_argument('--use-latest-model', action='store_true', default=False,
-                        help='Use most recently trained model')
-    parser.add_argument('--recording-dir', nargs='?', default=c.RECORDING_DIR,
-                        help='Where to store and read recorded environment data from')
-    parser.add_argument('--render', action='store_true', default=False,
-                        help='Show the cameras as seen your agents in Python')
-    parser.add_argument('--sync', action='store_true', default=False,
-                        help='Use synchronous stepping mode where the simulation advances only when calling step')
-    parser.add_argument('--sim-step-time', type=float,
-                        default=c.DEFAULT_SIM_STEP_TIME,
-                        help='Time to pause sim in synchronous stepping mode')
-    parser.add_argument('--enable-traffic', action='store_true', default=False,
-                        help='Enable traffic within the simulator')
-    parser.add_argument('--jitter-actions', action='store_true', default=False,
-                        help='Whether to occasionally perform random actions and record recovery from them')
-    parser.add_argument('--randomize-sun-speed', action='store_true', default=False,
-                        help='Whether to randomize the virtual speed of the earth\'s orbit around the sun')
-    parser.add_argument('--randomize-view-mode', action='store_true', default=False,
-                        help='Whether to randomize view mode on episode reset')
-    parser.add_argument('--randomize-shadow-level', action='store_true', default=False,
-                        help='Whether to randomize virtual position of Earth around Sun via month')
-    parser.add_argument('--randomize-month', action='store_true', default=False,
-                        help='Whether to randomize shadow quality render levels')
-    parser.add_argument('--path-follower', action='store_true', default=False,
-                        help='Whether to let the in-game path follower drive')
-    parser.add_argument('--overfit', action='store_true', default=False,
-                        help='Whether or not to overfit to a small test set during training to sanity check '
-                             'convergability')
-    parser.add_argument('--eval-only', action='store_true', default=False,
-                        help='Whether to just run evaluation, i.e. disable gradient updates',)
-    parser.add_argument('--net-path', nargs='?', default=None,
-                        help='Path to the tensorflow checkpoint you want to test drive. '
-                             'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
-    parser.add_argument('--net-type', nargs='?', default=None,
-                        help='Your model type - i.e. AlexNet or MobileNetV2')
-    parser.add_argument('--driving-style', nargs='?', default=DrivingStyle.NORMAL.name.lower(),
-                        help='Speed vs comfort prioritization, i.e. ' +
-                             ', '.join([level.name.lower() for level in DrivingStyle]))
-    parser.add_argument('--resume-train', nargs='?', default=None,
-                        help='Name of the tensorflow training session you want to resume within %s, '
-                             'i.e. 2018-01-01__11-11-11AM_train' % c.TENSORFLOW_OUT_DIR)
-    parser.add_argument('--tf-debug', action='store_true', default=False,
-                        help='Run a tf_debug session')
-    parser.add_argument('--freeze-pretrained', action='store_true', default=False,
-                        help='Freeze pretrained layers during training')
-    parser.add_argument('--remote', action='store_true', default=False,
-                        help='Use API to connect to a remote environment')
-    parser.add_argument('-v', '--verbose',
-                        help='Increase output verbosity', action='store_true')
-    parser.add_argument('--camera-rigs', nargs='?', default=None,
-                        help='Name of camera rigs to use')
-    parser.add_argument('--train-args-collection', nargs='?', default=None,
-                        help='Name of the set of training args to use')
-    parser.add_argument('--experiment', nargs='?', default=None,
-                        help='Name of your experiment')
-    parser.add_argument('--fps', type=int, default=c.DEFAULT_FPS,
-                        help='Frames or steps per second')
-    parser.add_argument('--ego-mph', type=float, default=25,
-                        help='Ego (i.e. main) agent vehicle miles per hour')
-    parser.add_argument('--agent', nargs='?', default=c.DAGGER_MNET2,
-                        help='Agent type (%s, %s, %s)' % (c.DAGGER,
-                                                          c.DAGGER_MNET2,
-                                                          c.BOOTSTRAPPED_PPO2))
-    parser.add_argument('--view-mode-period', type=int, default=None,
-                        help='Number of steps between view mode switches')
-    parser.add_argument('--max-steps', type=int, default=None,
-                        help='Max number of steps to run per episode')
-    parser.add_argument('--max-episodes', type=int, default=None,
-                        help='Maximum number of episodes')
-    parser.add_argument('--server', action='store_true', default=False,
-                        help='Run as an API server',)
-    parser.add_argument('--upload-gist', action='store_true', default=False,
-                        help='Upload a private gist with driving performance'
-                             'stats csv files',)
-    parser.add_argument('--public', action='store_true', default=False,
-                        help='Results will be made public, i.e. artifacts like https://gist.github.com/deepdrive-results/cce0a164498c17269ce2adea2a88ec95',)
+def add_standard_args(args:Args):
+    args.add(
+        '-e', '--env-id', nargs='?', default='Deepdrive-v0',
+        help='Select the environment to run')
+    args.add(
+        '-r', '--record', action='store_true', default=False,
+        help='Records game driving, including recovering from random actions')
+    args.add(
+        '--discrete-actions', action='store_true', default=False,
+        help='Use discrete, rather than continuous actions')
+    args.add(
+        '--recording-dir', nargs='?', default=c.RECORDING_DIR,
+        help='Where to store and read recorded environment data from')
+    args.add(
+        '--render', action='store_true', default=False,
+        help='Show the cameras as seen your agents in Python')
+    args.add(
+        '--sync', action='store_true', default=False,
+        help='Use synchronous stepping mode where the simulation advances only '
+             'when calling step')
+    args.add(
+        '--sim-step-time', type=float,
+        default=c.DEFAULT_SIM_STEP_TIME,
+        help='Time to pause sim in synchronous stepping mode')
+    args.add(
+        '--enable-traffic', action='store_true', default=False,
+        help='Enable traffic within the simulator')
+    args.add(
+        '--randomize-sun-speed', action='store_true', default=False,
+        help='Whether to randomize the virtual speed of the earth\'s orbit '
+             'around the sun')
+    args.add(
+        '--randomize-view-mode', action='store_true', default=False,
+        help='Whether to randomize view mode on episode reset')
+    args.add(
+        '--randomize-shadow-level', action='store_true', default=False,
+        help='Whether to randomize virtual position of Earth around Sun via '
+             'month')
+    args.add(
+        '--randomize-month', action='store_true', default=False,
+        help='Whether to randomize shadow quality render levels')
+    args.add(
+        '--path-follower', action='store_true', default=False,
+        help='Whether to let the in-game path follower drive')
+    args.add(
+        '--eval-only', action='store_true', default=False,
+        help='Whether to just run evaluation, i.e. disable gradient updates', )
+    args.add(
+        '--driving-style', nargs='?',
+        default=DrivingStyle.NORMAL.name.lower(),
+        help='Speed vs comfort prioritization, i.e. ' +
+             ', '.join([level.name.lower() for level in
+                        DrivingStyle]))
+    args.add(
+        '--remote', action='store_true', default=False,
+        help='Use API to connect to a remote environment')
+    args.add(
+        '-v', '--verbose',
+        help='Increase output verbosity', action='store_true')
+    args.add(
+        '--camera-rigs', nargs='?', default=None,
+        help='Name of camera rigs to use')
+    args.add(
+        '--experiment', nargs='?', default=None,
+        help='Name of your experiment')
+    args.add(
+        '--fps', type=int, default=c.DEFAULT_FPS,
+        help='Frames or steps per second')
+    args.add(
+        '--ego-mph', type=float, default=25,
+        help='Ego (i.e. main) agent vehicle miles per hour')
+    args.add(
+        '--view-mode-period', type=int, default=None,
+        help='Number of steps between view mode switches')
+    args.add(
+        '--max-steps', type=int, default=None,
+        help='Max number of steps to run per episode')
+    args.add(
+        '--max-episodes', type=int, default=None,
+        help='Maximum number of episodes')
+    args.add(
+        '--server', action='store_true', default=False,
+        help='Run as an API server', )
+    args.add(
+        '--upload-gist', action='store_true', default=False,
+        help='Upload a private gist with driving performance'
+             'stats csv files', )
+    args.add(
+        '--public', action='store_true', default=False,
+        help='Results will be made public, i.e. artifacts like '
+             'https://gist.github.com/deepdrive-results/cce0a164498c17269ce2adea2a88ec95', )
 
-    args = parser.parse_args()
+
+def add_agent_args(args):
+    args.add_agent_arg(
+        '--baseline', action='store_true', default=False,
+        help='Runs pretrained alexnet-based imitation learning based agent')
+    args.add_agent_arg(
+        '--mnet2-baseline', action='store_true', default=False,
+        help='Runs pretrained mnet2-based imitation learning based agent')
+    args.add_agent_arg(
+        '--ppo-baseline', action='store_true', default=False,
+        help='Runs pretrained ppo-based imitation learning based agent')
+    args.add_agent_arg(
+        '-t', '--train', action='store_true', default=False,
+        help='Trains tensorflow agent on stored driving data')
+    args.add_agent_arg(
+        '--hdf5-2-tfrecord', action='store_true', default=False,
+        help='Converts all recorded hdf5 files to a tfrecord dataset')
+    args.add_agent_arg(
+        '--use-latest-model', action='store_true', default=False,
+        help='Use most recently trained model')
+    args.add_agent_arg(
+        '--jitter-actions', action='store_true', default=False,
+        help='Whether to occasionally perform random actions and record recovery from them')
+    args.add_agent_arg(
+        '--overfit', action='store_true', default=False,
+        help='Whether or not to overfit to a small test set during training to sanity check '
+             'convergability')
+    args.add_agent_arg(
+        '--net-path', nargs='?', default=None,
+        help='Path to the tensorflow checkpoint you want to test drive. '
+             'i.e. /home/a/DeepDrive/tensorflow/2018-01-01__11-11-11AM_train/model.ckpt-98331')
+    args.add_agent_arg(
+        '--net-type', nargs='?', default=None,
+        help='Your model type - i.e. AlexNet or MobileNetV2')
+    args.add_agent_arg(
+        '--resume-train', nargs='?', default=None,
+        help='Name of the tensorflow training session you want '
+             'to resume within %s, '
+             'i.e. 2018-01-01__11-11-11AM_train' %
+             c.TENSORFLOW_OUT_DIR)
+    args.add_agent_arg(
+        '--tf-debug', action='store_true', default=False,
+        help='Run a tf_debug session')
+    args.add_agent_arg(
+        '--freeze-pretrained', action='store_true',
+        default=False,
+        help='Freeze pretrained layers during training')
+    args.add_agent_arg(
+        '--train-args-collection', nargs='?', default=None,
+        help='Name of the set of training args to use')
+    args.add_agent_arg(
+        '--agent', nargs='?', default=c.DAGGER_MNET2,
+        help='Agent type (%s, %s, %s)' % (c.DAGGER,
+                                          c.DAGGER_MNET2,
+                                          c.BOOTSTRAPPED_PPO2))
+
+
+def get_args():
+    args = Args()
+    add_standard_args(args)
+    add_agent_args(args)
+    all_args = args.all.parse_args()
+    agent_args = args.agent.parse_known_args()
+    return all_args, agent_args
+
+
+def main():
+    args, agent_args = get_args()
     c.MAIN_ARGS = vars(args)  # For documenting runs
     if args.verbose:
         logs.set_level(logging.DEBUG)
@@ -138,9 +204,14 @@ def main():
         return
     elif args.server:
         from deepdrive_api import server
+        sim_args = None
         if c.UPLOAD_ARTIFACTS:
             log.info('Starting a public evaluation')
-        server.start(sim, get_sim_path(), c.IS_CHALLENGE)
+        if len(sys.argv) > 2:
+            # Sim will be configured on server side
+            sim_args = vars(args)
+        # TODO: Extract sim_args out of run_agent and reuse here
+        server.start(sim, get_sim_path(), sim_args=sim_args)
         return
     else:
         camera_rigs = get_camera_rigs(args)

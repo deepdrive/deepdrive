@@ -4,7 +4,7 @@
 
 # Usage:
 #  make server  # runs sim
-#  make run args="bin/domain_randomization_short_test.sh"  # run some agent
+#  make run args="bin/domain_randomization.sh"  # run some agent
 #
 # Build and output artifacts:
 # make artifacts
@@ -103,4 +103,4 @@ push:
 ### Tests
 
 public_domain_randomization:
-	$(DD_RUN) bin/domain_randomization_short_test.sh
+	$(DD_RUN) bin/domain_randomization.sh

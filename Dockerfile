@@ -32,6 +32,7 @@ RUN apt-get update; apt-get install -y \
         ffmpeg \
         git \
         vim \
+        wget \
       && cd /usr/local/bin \
       && ln -s /usr/bin/python3 python \
       && pip3 install --upgrade pip \
@@ -47,7 +48,8 @@ RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 # Ensure ue4 owns directories needed to run Deepdrive
 USER $user
 #RUN sudo chown -R $user:$user /home/$user
-WORKDIR /home/$user/src/deepdrive
+ENV DEEPDRIVE_SRC_DIR=/home/$user/src/deepdrive
+WORKDIR $DEEPDRIVE_SRC_DIR
 #RUN sudo chown -R $user:$user .
 #RUN sudo chmod -R 775 /home/$user
 
@@ -112,7 +114,7 @@ EXPOSE 5557/tcp
 
 COPY . .
 
-ENTRYPOINT ["/bin/bash", "docker/entrypoint.bash"]
+#ENTRYPOINT ["/bin/bash", "docker/entrypoint.bash"]
 CMD python main.py --server
 
 
