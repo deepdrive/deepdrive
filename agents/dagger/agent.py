@@ -11,6 +11,7 @@ import numpy as np
 from simple_pid import PID
 
 import config as c
+import config.runtime
 import sim
 from agents.common import get_throttle
 from agents.dagger import net
@@ -18,7 +19,9 @@ from agents.dagger.action_jitterer import ActionJitterer, JitterState
 from sim.driving_style import DrivingStyle
 from sim.action import Action
 from sim import world
-from agents.dagger.net import AlexNet, MobileNetV2, MOBILENET_V2_IMAGE_SHAPE
+from agents.dagger.net import AlexNet, MobileNetV2
+from config import MOBILENET_V2_IMAGE_SHAPE
+from sim.sim_args import SimArgs
 from util.download import download
 import logs
 
@@ -32,8 +35,8 @@ TARGET_MPS_TEST = 75 * TARGET_MPS
 class Agent(object):
     def __init__(self, tf_session, should_jitter_actions=True,
                  net_path=None, use_frozen_net=False, path_follower=False,
-                 output_last_hidden=False, net_name=net.ALEXNET_NAME,
-                 driving_style=DrivingStyle.NORMAL):
+                 output_last_hidden=False, net_name=config.runtime.ALEXNET_NAME,
+                 driving_style: DrivingStyle = DrivingStyle.NORMAL):
         np.random.seed(c.RNG_SEED)
         self.previous_action = None
         self.previous_net_out = None
@@ -55,10 +58,10 @@ class Agent(object):
         self.sess = tf_session
         self.use_frozen_net = use_frozen_net
         if net_path is not None:
-            if net_name == net.ALEXNET_NAME:
-                input_shape = net.ALEXNET_IMAGE_SHAPE
-            elif net_name == net.MOBILENET_V2_NAME:
-                input_shape = net.MOBILENET_V2_IMAGE_SHAPE
+            if net_name == config.runtime.ALEXNET_NAME:
+                input_shape = config.runtime.ALEXNET_IMAGE_SHAPE
+            elif net_name == config.runtime.MOBILENET_V2_NAME:
+                input_shape = config.runtime.MOBILENET_V2_IMAGE_SHAPE
             else:
                 raise NotImplementedError(net_name + ' not recognized')
             self.load_net(net_path, use_frozen_net, input_shape)
@@ -82,7 +85,8 @@ class Agent(object):
                 raise
 
         if self.should_jitter_actions:
-            episode_time = obz.get('score', {}).get('episode_time', None) if obz else None
+            episode_time = obz.get('score', {}).get('episode_time',
+                                                    None) if obz else None
             if episode_time is None or episode_time < 10:
                 # Hold off a bit at start of episode
                 action = Action(has_control=False)
@@ -281,7 +285,7 @@ class Agent(object):
             self.net = graph
 
         else:
-            if self.net_name == net.MOBILENET_V2_NAME:
+            if self.net_name == config.runtime.MOBILENET_V2_NAME:
                 self.net = MobileNetV2(is_training=False)
             else:
                 self.net = AlexNet(is_training=False)
@@ -315,30 +319,26 @@ class Agent(object):
         self.throttle_pid.auto_mode = False
 
 
-def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
-        should_benchmark=True, run_baseline_agent=False,
+def run(sim_args: SimArgs,
+        net_path=None,
+        run_baseline_agent=False,
         run_mnet2_baseline_agent=False,
-        run_ppo_baseline_agent=False, camera_rigs=None,
+        run_ppo_baseline_agent=False,
+        camera_rigs=None,
+        should_jitter_actions=False,
+        path_follower=False,
+        net_name=config.runtime.ALEXNET_NAME,
+        max_episodes=1000,
+        agent_name=None,
 
         # Placeholder for rotating between Unreal Editor and packaged game
-        should_rotate_sim_types=False,
-
-        should_jitter_actions=False, render=False,
-        path_follower=False, fps=c.DEFAULT_FPS, net_name=net.ALEXNET_NAME,
-        driving_style=DrivingStyle.NORMAL, is_sync=False, is_remote=False,
-        recording_dir=c.RECORDING_DIR, randomize_view_mode=False,
-        randomize_sun_speed=False, randomize_shadow_level=False,
-        randomize_month=False, enable_traffic=True,
-        view_mode_period=None, max_steps=None, max_episodes=1000,
-        agent_name=None, eval_only=False, upload_gist=False, public=False,
-        sim_step_time=c.DEFAULT_SIM_STEP_TIME):
+        should_rotate_sim_types=False, ):
     """
     Run inference for agents
     """
-    if should_record:
+    sim_args.max_episodes = max_episodes
+    if sim_args.should_record:
         path_follower = True
-        randomize_sun_speed = True
-        randomize_month = True
 
     if agent_name == c.DAGGER_MNET2:
         image_resize_dims = MOBILENET_V2_IMAGE_SHAPE
@@ -346,13 +346,17 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
         image_resize_dims = None
 
     agent, env, should_rotate_camera_rigs, start_env = \
-        setup(experiment, camera_rigs, driving_style, net_name, net_path,
-              path_follower, recording_dir, run_baseline_agent,
-              run_mnet2_baseline_agent,
-              run_ppo_baseline_agent, should_record, should_jitter_actions,
-              env_id, render, fps, should_benchmark, is_remote, is_sync,
-              enable_traffic, view_mode_period, max_steps, image_resize_dims,
-              eval_only, upload_gist, public, agent_name, sim_step_time)
+        setup(sim_args=sim_args,
+              camera_rigs=camera_rigs,
+              net_name=net_name,
+              net_path=net_path,
+              path_follower=path_follower,
+              run_baseline_agent=run_baseline_agent,
+              run_mnet2_baseline_agent=run_mnet2_baseline_agent,
+              run_ppo_baseline_agent=run_ppo_baseline_agent,
+              should_jitter_actions=should_jitter_actions,
+              image_resize_dims=image_resize_dims,
+              agent_name=agent_name)
 
     reward = 0
     episode_done = False
@@ -374,17 +378,20 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
                 obz = None
             if max_episodes is not None and episode >= (max_episodes - 1):
                 session_done = True
-            episode_done = run_episode(agent, env, episode_done, obz, reward)
+            episode_done, should_close = run_episode(
+                agent, env, episode_done, obz, reward)
+
             if session_done:
                 log.info('Session done')
+            elif should_close:
+                session_done = True
+                log.info('Server directed to close')
             else:
                 log.info('Episode done')
                 episode += 1
                 agent.reset()
                 if should_rotate_camera_rigs:
                     rotate_cameras(camera_rigs, env, episode)
-            domain_randomization(env, randomize_month, randomize_shadow_level,
-                                 randomize_sun_speed, randomize_view_mode)
 
     except KeyboardInterrupt:
         log.info('keyboard interrupt detected in agent, closing')
@@ -403,6 +410,7 @@ def rotate_cameras(camera_rigs, env, episode):
 
 
 def run_episode(agent, env, episode_done, obz, reward):
+    should_close = False
     while not episode_done:
         act_start = time.time()
         action, net_out = agent.act(obz, reward, episode_done)
@@ -410,37 +418,17 @@ def run_episode(agent, env, episode_done, obz, reward):
 
         env_step_start = time.time()
         obz, reward, episode_done, info = env.step(action)
+        if 'should_close' in info:
+            should_close = info['should_close']
         log.debug('env step took %fs', time.time() - env_step_start)
-    return episode_done
+    return episode_done, should_close
 
 
-def domain_randomization(env, randomize_month, randomize_shadow_level,
-                         randomize_sun_speed, randomize_view_mode):
-    """
-    Sim randomization modes to encourage generalization and sim2real transfer
-    """
-    if randomize_view_mode:
-        set_random_view_mode(env)
-    # if randomize_sun_speed:
-    #     world.randomize_sun_speed()
-    # if randomize_shadow_level:
-    #     graphics.randomize_shadow_level()
-    # if randomize_month:
-    #     world.randomize_sun_month()
-    pass
-
-
-def set_random_view_mode(env):
-    env.unwrapped.view_mode_controller.set_random()
-
-
-def setup(experiment, camera_rigs, driving_style, net_name, net_path,
-          path_follower, recording_dir, run_baseline_agent,
+def setup(sim_args, camera_rigs, net_name, net_path,
+          path_follower, run_baseline_agent,
           run_mnet2_baseline_agent,
-          run_ppo_baseline_agent, should_record, should_jitter_actions, env_id,
-          render, fps, should_benchmark, is_remote, is_sync,
-          enable_traffic, view_mode_period, max_steps, image_resize_dims,
-          eval_only, upload_gist, public, agent_name, sim_step_time):
+          run_ppo_baseline_agent, should_jitter_actions, image_resize_dims,
+          agent_name):
     if net_path and (run_baseline_agent or
                      run_mnet2_baseline_agent or
                      run_ppo_baseline_agent):
@@ -466,39 +454,35 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
         net_path = ensure_ppo_baseline_weights(net_path)
 
     sess = config_tensorflow_memory(net_name)
+
+    # TODO: Allow rotating and randomizing cameras rigs in env
     if camera_rigs:
         cameras = camera_rigs[0]
     else:
         cameras = None
-    if should_record and camera_rigs is not None and len(camera_rigs) >= 1:
+    if sim_args.should_record and camera_rigs is not None and \
+            len(camera_rigs) >= 1:
         should_rotate_camera_rigs = True
-        log.info('Rotating cameras while recording to encourage visual robustness')
+        log.info(
+            'Rotating cameras while recording to encourage visual robustness')
     else:
         should_rotate_camera_rigs = False
     if should_rotate_camera_rigs:
         randomize_cameras(cameras)
+
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
 
     def start_env():
-        return sim.start(experiment=experiment, env_id=env_id,
-                         should_benchmark=should_benchmark, cameras=cameras,
-                         use_sim_start_command=use_sim_start_command_first_lap,
-                         render=render, fps=fps, driving_style=driving_style,
-                         is_sync=is_sync, reset_returns_zero=False,
-                         is_remote_client=is_remote,
-                         enable_traffic=enable_traffic,
-                         view_mode_period=view_mode_period, max_steps=max_steps,
-                         should_record=should_record,
-                         recording_dir=recording_dir,
-                         image_resize_dims=image_resize_dims,
-                         should_normalize_image=True,
-                         eval_only=eval_only, upload_gist=upload_gist,
-                         public=public, sim_step_time=sim_step_time)
+        sim_args.cameras = cameras
+        sim_args.use_sim_start_command = use_sim_start_command_first_lap
+        sim_args.image_resize_dims = image_resize_dims
+        return sim.start(**(sim_args.to_dict()))
 
     env = start_env()
     agent = Agent(sess, should_jitter_actions=should_jitter_actions,
                   net_path=net_path, path_follower=path_follower,
-                  net_name=net_name, driving_style=driving_style)
+                  net_name=net_name,
+                  driving_style=DrivingStyle.from_str(sim_args.driving_style))
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
     return agent, env, should_rotate_camera_rigs, start_env
@@ -516,7 +500,7 @@ def config_tensorflow_memory(net_name):
     :return: Tensorflow Session object
     """
 
-    if net_name == net.ALEXNET_NAME:
+    if net_name == config.runtime.ALEXNET_NAME:
         per_process_gpu_memory_fraction = 0.8
     else:
         per_process_gpu_memory_fraction = 0.4
@@ -539,8 +523,10 @@ def okay_to_jitter_actions(obz):
         if dnext == -1.0 and dprev == -1.0:
             return True
         if dnext < (100 * 100) or dprev < (50 * 100):
-            log.info('Not okay to act randomly passing %r distance next %r distance prev %r',
-                     obz['is_passing'], obz['distance_to_next_agent'], obz['distance_to_prev_agent'])
+            log.info(
+                'Not okay to act randomly passing %r distance next %r distance prev %r',
+                obz['is_passing'], obz['distance_to_next_agent'],
+                obz['distance_to_prev_agent'])
             return False
         else:
             return True
@@ -585,7 +571,8 @@ def _ensure_baseline_weights(net_path, version, weights_dir, url):
 
 
 def ensure_alexnet_baseline_weights(net_path):
-    return _ensure_baseline_weights(net_path, c.ALEXNET_BASELINE_WEIGHTS_VERSION,
+    return _ensure_baseline_weights(net_path,
+                                    c.ALEXNET_BASELINE_WEIGHTS_VERSION,
                                     c.ALEXNET_BASELINE_WEIGHTS_DIR,
                                     c.ALEXNET_BASELINE_WEIGHTS_URL)
 

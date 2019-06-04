@@ -32,7 +32,7 @@ class Recorder(object):
     def __init__(self, recording_dir, should_record_agent_actions=True,
                  should_record=True, eval_only=False, should_upload_gist=False,
                  public=False, main_args=None):
-        self.save_threads = []  # type list
+        self.save_threads = []  # type: list
         self.record_agent_actions = should_record_agent_actions  # type: bool
         self.should_record = should_record  # type: bool
         self.hdf5_dir = c.HDF5_SESSION_DIR  # type: str

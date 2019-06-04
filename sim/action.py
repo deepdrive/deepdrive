@@ -25,7 +25,8 @@ class Action(object):
     BRAKE_MIN, BRAKE_MAX = 0, 1
     HANDBRAKE_MIN, HANDBRAKE_MAX = 0, 1
 
-    def __init__(self, steering=0, throttle=0, brake=0, handbrake=0, has_control=True):
+    def __init__(self, steering=0, throttle=0, brake=0, handbrake=0,
+                 has_control=True):
         self.steering = steering
         self.throttle = throttle
         self.brake = brake
@@ -39,8 +40,9 @@ class Action(object):
         self.handbrake = min(max(self.handbrake, self.HANDBRAKE_MIN), self.HANDBRAKE_MAX)
 
     def as_gym(self):
-        ret = gym_action(steering=self.steering, throttle=self.throttle, brake=self.brake,
-                         handbrake=self.handbrake, has_control=self.has_control)
+        ret = gym_action(steering=self.steering, throttle=self.throttle,
+                         brake=self.brake, handbrake=self.handbrake,
+                         has_control=self.has_control)
         return ret
 
     @classmethod

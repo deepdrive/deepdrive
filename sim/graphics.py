@@ -14,6 +14,7 @@ log = logs.get_log(__name__)
 
 SHADOW_RANGE = list(range(0, 5))
 
+
 def set_capture_graphics(shadow_level):
     """Set shadow quality to level where level is an int between 0 and 4
         Note: We can set texture level, ambient occlusion, etc... but it only affects

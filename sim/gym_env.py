@@ -41,7 +41,7 @@ import util.ensure_sim
 import util.run_command
 from recorder.Recorder import Recorder
 import utils
-from sim import world
+from sim import world, graphics
 from sim.action import Action, DiscreteActions
 from sim.graphics import set_capture_graphics
 from sim.reward_calculator import RewardCalculator
@@ -80,15 +80,7 @@ class DeepDriveEnv(gym.Env):
         self.start_time:float = time.time()
         self.step_num:int = 0
         self.prev_step_time:float = None
-        self.display_stats = OrderedDict()
-        self.display_stats['g-forces']                = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 3,    'units': 'g'}
-        self.display_stats['gforce penalty']          = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 0,    'units': ''}
-        self.display_stats['lane deviation penalty']  = {'total': 0, 'value': 0, 'ymin': -100,   'ymax': 0,    'units': ''}
-        self.display_stats['lap progress']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 100,  'units': '%'}
-        self.display_stats['speed reward']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5000, 'units': ''}
-        self.display_stats['episode #']               = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5,    'units': ''}
-        self.display_stats['time']                    = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 500,  'units': 's'}
-        self.display_stats['episode score']           = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 4000, 'units': ''}
+        self.display_stats: OrderedDict = self.init_display_stats()
         self.dashboard_process:Process = None
         self.dashboard_pub:DashboardPub = None
         self.should_exit:bool = False
@@ -122,6 +114,8 @@ class DeepDriveEnv(gym.Env):
         self.enable_traffic:bool = False
         self.ego_mph:float = None
         self.max_steps:int = None
+        self.max_episodes: int = None
+        self.should_close: bool = False
         self.recorder:Recorder = None
         self.image_resize_dims:np.ndarray = None
         self.should_normalize_image:bool = False
@@ -136,9 +130,9 @@ class DeepDriveEnv(gym.Env):
         # collision detection  # TODO: Remove in favor of in-game detection
         self.set_forward_progress()
 
-        self.distance_along_route = 0  # type: float
-        self.start_distance_along_route = None  # type: float
-        self.previous_distance_along_route = 0  # type: float
+        self.distance_along_route:float = 0
+        self.start_distance_along_route:float = None
+        self.previous_distance_along_route:float = 0
 
         # reward
         self.episode_score:EpisodeScore = EpisodeScore()
@@ -149,8 +143,13 @@ class DeepDriveEnv(gym.Env):
         self.prev_lap_score = 0
         self.total_laps = 0
 
-        # benchmarking - carries over across resets
-        self.should_benchmark = False
+        # domain randomization
+        self.randomize_sun_speed: bool = False
+        self.randomize_shadow_level: bool = False
+        self.randomize_month: bool = False
+
+        self.is_botleague: bool = False
+
         self.episode_scores:List[EpisodeScore] = []
 
         try:
@@ -173,6 +172,18 @@ class DeepDriveEnv(gym.Env):
             self.tensorboard_writer = tf.summary.FileWriter(c.TF_ENV_EVENT_DIR)
         else:
             self.tensorboard_writer = None
+
+    def init_display_stats(self) -> OrderedDict:
+        disp_stats = OrderedDict()
+        disp_stats['g-forces']                = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 3,    'units': 'g'}
+        disp_stats['gforce penalty']          = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 0,    'units': ''}
+        disp_stats['lane deviation penalty']  = {'total': 0, 'value': 0, 'ymin': -100,   'ymax': 0,    'units': ''}
+        disp_stats['lap progress']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 100,  'units': '%'}
+        disp_stats['speed reward']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5000, 'units': ''}
+        disp_stats['episode #']               = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5,    'units': ''}
+        disp_stats['time']                    = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 500,  'units': 's'}
+        disp_stats['episode score']           = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 4000, 'units': ''}
+        return disp_stats
 
     def open_sim(self):
         self._kill_competing_procs()
@@ -253,7 +264,6 @@ class DeepDriveEnv(gym.Env):
         self.use_sim_start_command = use_sim_start_command
 
     def init_benchmarking(self):
-        self.should_benchmark = True
         os.makedirs(c.RESULTS_DIR, exist_ok=True)
 
     def start_dashboard(self):
@@ -278,12 +288,9 @@ class DeepDriveEnv(gym.Env):
         self.sess = session
 
     def step(self, action):
-        if self.is_discrete:
-            steer, throttle, brake = self.discrete_actions.get_components(action)
-            dd_action = Action(steering=steer, throttle=throttle, brake=brake)
-        else:
-            dd_action = Action.from_gym(action)
-
+        if self.surpassed_max_episodes():
+            return None, 0, True, {'should_close': True}
+        dd_action = self.get_dd_action(action)
         send_control_start = time.time()
         self.send_control(dd_action)
         log.debug('send_control took %fs', time.time() - send_control_start)
@@ -298,23 +305,11 @@ class DeepDriveEnv(gym.Env):
 
         now = time.time()
 
-        start_reward_stuff = time.time()
-        reward, done = self.get_reward(obz, now)
+        done, reward = self.get_reward_timed(now, obz)
         self.prev_step_time = now
-
-        if self.dashboard_pub is not None:
-            start_dashboard_put = time.time()
-            self.dashboard_pub.put(OrderedDict(
-                {'display_stats': list(self.display_stats.items()),
-                 'should_stop': False}))
-            log.debug(
-                'dashboard put took %fs', time.time() - start_dashboard_put)
-
+        self.publish_to_dashboard()
         self.step_num += 1
-        log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
-
         info = self.init_step_info()
-
         if done:
             # For OpenAI baselines
             self.report_score(info)
@@ -324,13 +319,38 @@ class DeepDriveEnv(gym.Env):
 
         self.regulate_fps()
         self.view_mode_controller.step(self.client_id)
-
         obz = self.postprocess_obz(obz)
 
         if self.recorder is not None:
             self.recorder.step(obz, is_agent_action=dd_action.has_control)
 
         return obz, reward, done, info
+
+    def get_reward_timed(self, now, obz):
+        start_reward_stuff = time.time()
+        reward, done = self.get_reward(obz, now)
+        log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
+        return done, reward
+
+    def publish_to_dashboard(self):
+        if self.dashboard_pub is not None:
+            start_dashboard_put = time.time()
+            self.dashboard_pub.put(OrderedDict(
+                {'display_stats': list(self.display_stats.items()),
+                 'should_stop': False}))
+            log.debug(
+                'dashboard put took %fs', time.time() - start_dashboard_put)
+
+    def get_dd_action(self, action):
+        if self.is_discrete:
+            steer, throttle, brake = self.discrete_actions.get_components(
+                action)
+            dd_action = Action(steering=steer, throttle=throttle, brake=brake)
+        else:
+            dd_action = Action.from_gym(action)
+        if self.is_botleague and not dd_action.has_control:
+            raise RuntimeError('Cannot use built-in AI on Botleague')
+        return dd_action
 
     def init_step_info(self):
         """From https://gym.openai.com/docs/
@@ -355,10 +375,7 @@ class DeepDriveEnv(gym.Env):
         episode_info['reward'] = self.episode_score.total
         episode_info['length'] = self.step_num
         episode_info['time'] = self.episode_score.episode_time
-        if self.should_benchmark:
-            self.aggregate_scores()
-        else:
-            log.info('lap %d complete with score of %f', self.total_laps, self.episode_score.total)
+        self.aggregate_scores()
         if self.tensorboard_writer is not None:
             import tensorflow as tf
             summary = tf.Summary()
@@ -645,8 +662,7 @@ class DeepDriveEnv(gym.Env):
                          self.steps_crawling,
                          self.steps_crawling_with_throttle_on, time_crawling)
                 self.set_forward_progress()
-                if self.should_benchmark:
-                    self.episode_score.got_stuck = True
+                self.episode_score.got_stuck = True
                 ret = True
         else:
             log.debug('speed greater than 1m/s, not stuck')
@@ -796,6 +812,16 @@ class DeepDriveEnv(gym.Env):
         self.started_driving_wrong_way_time = None
         set_capture_graphics(shadow_level=0)
         self.view_mode_controller.reset()
+
+        # Create domain randomization controller for these
+
+        if self.randomize_sun_speed:
+            world.randomize_sun_speed()
+        if self.randomize_shadow_level:
+            graphics.randomize_shadow_level()
+        if self.randomize_month:
+            world.randomize_sun_month()
+
         log.info('Reset complete')
         if self.reset_returns_zero:
             # TODO: Always return zero after testing that everything
@@ -961,7 +987,12 @@ class DeepDriveEnv(gym.Env):
         return ret
 
     def reset_agent(self):
+        # if self.scenario:
+        #     world.configure(scenario)
+        # else:
+
         world.reset(enable_traffic=self.enable_traffic)
+
         if self.ego_mph is not None:
             world.set_ego_mph(self.ego_mph, self.ego_mph)
 
@@ -1289,5 +1320,12 @@ class DeepDriveEnv(gym.Env):
         avg = total / steps
         return avg
 
+    def surpassed_max_episodes(self) -> bool:
+        if self.max_episodes is not None and \
+                len(self.episode_scores) >= self.max_episodes:
+            log.info('Max episodes of %r reached.', self.max_episodes)
+            self.should_close = True
+            return True
+        return False
 
 

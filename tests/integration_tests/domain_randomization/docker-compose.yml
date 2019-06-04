@@ -8,4 +8,4 @@ services:
   agent:
     image: deepdriveio/deepdrive:3.0
     network_mode: "host"
-    command: bin/domain_randomization_short_test.sh
+    command: bin/domain_randomization.sh
