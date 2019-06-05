@@ -44,8 +44,8 @@ def start(**kwargs):
             'Received unexpected args in run: ' + str(unexpected_args))
     args.update(kwargs)
     if args.is_remote_client:
-        if not isinstance(args.driving_style, str):
-            args.driving_style = args.driving_style.name
+        if isinstance(args.driving_style, DrivingStyle):
+            args.driving_style = args.driving_style.as_string()
         args.client_main_args = c.MAIN_ARGS
         env = Client(**(args.to_dict()))
     else:
@@ -79,7 +79,7 @@ def start_local_env(args):
     :return: gym environment
     """
     if isinstance(args.driving_style, str):
-        args.driving_style = DrivingStyle.__members__[args.driving_style]
+        args.driving_style = DrivingStyle.from_str(args.driving_style)
     env = gym.make(args.env_id)
     env.seed(c.RNG_SEED)
     if args.experiment is None:

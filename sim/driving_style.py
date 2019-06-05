@@ -76,4 +76,9 @@ class DrivingStyle(Enum):
     CHASE      = RewardWeighting(speed=2.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
     STEER_ONLY = RewardWeighting(speed=1.0, progress=0.0, gforce=0.00, lane_deviation=0.00, total_time=0.0)
 
+    def as_string(self):
+        return self.name.lower()
 
+    @classmethod
+    def from_str(cls, name):
+        return cls[name.upper()]

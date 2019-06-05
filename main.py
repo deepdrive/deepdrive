@@ -147,7 +147,7 @@ def main():
         return
     else:
         camera_rigs = get_camera_rigs(args)
-        driving_style = DrivingStyle[args.driving_style.upper()]
+        driving_style = DrivingStyle.from_str(args.driving_style)
         if args.path_follower:
             run_path_follower(args, driving_style, camera_rigs)
         else:
