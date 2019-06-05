@@ -458,7 +458,8 @@ def setup(sim_args, camera_rigs, net_name, net_path,
         cameras = camera_rigs[0]
     else:
         cameras = None
-    if should_record and camera_rigs is not None and len(camera_rigs) >= 1:
+    if sim_args.should_record and camera_rigs is not None and \
+            len(camera_rigs) >= 1:
         should_rotate_camera_rigs = True
         log.info('Rotating cameras while recording to encourage visual robustness')
     else:
