@@ -214,9 +214,15 @@ def main():
         return
     elif args.server:
         from deepdrive_api import server
-        if c.UPLOAD_ARTIFACTS:
-            log.info('Starting a public evaluation')
-        server.start(sim, get_sim_path(), c.IS_CHALLENGE)
+        sim_args = None
+        if args.botleague:
+            log.info('Starting a botleague evaluation')
+        if len(sys.argv) > 2:
+            # More than just --server was passed,
+            # so sim will be configured purely on the server side,
+            # vs purely from the client.
+            sim_args = get_sim_args_from_command_args(args)
+        server.start(sim, get_sim_path(), sim_args=sim_args)
         return
     else:
         camera_rigs = get_camera_rigs(args)

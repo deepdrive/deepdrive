@@ -49,9 +49,7 @@ ARTIFACTS_VOLUMES:=$(LOG_VOL) $(RECORDINGS_VOL) $(RESULTS_VOL) $(TF_VOL) $(WEIGH
 MAKE_DIRS:=$(shell mkdir -p $(ARTIFACTS_DIRS))
 
 DOCKER_OPTS=$(ARTIFACTS_VOLUMES) --net=host --runtime=nvidia
-EVAL=--env DEEPDRIVE_UPLOAD_ARTIFACTS=true
 DD_RUN=docker run -it $(DOCKER_OPTS) $(TAG)
-DD_EVAL=docker run -it $(DOCKER_OPTS) $(EVAL) $(TAG)
 
 ARTIFACTS_FILE=$(RESULTS_DIR)/latest-artifacts.json
 SERVER=python main.py --server
@@ -77,9 +75,6 @@ rerun: build run
 
 server:
 	$(DD_RUN) $(SERVER)
-
-eval_server:
-	$(DD_EVAL) $(SERVER)
 
 artifacts: build server
 	find $(ARTIFACTS_FILE) 2> /dev/null
