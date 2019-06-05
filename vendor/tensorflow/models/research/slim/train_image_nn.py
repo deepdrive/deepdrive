@@ -31,8 +31,7 @@ from datetime import datetime
 
 import tensorflow as tf
 
-from agents.dagger.net import MOBILENET_V2_SLIM_NAME
-from config import TENSORFLOW_OUT_DIR, CONTROL_NAMES
+from config import TENSORFLOW_OUT_DIR, CONTROL_NAMES, MOBILENET_V2_SLIM_NAME
 from vendor.tensorflow.models.research.slim.datasets import dataset_factory
 from vendor.tensorflow.models.research.slim.deployment import model_deploy
 from vendor.tensorflow.models.research.slim.nets import nets_factory

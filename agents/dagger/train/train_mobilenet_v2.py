@@ -14,7 +14,7 @@ from multiprocessing import Process
 import config as c
 import util.download
 import utils
-from agents.dagger.net import MOBILENET_V2_SLIM_NAME
+from config import MOBILENET_V2_SLIM_NAME
 from agents.dagger.train import hdf5_to_tfrecord
 from install import check_tensorflow_gpu
 from vendor.tensorflow.models.research.slim.eval_image_nn import \

@@ -3,20 +3,13 @@ import tensorflow as tf
 from agents.dagger.layers import conv2d, max_pool_2x2, linear, lrn
 import config as c
 import logs
+from config import ALEXNET_NAME, ALEXNET_FC7, ALEXNET_IMAGE_SHAPE, \
+    MOBILENET_V2_SLIM_NAME, MOBILENET_V2_IMAGE_SHAPE
 from util.download import download, has_stuff
 from vendor.tensorflow.models.research.slim.nets import nets_factory
 from vendor.tensorflow.models.research.slim.preprocessing import preprocessing_factory
 
 log = logs.get_log(__name__)
-
-
-ALEXNET_NAME = 'AlexNet'
-ALEXNET_FC7 = 4096
-ALEXNET_IMAGE_SHAPE = (227, 227, 3)
-
-MOBILENET_V2_NAME = 'MobileNetV2'
-MOBILENET_V2_SLIM_NAME = 'mobilenet_v2_deepdrive'
-MOBILENET_V2_IMAGE_SHAPE = (224, 224, 3)
 
 # A module is understood as instrumented for quantization with TF-Lite
 # if it contains any of these ops.

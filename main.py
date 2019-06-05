@@ -14,7 +14,7 @@ import traceback
 # noinspection PyUnresolvedReferences
 import config.check_bindings
 
-from config import camera_config
+from config import camera_config, MOBILENET_V2_IMAGE_SHAPE
 import config as c
 from sim import DrivingStyle, SimArgs
 from util.ensure_sim import get_sim_path
@@ -268,9 +268,9 @@ def configure_net_args(args):
 
     from agents.dagger import net
     if args.net_type is None:
-        args.net_type = net.MOBILENET_V2_NAME
+        args.net_type = c.MOBILENET_V2_NAME
     if args.mnet2_baseline:
-        args.net_type = net.MOBILENET_V2_NAME
+        args.net_type = c.MOBILENET_V2_NAME
 
     if args.ppo_baseline and not args.agent:
         # args.agent / agent_name are use in training, but

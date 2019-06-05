@@ -34,8 +34,8 @@ TARGET_MPS_TEST = 75 * TARGET_MPS
 class Agent(object):
     def __init__(self, tf_session, should_jitter_actions=True,
                  net_path=None, use_frozen_net=False, path_follower=False,
-                 output_last_hidden=False, net_name=net.ALEXNET_NAME,
-                 driving_style=DrivingStyle.NORMAL):
+                 output_last_hidden=False, net_name=c.ALEXNET_NAME,
+                 driving_style: DrivingStyle = DrivingStyle.NORMAL):
         np.random.seed(c.RNG_SEED)
         self.previous_action = None
         self.previous_net_out = None
@@ -57,10 +57,10 @@ class Agent(object):
         self.sess = tf_session
         self.use_frozen_net = use_frozen_net
         if net_path is not None:
-            if net_name == net.ALEXNET_NAME:
-                input_shape = net.ALEXNET_IMAGE_SHAPE
-            elif net_name == net.MOBILENET_V2_NAME:
-                input_shape = net.MOBILENET_V2_IMAGE_SHAPE
+            if net_name == c.ALEXNET_NAME:
+                input_shape = c.ALEXNET_IMAGE_SHAPE
+            elif net_name == c.MOBILENET_V2_NAME:
+                input_shape = c.MOBILENET_V2_IMAGE_SHAPE
             else:
                 raise NotImplementedError(net_name + ' not recognized')
             self.load_net(net_path, use_frozen_net, input_shape)
@@ -283,7 +283,7 @@ class Agent(object):
             self.net = graph
 
         else:
-            if self.net_name == net.MOBILENET_V2_NAME:
+            if self.net_name == c.MOBILENET_V2_NAME:
                 self.net = MobileNetV2(is_training=False)
             else:
                 self.net = AlexNet(is_training=False)
@@ -495,7 +495,7 @@ def config_tensorflow_memory(net_name):
     :return: Tensorflow Session object
     """
 
-    if net_name == net.ALEXNET_NAME:
+    if net_name == c.ALEXNET_NAME:
         per_process_gpu_memory_fraction = 0.8
     else:
         per_process_gpu_memory_fraction = 0.4

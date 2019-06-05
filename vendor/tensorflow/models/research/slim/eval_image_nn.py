@@ -24,12 +24,10 @@ import os
 
 import tensorflow as tf
 
-from config import TENSORFLOW_OUT_DIR, CONTROL_NAMES
+from config import TENSORFLOW_OUT_DIR, CONTROL_NAMES, MOBILENET_V2_SLIM_NAME
 from vendor.tensorflow.models.research.slim.datasets import dataset_factory
 from vendor.tensorflow.models.research.slim.nets import nets_factory
 from vendor.tensorflow.models.research.slim.preprocessing import preprocessing_factory
-
-from agents.dagger.net import MOBILENET_V2_SLIM_NAME
 
 slim = tf.contrib.slim
 

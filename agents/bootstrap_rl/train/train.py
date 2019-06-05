@@ -12,7 +12,7 @@ import config as c
 import sim
 from agents.common import get_throttle
 from agents.dagger.agent import Agent
-from agents.dagger.net import MOBILENET_V2_NAME, MOBILENET_V2_IMAGE_SHAPE
+from config import MOBILENET_V2_NAME, MOBILENET_V2_IMAGE_SHAPE
 from sim.driving_style import DrivingStyle
 from sim.action import Action
 from util.experience_buffer import ExperienceBuffer
