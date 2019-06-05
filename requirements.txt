@@ -1,13 +1,13 @@
-scipy
+scipy==1.2.1
 numpy>=1.16.1
 h5py
 gym==0.10.0
 arrow
-matplotlib
+matplotlib==3.0.3
 pytest-xdist
 requests
 clint
-pillow
+Pillow==5.4.1
 boto
 future
 pyzmq
@@ -25,7 +25,7 @@ simple-pid
 requests
 python-box
 sarge
-deepdrive-api
+deepdrive-api==3.0.20190603042042
 ue4_ci_helpers
 
 # Install from Github, editable
