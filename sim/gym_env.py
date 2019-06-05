@@ -130,9 +130,9 @@ class DeepDriveEnv(gym.Env):
         # collision detection  # TODO: Remove in favor of in-game detection
         self.set_forward_progress()
 
-        self.distance_along_route = 0  # type: float
-        self.start_distance_along_route = None  # type: float
-        self.previous_distance_along_route = 0  # type: float
+        self.distance_along_route:float = 0
+        self.start_distance_along_route:float = None
+        self.previous_distance_along_route:float = 0
 
         # reward
         self.episode_score:EpisodeScore = EpisodeScore()
