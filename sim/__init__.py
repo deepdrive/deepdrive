@@ -84,6 +84,10 @@ def start_local_env(args:SimArgs):
     _env.image_resize_dims = args.image_resize_dims
     add_recorder(_env, args)
     _env.should_normalize_image = args.should_normalize_image
+    _env.randomize_sun_speed = args.randomize_sun_speed
+    _env.randomize_shadow_level = args.randomize_shadow_level
+    _env.randomize_month = args.randomize_month
+    _env.is_botleague = args.is_botleague
 
     connect_to_unreal(_env, args)
     _env.set_step_mode()

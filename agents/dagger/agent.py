@@ -390,8 +390,6 @@ def run(sim_args: SimArgs,
                 agent.reset()
                 if should_rotate_camera_rigs:
                     rotate_cameras(camera_rigs, env, episode)
-            domain_randomization(env, randomize_month, randomize_shadow_level,
-                                 randomize_sun_speed, randomize_view_mode)
 
     except KeyboardInterrupt:
         log.info('keyboard interrupt detected in agent, closing')
@@ -423,8 +421,6 @@ def run_episode(agent, env, episode_done, obz, reward):
         log.debug('env step took %fs', time.time() - env_step_start)
     return episode_done, should_close
 
-def set_random_view_mode(env):
-    env.unwrapped.view_mode_controller.set_random()
 
 def setup(sim_args, camera_rigs, net_name, net_path,
           path_follower, run_baseline_agent,
@@ -456,6 +452,8 @@ def setup(sim_args, camera_rigs, net_name, net_path,
         net_path = ensure_ppo_baseline_weights(net_path)
 
     sess = config_tensorflow_memory(net_name)
+
+    # TODO: Allow rotating and randomizing cameras rigs in env
     if camera_rigs:
         cameras = camera_rigs[0]
     else:

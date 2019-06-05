@@ -41,7 +41,7 @@ import util.ensure_sim
 import util.run_command
 from recorder.Recorder import Recorder
 import utils
-from sim import world
+from sim import world, graphics
 from sim.action import Action, DiscreteActions
 from sim.graphics import set_capture_graphics
 from sim.reward_calculator import RewardCalculator
@@ -816,6 +816,16 @@ class DeepDriveEnv(gym.Env):
         self.started_driving_wrong_way_time = None
         set_capture_graphics(shadow_level=0)
         self.view_mode_controller.reset()
+
+        # Create domain randomization controller for these
+
+        if self.randomize_sun_speed:
+            world.randomize_sun_speed()
+        if self.randomize_shadow_level:
+            graphics.randomize_shadow_level()
+        if self.randomize_month:
+            world.randomize_sun_month()
+
         log.info('Reset complete')
         if self.reset_returns_zero:
             # TODO: Always return zero after testing that everything
