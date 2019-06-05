@@ -114,6 +114,8 @@ class DeepDriveEnv(gym.Env):
         self.enable_traffic:bool = False
         self.ego_mph:float = None
         self.max_steps:int = None
+        self.max_episodes: int = None
+        self.should_close: bool = False
         self.recorder:Recorder = None
         self.image_resize_dims:np.ndarray = None
         self.should_normalize_image:bool = False
@@ -286,12 +288,9 @@ class DeepDriveEnv(gym.Env):
         self.sess = session
 
     def step(self, action):
-        if self.is_discrete:
-            steer, throttle, brake = self.discrete_actions.get_components(action)
-            dd_action = Action(steering=steer, throttle=throttle, brake=brake)
-        else:
-            dd_action = Action.from_gym(action)
-
+        if self.surpassed_max_episodes():
+            return None, 0, True, {'should_close': True}
+        dd_action = self.get_dd_action(action)
         send_control_start = time.time()
         self.send_control(dd_action)
         log.debug('send_control took %fs', time.time() - send_control_start)
@@ -1310,5 +1309,12 @@ class DeepDriveEnv(gym.Env):
         avg = total / steps
         return avg
 
+    def surpassed_max_episodes(self) -> bool:
+        if self.max_episodes is not None and \
+                len(self.episode_scores) >= self.max_episodes:
+            log.info('Max episodes of %r reached.', self.max_episodes)
+            self.should_close = True
+            return True
+        return False
 
 

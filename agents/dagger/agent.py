@@ -376,9 +376,14 @@ def run(sim_args: SimArgs,
                 obz = None
             if max_episodes is not None and episode >= (max_episodes - 1):
                 session_done = True
-            episode_done = run_episode(agent, env, episode_done, obz, reward)
+            episode_done, should_close = run_episode(
+                agent, env, episode_done, obz, reward)
+
             if session_done:
                 log.info('Session done')
+            elif should_close:
+                session_done = True
+                log.info('Server directed to close')
             else:
                 log.info('Episode done')
                 episode += 1
@@ -405,6 +410,7 @@ def rotate_cameras(camera_rigs, env, episode):
 
 
 def run_episode(agent, env, episode_done, obz, reward):
+    should_close = False
     while not episode_done:
         act_start = time.time()
         action, net_out = agent.act(obz, reward, episode_done)
@@ -412,25 +418,10 @@ def run_episode(agent, env, episode_done, obz, reward):
 
         env_step_start = time.time()
         obz, reward, episode_done, info = env.step(action)
+        if 'should_close' in info:
+            should_close = info['should_close']
         log.debug('env step took %fs', time.time() - env_step_start)
-    return episode_done
-
-
-def domain_randomization(env, randomize_month, randomize_shadow_level,
-                         randomize_sun_speed, randomize_view_mode):
-    """
-    Sim randomization modes to encourage generalization and sim2real transfer
-    """
-    if randomize_view_mode:
-        set_random_view_mode(env)
-    # if randomize_sun_speed:
-    #     world.randomize_sun_speed()
-    # if randomize_shadow_level:
-    #     graphics.randomize_shadow_level()
-    # if randomize_month:
-    #     world.randomize_sun_month()
-    pass
-
+    return episode_done, should_close
 
 def set_random_view_mode(env):
     env.unwrapped.view_mode_controller.set_random()

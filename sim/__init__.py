@@ -79,6 +79,7 @@ def start_local_env(args:SimArgs):
     _env.ego_mph = args.ego_mph
     _env.view_mode_controller = ViewModeController(period=args.view_mode_period)
     _env.max_steps = args.max_steps
+    _env.max_episodes = args.max_episodes
     _env.set_use_sim_start_command(args.use_sim_start_command)
     _env.image_resize_dims = args.image_resize_dims
     add_recorder(_env, args)
