@@ -9,9 +9,11 @@ from enum import Enum
 import logs
 log = logs.get_log(__name__)
 
+
 class RewardWeighting(object):
     def __init__(self, progress, gforce, lane_deviation, total_time, speed):
-        # Progress and time were used in DeepDrive-v0 (2.0) - keeping for now in case we want to use again
+        # Progress and time were used in DeepDrive-v0 (2.0) -
+        # keeping for now in case we want to use again
         self.progress_weight = progress
         self.gforce_weight = gforce
         self.lane_deviation_weight = lane_deviation

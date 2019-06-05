@@ -84,7 +84,8 @@ class Agent(object):
                 raise
 
         if self.should_jitter_actions:
-            episode_time = obz.get('score', {}).get('episode_time', None) if obz else None
+            episode_time = obz.get('score', {}).get('episode_time',
+                                                    None) if obz else None
             if episode_time is None or episode_time < 10:
                 # Hold off a bit at start of episode
                 action = Action(has_control=False)
@@ -461,11 +462,13 @@ def setup(sim_args, camera_rigs, net_name, net_path,
     if sim_args.should_record and camera_rigs is not None and \
             len(camera_rigs) >= 1:
         should_rotate_camera_rigs = True
-        log.info('Rotating cameras while recording to encourage visual robustness')
+        log.info(
+            'Rotating cameras while recording to encourage visual robustness')
     else:
         should_rotate_camera_rigs = False
     if should_rotate_camera_rigs:
         randomize_cameras(cameras)
+
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
 
     def start_env():
@@ -519,8 +522,10 @@ def okay_to_jitter_actions(obz):
         if dnext == -1.0 and dprev == -1.0:
             return True
         if dnext < (100 * 100) or dprev < (50 * 100):
-            log.info('Not okay to act randomly passing %r distance next %r distance prev %r',
-                     obz['is_passing'], obz['distance_to_next_agent'], obz['distance_to_prev_agent'])
+            log.info(
+                'Not okay to act randomly passing %r distance next %r distance prev %r',
+                obz['is_passing'], obz['distance_to_next_agent'],
+                obz['distance_to_prev_agent'])
             return False
         else:
             return True
@@ -565,7 +570,8 @@ def _ensure_baseline_weights(net_path, version, weights_dir, url):
 
 
 def ensure_alexnet_baseline_weights(net_path):
-    return _ensure_baseline_weights(net_path, c.ALEXNET_BASELINE_WEIGHTS_VERSION,
+    return _ensure_baseline_weights(net_path,
+                                    c.ALEXNET_BASELINE_WEIGHTS_VERSION,
                                     c.ALEXNET_BASELINE_WEIGHTS_DIR,
                                     c.ALEXNET_BASELINE_WEIGHTS_URL)
 

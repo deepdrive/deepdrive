@@ -309,10 +309,7 @@ class DeepDriveEnv(gym.Env):
         self.prev_step_time = now
         self.publish_to_dashboard()
         self.step_num += 1
-        log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
-
         info = self.init_step_info()
-
         if done:
             # For OpenAI baselines
             self.report_score(info)
@@ -322,7 +319,6 @@ class DeepDriveEnv(gym.Env):
 
         self.regulate_fps()
         self.view_mode_controller.step(self.client_id)
-
         obz = self.postprocess_obz(obz)
 
         if self.recorder is not None:
@@ -997,6 +993,7 @@ class DeepDriveEnv(gym.Env):
         # else:
 
         world.reset(enable_traffic=self.enable_traffic)
+
         if self.ego_mph is not None:
             world.set_ego_mph(self.ego_mph, self.ego_mph)
 

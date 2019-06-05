@@ -45,7 +45,8 @@ class Net(object):
 class MobileNetV2(Net):
     def __init__(self, *args, **kwargs):
         self.input_image_shape = MOBILENET_V2_IMAGE_SHAPE
-        self.image_preprocessing_fn = preprocessing_factory.get_preprocessing(MOBILENET_V2_SLIM_NAME, is_training=False)
+        self.image_preprocessing_fn = preprocessing_factory.get_preprocessing(
+            MOBILENET_V2_SLIM_NAME, is_training=False)
         super(MobileNetV2, self).__init__(*args, **kwargs)
         if self.is_training:
             if self.freeze_pretrained:
