@@ -17,7 +17,7 @@ import config.check_bindings
 
 from config import camera_config
 import config as c
-from sim.driving_style import DrivingStyle
+from sim import DrivingStyle, SimArgs
 from util.ensure_sim import get_sim_path
 import sim
 import logs
@@ -165,7 +165,7 @@ def run_tf_based_models(args, camera_rigs, driving_style):
         # call train_agent even for eval_only.
         train_agent(args, driving_style)
     else:
-        run_agent(args, camera_rigs, driving_style)
+        run_agent(args, camera_rigs)
 
 
 def get_camera_rigs(args):
@@ -206,7 +206,7 @@ def configure_net_args(args):
         args.agent = c.BOOTSTRAPPED_PPO2
 
 
-def run_agent(args, camera_rigs, driving_style):
+def run_agent(args, camera_rigs):
     """
     Here we run an agent alongside an open simulator and either just benchmark
     it's performance, as with agents trained offline (i.e. the current dagger
@@ -217,28 +217,45 @@ def run_agent(args, camera_rigs, driving_style):
     one rig used for the duration of an episode
     """
     from agents.dagger import agent
-    agent.run(args.experiment,
-              should_record=args.record, net_path=args.net_path,
-              env_id=args.env_id,
+    sim_args = get_sim_args_from_command_args(args)
+    agent.run(sim_args,
+              net_path=args.net_path,
               run_baseline_agent=args.baseline,
               run_mnet2_baseline_agent=args.mnet2_baseline,
-              run_ppo_baseline_agent=args.ppo_baseline, render=args.render,
+              run_ppo_baseline_agent=args.ppo_baseline,
               camera_rigs=camera_rigs,
-              should_jitter_actions=args.jitter_actions, fps=args.fps,
-              net_name=args.net_type, is_sync=args.sync,
-              driving_style=driving_style,
-              is_remote=args.remote, recording_dir=args.recording_dir,
-              randomize_view_mode=args.randomize_view_mode,
-              randomize_sun_speed=args.randomize_sun_speed,
-              randomize_shadow_level=args.randomize_shadow_level,
-              randomize_month=args.randomize_month,
-              enable_traffic=args.enable_traffic,
-              view_mode_period=args.view_mode_period,
-              max_steps=args.max_steps,
-              max_episodes=args.max_episodes, agent_name=args.agent,
-              eval_only=args.eval_only,
-              upload_gist=args.upload_gist, public=args.public,
-              sim_step_time=args.sim_step_time)
+              should_jitter_actions=args.jitter_actions,
+              net_name=args.net_type,
+              max_episodes=args.max_episodes,
+              agent_name=args.agent,)
+
+
+def get_sim_args_from_command_args(args):
+    sim_args = SimArgs(
+        experiment=args.experiment,
+        env_id=args.env_id,
+        should_record=args.record,
+        render=args.render,
+        # cameras will be set in agent
+        fps=args.fps,
+        is_sync=args.sync,
+        driving_style=args.driving_style,
+        is_remote_client=args.remote,
+        recording_dir=args.recording_dir,
+        enable_traffic=args.enable_traffic,
+        view_mode_period=args.view_mode_period,
+        max_steps=args.max_steps,
+        max_episodes=args.max_episodes,
+        eval_only=args.eval_only,
+        upload_gist=args.upload_gist, public=args.public,
+        sim_step_time=args.sim_step_time,
+        randomize_view_mode=args.randomize_view_mode,
+        randomize_sun_speed=args.randomize_sun_speed,
+        randomize_shadow_level=args.randomize_shadow_level,
+        randomize_month=args.randomize_month,
+        image_resize_dims=tuple(json.loads(args.image_resize_dims)),
+    )
+    return sim_args
 
 
 def run_path_follower(args, driving_style, camera_rigs):

@@ -15,6 +15,8 @@ from deepdrive_api.client import Client
 # noinspection PyUnresolvedReferences
 from sim.action import gym_action as action
 from sim.driving_style import DrivingStyle
+from sim import driving_style
+from sim.sim_args import SimArgs
 from sim.view_mode import ViewMode, ViewModeController
 from sim import world
 from recorder.Recorder import Recorder
@@ -37,12 +39,7 @@ def start(**kwargs):
     :param kwargs: Deepdrive gym env configuration
     :return: environment object that implements the gym API (i.e. step, reset, close, render)
     """
-    args = get_default_start_args()
-    unexpected_args = set(kwargs) - set(args)
-    if unexpected_args:
-        raise RuntimeError(
-            'Received unexpected args in run: ' + str(unexpected_args))
-    args.update(kwargs)
+    args = SimArgs(**kwargs)
     if args.is_remote_client:
         if isinstance(args.driving_style, DrivingStyle):
             args.driving_style = args.driving_style.as_string()
@@ -53,25 +50,7 @@ def start(**kwargs):
     return env
 
 
-def get_default_start_args():
-    return Box(experiment=None, env_id='Deepdrive-v0', sess=None,
-               start_dashboard=True,
-               should_benchmark=True, cameras=None, use_sim_start_command=False,
-               render=False,
-               fps=c.DEFAULT_FPS, combine_box_action_spaces=False,
-               is_discrete=False,
-               preprocess_with_tensorflow=False, is_sync=False,
-               driving_style=DrivingStyle.NORMAL,
-               reset_returns_zero=True, is_remote_client=False,
-               enable_traffic=False, ego_mph=None,
-               view_mode_period=None, max_steps=None, should_record=False,
-               recording_dir=c.RECORDING_DIR, image_resize_dims=None,
-               should_normalize_image=False,
-               eval_only=False, upload_gist=False, public=False,
-               client_main_args=None, sim_step_time=c.DEFAULT_SIM_STEP_TIME)
-
-
-def start_local_env(args):
+def start_local_env(args:SimArgs):
     """
     Acts as a constructor / factory for a local gym environment
     and starts the associated Unreal process
@@ -122,7 +101,7 @@ def start_local_env(args):
     return env
 
 
-def add_recorder(_env, args):
+def add_recorder(_env, args:SimArgs):
     if args.is_remote_client:
         main_args = args.client_main_args
     else:
@@ -132,7 +111,8 @@ def add_recorder(_env, args):
                              eval_only=args.eval_only,
                              should_upload_gist=args.upload_gist,
                              public=args.public,
-                             main_args=main_args)
+                             main_args=main_args,
+                             is_botleague=args.is_botleague)
 
 
 def monkey_patch_env_api(env):

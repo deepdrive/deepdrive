@@ -18,7 +18,9 @@ from agents.dagger.action_jitterer import ActionJitterer, JitterState
 from sim.driving_style import DrivingStyle
 from sim.action import Action
 from sim import world
-from agents.dagger.net import AlexNet, MobileNetV2, MOBILENET_V2_IMAGE_SHAPE
+from agents.dagger.net import AlexNet, MobileNetV2
+from config import MOBILENET_V2_IMAGE_SHAPE
+from sim.sim_args import SimArgs
 from util.download import download
 import logs
 
@@ -315,30 +317,26 @@ class Agent(object):
         self.throttle_pid.auto_mode = False
 
 
-def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
-        should_benchmark=True, run_baseline_agent=False,
+def run(sim_args: SimArgs,
+        net_path=None,
+        run_baseline_agent=False,
         run_mnet2_baseline_agent=False,
-        run_ppo_baseline_agent=False, camera_rigs=None,
+        run_ppo_baseline_agent=False,
+        camera_rigs=None,
+        should_jitter_actions=False,
+        path_follower=False,
+        net_name=c.ALEXNET_NAME,
+        max_episodes=1000,
+        agent_name=None,
 
         # Placeholder for rotating between Unreal Editor and packaged game
-        should_rotate_sim_types=False,
-
-        should_jitter_actions=False, render=False,
-        path_follower=False, fps=c.DEFAULT_FPS, net_name=net.ALEXNET_NAME,
-        driving_style=DrivingStyle.NORMAL, is_sync=False, is_remote=False,
-        recording_dir=c.RECORDING_DIR, randomize_view_mode=False,
-        randomize_sun_speed=False, randomize_shadow_level=False,
-        randomize_month=False, enable_traffic=True,
-        view_mode_period=None, max_steps=None, max_episodes=1000,
-        agent_name=None, eval_only=False, upload_gist=False, public=False,
-        sim_step_time=c.DEFAULT_SIM_STEP_TIME):
+        should_rotate_sim_types=False, ):
     """
     Run inference for agents
     """
-    if should_record:
+    sim_args.max_episodes = max_episodes
+    if sim_args.should_record:
         path_follower = True
-        randomize_sun_speed = True
-        randomize_month = True
 
     if agent_name == c.DAGGER_MNET2:
         image_resize_dims = MOBILENET_V2_IMAGE_SHAPE
@@ -346,13 +344,17 @@ def run(experiment, env_id='Deepdrive-v0', should_record=False, net_path=None,
         image_resize_dims = None
 
     agent, env, should_rotate_camera_rigs, start_env = \
-        setup(experiment, camera_rigs, driving_style, net_name, net_path,
-              path_follower, recording_dir, run_baseline_agent,
-              run_mnet2_baseline_agent,
-              run_ppo_baseline_agent, should_record, should_jitter_actions,
-              env_id, render, fps, should_benchmark, is_remote, is_sync,
-              enable_traffic, view_mode_period, max_steps, image_resize_dims,
-              eval_only, upload_gist, public, agent_name, sim_step_time)
+        setup(sim_args=sim_args,
+              camera_rigs=camera_rigs,
+              net_name=net_name,
+              net_path=net_path,
+              path_follower=path_follower,
+              run_baseline_agent=run_baseline_agent,
+              run_mnet2_baseline_agent=run_mnet2_baseline_agent,
+              run_ppo_baseline_agent=run_ppo_baseline_agent,
+              should_jitter_actions=should_jitter_actions,
+              image_resize_dims=image_resize_dims,
+              agent_name=agent_name)
 
     reward = 0
     episode_done = False
@@ -433,14 +435,11 @@ def domain_randomization(env, randomize_month, randomize_shadow_level,
 def set_random_view_mode(env):
     env.unwrapped.view_mode_controller.set_random()
 
-
-def setup(experiment, camera_rigs, driving_style, net_name, net_path,
-          path_follower, recording_dir, run_baseline_agent,
+def setup(sim_args, camera_rigs, net_name, net_path,
+          path_follower, run_baseline_agent,
           run_mnet2_baseline_agent,
-          run_ppo_baseline_agent, should_record, should_jitter_actions, env_id,
-          render, fps, should_benchmark, is_remote, is_sync,
-          enable_traffic, view_mode_period, max_steps, image_resize_dims,
-          eval_only, upload_gist, public, agent_name, sim_step_time):
+          run_ppo_baseline_agent, should_jitter_actions, image_resize_dims,
+          agent_name):
     if net_path and (run_baseline_agent or
                      run_mnet2_baseline_agent or
                      run_ppo_baseline_agent):
@@ -480,25 +479,16 @@ def setup(experiment, camera_rigs, driving_style, net_name, net_path,
     use_sim_start_command_first_lap = c.SIM_START_COMMAND is not None
 
     def start_env():
-        return sim.start(experiment=experiment, env_id=env_id,
-                         should_benchmark=should_benchmark, cameras=cameras,
-                         use_sim_start_command=use_sim_start_command_first_lap,
-                         render=render, fps=fps, driving_style=driving_style,
-                         is_sync=is_sync, reset_returns_zero=False,
-                         is_remote_client=is_remote,
-                         enable_traffic=enable_traffic,
-                         view_mode_period=view_mode_period, max_steps=max_steps,
-                         should_record=should_record,
-                         recording_dir=recording_dir,
-                         image_resize_dims=image_resize_dims,
-                         should_normalize_image=True,
-                         eval_only=eval_only, upload_gist=upload_gist,
-                         public=public, sim_step_time=sim_step_time)
+        sim_args.cameras = cameras
+        sim_args.use_sim_start_command = use_sim_start_command_first_lap
+        sim_args.image_resize_dims = image_resize_dims
+        return sim.start(**(sim_args.to_dict()))
 
     env = start_env()
     agent = Agent(sess, should_jitter_actions=should_jitter_actions,
                   net_path=net_path, path_follower=path_follower,
-                  net_name=net_name, driving_style=driving_style)
+                  net_name=net_name,
+                  driving_style=DrivingStyle.from_str(sim_args.driving_style))
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
     return agent, env, should_rotate_camera_rigs, start_env
