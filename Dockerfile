@@ -48,7 +48,8 @@ RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 # Ensure ue4 owns directories needed to run Deepdrive
 USER $user
 #RUN sudo chown -R $user:$user /home/$user
-WORKDIR /home/$user/src/deepdrive
+ENV DEEPDRIVE_SRC_DIR=/home/$user/src/deepdrive
+WORKDIR $DEEPDRIVE_SRC_DIR
 #RUN sudo chown -R $user:$user .
 #RUN sudo chmod -R 775 /home/$user
 
