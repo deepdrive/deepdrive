@@ -200,7 +200,7 @@ def main():
         logs.set_level(logging.DEBUG)
 
     if args.public:
-        if 'DEEPDRIVE_PUBLIC' not in os.environ:
+        if not c.PUBLIC:
             answer = input('Please confirm you want to make the results '
                            'of this evaluation public? ')
             args.public = answer.lower() in ['y', 'yes']
