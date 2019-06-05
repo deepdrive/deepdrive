@@ -80,15 +80,7 @@ class DeepDriveEnv(gym.Env):
         self.start_time:float = time.time()
         self.step_num:int = 0
         self.prev_step_time:float = None
-        self.display_stats = OrderedDict()
-        self.display_stats['g-forces']                = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 3,    'units': 'g'}
-        self.display_stats['gforce penalty']          = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 0,    'units': ''}
-        self.display_stats['lane deviation penalty']  = {'total': 0, 'value': 0, 'ymin': -100,   'ymax': 0,    'units': ''}
-        self.display_stats['lap progress']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 100,  'units': '%'}
-        self.display_stats['speed reward']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5000, 'units': ''}
-        self.display_stats['episode #']               = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5,    'units': ''}
-        self.display_stats['time']                    = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 500,  'units': 's'}
-        self.display_stats['episode score']           = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 4000, 'units': ''}
+        self.display_stats: OrderedDict = self.init_display_stats()
         self.dashboard_process:Process = None
         self.dashboard_pub:DashboardPub = None
         self.should_exit:bool = False
@@ -178,6 +170,18 @@ class DeepDriveEnv(gym.Env):
             self.tensorboard_writer = tf.summary.FileWriter(c.TF_ENV_EVENT_DIR)
         else:
             self.tensorboard_writer = None
+
+    def init_display_stats(self) -> OrderedDict:
+        disp_stats = OrderedDict()
+        disp_stats['g-forces']                = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 3,    'units': 'g'}
+        disp_stats['gforce penalty']          = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 0,    'units': ''}
+        disp_stats['lane deviation penalty']  = {'total': 0, 'value': 0, 'ymin': -100,   'ymax': 0,    'units': ''}
+        disp_stats['lap progress']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 100,  'units': '%'}
+        disp_stats['speed reward']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5000, 'units': ''}
+        disp_stats['episode #']               = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5,    'units': ''}
+        disp_stats['time']                    = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 500,  'units': 's'}
+        disp_stats['episode score']           = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 4000, 'units': ''}
+        return disp_stats
 
     def open_sim(self):
         self._kill_competing_procs()
