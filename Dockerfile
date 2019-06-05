@@ -114,7 +114,7 @@ EXPOSE 5557/tcp
 
 COPY . .
 
-ENTRYPOINT ["/bin/bash", "docker/entrypoint.bash"]
+#ENTRYPOINT ["/bin/bash", "docker/entrypoint.bash"]
 CMD python main.py --server
 
 
