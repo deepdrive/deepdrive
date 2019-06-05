@@ -32,6 +32,7 @@ RUN apt-get update; apt-get install -y \
         ffmpeg \
         git \
         vim \
+        wget \
       && cd /usr/local/bin \
       && ln -s /usr/bin/python3 python \
       && pip3 install --upgrade pip \
