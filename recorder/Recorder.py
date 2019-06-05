@@ -23,7 +23,7 @@ TEST_SAVE_IMAGE = False
 
 class Recorder(object):
     """
-    Responsible for all artifact creation and uploading, including:
+    Responsible for artifact creation and uploading, including:
     * HDF5's (Optionally saved to S3)
     * Results csv files (Uploaded to Gist)
     * MP4's (Uploaded to YouTube)
