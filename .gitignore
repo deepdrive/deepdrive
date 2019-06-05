@@ -194,3 +194,6 @@ Pipfile.lock
 
 # JetBrains / PyCharm
 .idea
+
+# Local python-gist
+src/python-gist
