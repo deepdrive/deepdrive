@@ -253,7 +253,6 @@ class DeepDriveEnv(gym.Env):
         self.use_sim_start_command = use_sim_start_command
 
     def init_benchmarking(self):
-        self.should_benchmark = True
         os.makedirs(c.RESULTS_DIR, exist_ok=True)
 
     def start_dashboard(self):
@@ -355,10 +354,7 @@ class DeepDriveEnv(gym.Env):
         episode_info['reward'] = self.episode_score.total
         episode_info['length'] = self.step_num
         episode_info['time'] = self.episode_score.episode_time
-        if self.should_benchmark:
-            self.aggregate_scores()
-        else:
-            log.info('lap %d complete with score of %f', self.total_laps, self.episode_score.total)
+        self.aggregate_scores()
         if self.tensorboard_writer is not None:
             import tensorflow as tf
             summary = tf.Summary()
@@ -645,8 +641,7 @@ class DeepDriveEnv(gym.Env):
                          self.steps_crawling,
                          self.steps_crawling_with_throttle_on, time_crawling)
                 self.set_forward_progress()
-                if self.should_benchmark:
-                    self.episode_score.got_stuck = True
+                self.episode_score.got_stuck = True
                 ret = True
         else:
             log.debug('speed greater than 1m/s, not stuck')

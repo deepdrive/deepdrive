@@ -113,9 +113,8 @@ def start_local_env(args):
         _env.set_tf_session(args.sess)
     if args.start_dashboard:
         _env.start_dashboard()
-    if args.should_benchmark:
-        log.info('Benchmarking enabled - will save results to %s', c.RESULTS_DIR)
-        _env.init_benchmarking()
+    log.info('Will save results to %s', c.RESULTS_DIR)
+    _env.init_benchmarking()
 
     monkey_patch_env_api(env)
 
