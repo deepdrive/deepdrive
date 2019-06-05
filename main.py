@@ -209,6 +209,7 @@ def run_agent(args, camera_rigs, driving_style):
     it's performance, as with agents trained offline (i.e. the current dagger
     mnet and alexnet agents), or train an online agent (i.e. the PP02 agent).
 
+    :param args Command line args that configure agent and sim
     :param camera_rigs: A collection of camera configs to cycle through, with
     one rig used for the duration of an episode
     """
