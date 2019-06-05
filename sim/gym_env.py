@@ -149,8 +149,13 @@ class DeepDriveEnv(gym.Env):
         self.prev_lap_score = 0
         self.total_laps = 0
 
-        # benchmarking - carries over across resets
-        self.should_benchmark = False
+        # domain randomization
+        self.randomize_sun_speed: bool = False
+        self.randomize_shadow_level: bool = False
+        self.randomize_month: bool = False
+
+        self.is_botleague: bool = False
+
         self.episode_scores:List[EpisodeScore] = []
 
         try:
@@ -297,18 +302,9 @@ class DeepDriveEnv(gym.Env):
 
         now = time.time()
 
-        start_reward_stuff = time.time()
-        reward, done = self.get_reward(obz, now)
+        done, reward = self.get_reward_timed(now, obz)
         self.prev_step_time = now
-
-        if self.dashboard_pub is not None:
-            start_dashboard_put = time.time()
-            self.dashboard_pub.put(OrderedDict(
-                {'display_stats': list(self.display_stats.items()),
-                 'should_stop': False}))
-            log.debug(
-                'dashboard put took %fs', time.time() - start_dashboard_put)
-
+        self.publish_to_dashboard()
         self.step_num += 1
         log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
 
@@ -330,6 +326,32 @@ class DeepDriveEnv(gym.Env):
             self.recorder.step(obz, is_agent_action=dd_action.has_control)
 
         return obz, reward, done, info
+
+    def get_reward_timed(self, now, obz):
+        start_reward_stuff = time.time()
+        reward, done = self.get_reward(obz, now)
+        log.debug('reward stuff took %fs', time.time() - start_reward_stuff)
+        return done, reward
+
+    def publish_to_dashboard(self):
+        if self.dashboard_pub is not None:
+            start_dashboard_put = time.time()
+            self.dashboard_pub.put(OrderedDict(
+                {'display_stats': list(self.display_stats.items()),
+                 'should_stop': False}))
+            log.debug(
+                'dashboard put took %fs', time.time() - start_dashboard_put)
+
+    def get_dd_action(self, action):
+        if self.is_discrete:
+            steer, throttle, brake = self.discrete_actions.get_components(
+                action)
+            dd_action = Action(steering=steer, throttle=throttle, brake=brake)
+        else:
+            dd_action = Action.from_gym(action)
+        if self.is_botleague and not dd_action.has_control:
+            raise RuntimeError('Cannot use built-in AI on Botleague')
+        return dd_action
 
     def init_step_info(self):
         """From https://gym.openai.com/docs/

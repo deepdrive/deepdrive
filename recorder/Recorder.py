@@ -31,21 +31,22 @@ class Recorder(object):
 
     def __init__(self, recording_dir, should_record_agent_actions=True,
                  should_record=True, eval_only=False, should_upload_gist=False,
-                 public=False, main_args=None):
-        self.save_threads = []  # type list
-        self.record_agent_actions = should_record_agent_actions  # type: bool
-        self.should_record = should_record  # type: bool
-        self.hdf5_dir = c.HDF5_SESSION_DIR  # type: str
-        self.obz_recording = []  # type: list
-        self.skipped_first_agent_action = False  # type: bool
-        self.was_agent_action = True  # type: bool
-        self.recorded_obz_count = 0  # type: int
-        self.num_saved_observations = 0  # type: int
-        self.recording_dir = recording_dir  # type: str
-        self.eval_only = eval_only  # type: bool
-        self.should_upload_gist = should_upload_gist  # type: bool
-        self.public = public  # type: bool
-        self.main_args = main_args  # type: dict
+                 public=False, main_args=None, is_botleague=False):
+        self.save_threads:list = []
+        self.record_agent_actions:bool = should_record_agent_actions
+        self.should_record:bool = should_record
+        self.hdf5_dir:str = c.HDF5_SESSION_DIR
+        self.obz_recording:list = []
+        self.skipped_first_agent_action:bool = False
+        self.was_agent_action:bool = True
+        self.recorded_obz_count:int = 0
+        self.num_saved_observations:int = 0
+        self.recording_dir:str = recording_dir
+        self.eval_only:bool = eval_only
+        self.should_upload_gist:bool = should_upload_gist
+        self.public:bool = public
+        self.main_args:dict = main_args
+        self.is_botleague:bool = is_botleague
         if self.should_record:
             log.info('Recording driving data to %s', self.hdf5_dir)
 
@@ -97,7 +98,7 @@ class Recorder(object):
                 save_thread.join()
             mp4_file = utils.hdf5_to_mp4()
             local_public_run = self.should_upload_gist and self.public
-            server_public_run = c.UPLOAD_ARTIFACTS
+            server_public_run = self.is_botleague
             public_run = local_public_run or server_public_run
 
             if public_run:
@@ -118,12 +119,7 @@ class Recorder(object):
                 summary_file=c.SUMMARY_CSV_FILENAME,
                 mp4_file=mp4_file)
 
-            if not c.UPLOAD_ARTIFACTS:
-                log.info('DEEPDRIVE_UPLOAD_ARTIFACTS not in environment, not '
-                         'uploading.')
-            else:
-                # uploaded = self.upload_artifacts(mp4_file, hdf5_observations)
-                # youtube_id, mp4_url, hdf5_urls = uploaded
+            if self.is_botleague:
                 create_botleague_results(total_score, episode_scores, gist_url,
                                          hdf5_observations,
                                          mp4_file,
