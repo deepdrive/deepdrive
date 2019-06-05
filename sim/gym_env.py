@@ -991,6 +991,11 @@ class DeepDriveEnv(gym.Env):
         return ret
 
     def reset_agent(self):
+        # TODO: Scenario config here:
+        # if self.scenario:
+        #     world.configure(scenario)
+        # else:
+
         world.reset(enable_traffic=self.enable_traffic)
         if self.ego_mph is not None:
             world.set_ego_mph(self.ego_mph, self.ego_mph)
