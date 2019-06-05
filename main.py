@@ -240,7 +240,8 @@ def run_tf_based_models(args, camera_rigs, driving_style):
                            'trained tensorflow agents')
     configure_net_args(args)
     if args.train or args.agent == c.BOOTSTRAPPED_PPO2:
-        # Training and running are more tightly linked in RL, so we
+        # Training and running are more coupled in RL in our
+        # implementation (and generally), so we
         # call train_agent even for eval_only.
         train_agent(args, driving_style)
     else:
