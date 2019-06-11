@@ -20,9 +20,19 @@ from vendor.openai.baselines.ppo2.run_deepdrive import train
 
 
 class BootstrapRLGymEnv(gym.Wrapper):
-    """Bootstrap is probably a bad name here due to its overloaded use in RL where bootstrapping historically refers
-    to learning with value based or TDD methods."""
-    def __init__(self, env, dagger_agent, driving_style=DrivingStyle.NORMAL):
+    """
+    Bootstrap is probably a bad name here due to its overloaded use in RL
+    where bootstrapping historically refers to learning with value based or
+    TDD methods.
+    """
+    def __init__(self, env, dagger_agent, driving_style=DrivingStyle.STEER_ONLY):
+        """
+        Normalize the brake and
+        handbrake space to be between -1 and 1 so
+        that all actions have the same dimension -
+        Then create a single box space. The is_game_driving space
+        can be ignored for now within the ppo agent.
+        """
         super(BootstrapRLGymEnv, self).__init__(env)
         self.dagger_agent = dagger_agent
         self.driving_style = driving_style
