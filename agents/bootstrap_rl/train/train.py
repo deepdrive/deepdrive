@@ -34,6 +34,10 @@ class BootstrapRLGymEnv(gym.Wrapper):
         can be ignored for now within the ppo agent.
         """
         super(BootstrapRLGymEnv, self).__init__(env)
+
+        self.denormalizers = None
+        self.combine_action_spaces()
+
         self.dagger_agent = dagger_agent
         self.driving_style = driving_style
         self.previous_obz = None
@@ -69,11 +73,20 @@ class BootstrapRLGymEnv(gym.Wrapper):
                                             dtype=np.float32)
 
     def step(self, action):
+
+        # Denormalize the action into the original high and low for the space
+        action = [[denorm(action[i])] for i, denorm in
+                  enumerate(self.denormalizers)]
+
         if self.driving_style == DrivingStyle.STEER_ONLY and self.previous_obz is not None:
             # Simplifying by only controlling steering. Otherwise, we need to shape rewards so that initial acceleration
             # is not disincentivized by gforce penalty.
-            action[Action.THROTTLE_INDEX] = get_throttle(actual_speed=self.previous_obz['speed'],
-                                                         target_speed=(8 * 100))
+            action[Action.THROTTLE_INDEX] = [get_throttle(
+                actual_speed=self.previous_obz['speed'],
+                target_speed=(8 * 100))]
+            action[Action.BRAKE_INDEX] = [0]
+            action[Action.HANDBRAKE_INDEX] = [0]
+
         obz, reward, done, info = self.env.step(action)
         if 'score' in info and 'episode_time' in info['score']:
             self.experience_buffer.maybe_add(obz, info['score']['episode_time'])
@@ -90,6 +103,36 @@ class BootstrapRLGymEnv(gym.Wrapper):
 
     def reset(self):
         return self.env.reset()
+
+    def combine_action_spaces(self):
+        """
+        Normalize the brake and handbrake space to be between -1 and 1 so
+        that all actions have the same dimension -
+        Then create a single box space. The is_game_driving space
+        can be ignored for now within the ppo agent.
+        """
+        ac_space = self.action_space
+        if isinstance(ac_space, gym.spaces.Tuple):
+            self.denormalizers = []
+            box_spaces = [s for s in ac_space.spaces if
+                          isinstance(s, gym.spaces.Box)]
+            total_dims = 0
+            for i, space in enumerate(box_spaces):
+                if len(space.shape) > 1 or space.shape[0] > 1:
+                    raise NotImplementedError(
+                        'Multi-dimensional box spaces not yet supported - need to flatten / separate')
+                else:
+                    total_dims += 1
+                self.denormalizers.append(
+                    self.get_denormalizer(space.high[0], space.low[0]))
+            self.action_space = gym.spaces.Box(-1, 1, shape=(total_dims,))
+
+    @staticmethod
+    def get_denormalizer(high, low):
+        def denormalizer(x):
+            ret = (x + 1) * (high - low) / 2 + low
+            return ret
+        return denormalizer
 
 
 def run(env_id, bootstrap_net_path,
@@ -115,7 +158,7 @@ def run(env_id, bootstrap_net_path,
         with sess_1.as_default():
             dagger_gym_env = sim.start(
                 experiment=experiment, env_id=env_id, cameras=camera_rigs,
-                render=render, fps=fps, combine_box_action_spaces=True,
+                render=render, fps=fps,
                 is_sync=is_sync, driving_style=driving_style,
                 is_remote_client=is_remote_client, should_record=should_record,
                 image_resize_dims=MOBILENET_V2_IMAGE_SHAPE,

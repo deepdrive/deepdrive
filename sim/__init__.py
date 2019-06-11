@@ -20,7 +20,6 @@ from sim.sim_args import SimArgs
 from sim.view_mode import ViewMode, ViewModeController
 from sim import world
 from recorder.Recorder import Recorder
-from vendor.openai.baselines.common.continuous_action_wrapper import CombineBoxSpaceWrapper
 
 log = logs.get_log(__name__)
 
@@ -91,8 +90,6 @@ def start_local_env(args:SimArgs):
 
     connect_to_unreal(_env, args)
     _env.set_step_mode()
-    if args.combine_box_action_spaces:
-        env = CombineBoxSpaceWrapper(env)
     if args.sess:
         _env.set_tf_session(args.sess)
     if args.start_dashboard:
