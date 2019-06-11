@@ -119,7 +119,7 @@ DEFAULT_CAM = dict(
     relative_rotation=[0.0, 0.0, 0.0])
 
 DEFAULT_FPS = 8
-DEFAULT_SIM_STEP_TIME = 1 / (2 * DEFAULT_FPS)
+DEFAULT_SIM_STEP_TIME = 1 / DEFAULT_FPS
 
 try:
     import tensorflow
