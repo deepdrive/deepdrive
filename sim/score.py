@@ -30,6 +30,8 @@ class EpisodeScore(object):
     num_steps: int = 0
     cm_along_route: float = 0
     route_length_cm: float = 0
+    collided_with_actor: bool = False
+    collided_with_non_actor: bool = False
 
     def __init__(self):
         self.start_time = time.time()
@@ -59,6 +61,8 @@ class TotalScore(object):
     max_kph: float = 0
     avg_kph: float = 0
     trip_speed_kph: float = 0
+    collided_with_actor: bool = False
+    collided_with_non_actor: bool = False
 
     def update(self, episode_scores:List[EpisodeScore]):
         totals = [e.total for e in episode_scores]
@@ -75,6 +79,10 @@ class TotalScore(object):
         trip_cm_per_second = float(np.mean(
             [e.cm_along_route / e.episode_time for e in episode_scores]))
         self.trip_speed_kph = trip_cm_per_second * c.CMPS_TO_KPH
+        self.collided_with_actor = any(e.collided_with_actor for e in
+                                       episode_scores)
+        self.collided_with_non_actor = any(e.collided_with_non_actor for e
+                                           in episode_scores)
 
 
 def main():

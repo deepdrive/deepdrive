@@ -488,6 +488,13 @@ class DeepDriveEnv(gym.Env):
 
             self.episode_score.cm_per_second_sampler.sample(obz['speed'])
             self.episode_score.total += reward + lap_bonus
+
+            last_collision = obz['last_collision']
+            if last_collision['collidee_velocity'].any():
+                self.episode_score.collided_with_actor = True
+            elif last_collision['time_stamp']:
+                self.episode_score.collided_with_non_actor = True
+
             self.display_stats['time']['value'] = self.episode_score.episode_time
             self.display_stats['time']['total'] = self.episode_score.episode_time
             self.display_stats['episode score']['value'] = self.episode_score.total

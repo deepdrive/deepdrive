@@ -246,6 +246,13 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
     ret.driving_specific.max_kph = total_score.max_kph
     ret.driving_specific.trip_speed_kph = total_score.trip_speed_kph
 
+    ret.driving_specific.collided_with_actor = total_score.collided_with_actor
+    ret.driving_specific.collided_with_non_actor = \
+        total_score.collided_with_non_actor
+
+    # TODO: Add whether we collided with a non-actor
+    # TODO: Add closest distance to other actor
+
     # Add items to be uploaded by privileged code
     artifact_dir = c.PUBLIC_ARTIFACTS_DIR
     os.makedirs(artifact_dir, exist_ok=True)
