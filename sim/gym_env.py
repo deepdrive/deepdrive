@@ -586,6 +586,8 @@ class DeepDriveEnv(gym.Env):
             self.episode_score.prev_progress = self.episode_score.progress
             self.episode_score.progress = \
                 100 * self.distance_along_route / obz['route_length']
+            self.episode_score.cm_along_route = self.distance_along_route
+            self.episode_score.route_length_cm = obz['route_length']
 
         progress_reward *= self.driving_style.value.progress_weight
         speed_reward *= self.driving_style.value.speed_weight
@@ -675,6 +677,7 @@ class DeepDriveEnv(gym.Env):
         return ret
 
     def aggregate_scores(self):
+        # TODO: Move this to score.py
         self.episode_score.end_time = time.time()
         self.episode_score.num_steps = self.step_num
 

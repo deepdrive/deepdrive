@@ -126,6 +126,7 @@ class Recorder(object):
                                          episodes_file=c.EPISODES_CSV_FILENAME,
                                          summary_file=c.SUMMARY_CSV_FILENAME,
                                          median_fps=median_fps)
+
             # TODO: Create a Botleague compatible results.json file with
             #  - YouTube link
             #  - HDF5 links
@@ -242,7 +243,7 @@ def create_botleague_results(total_score, episode_scores, gist_url,
 
     ret.driving_specific.max_gforce = total_score.max_gforce
     ret.driving_specific.max_kph = total_score.max_kph
-    ret.driving_specific.avg_kph = total_score.avg_kph
+    ret.driving_specific.trip_speed_kph = total_score.trip_speed_kph
 
     # Add items to be uploaded by privileged code
     artifact_dir = c.PUBLIC_ARTIFACTS_DIR

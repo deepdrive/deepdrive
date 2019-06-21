@@ -7,6 +7,7 @@ import time
 
 from util.sampler import Sampler
 import utils
+import config as c
 
 
 class EpisodeScore(object):
@@ -67,7 +68,10 @@ class TotalScore(object):
         cm_per_second_means = \
             [e.cm_per_second_sampler.mean() for e in episode_scores]
         cm_per_second_avg = float(np.mean(cm_per_second_means))
-        self.avg_kph = cm_per_second_avg * 0.036
+        self.avg_kph = cm_per_second_avg * c.CMPS_TO_KPH
+        trip_cm_per_second = float(np.mean(
+            [e.cm_along_route / e.episode_time for e in episode_scores]))
+        self.trip_speed_kph = trip_cm_per_second * c.CMPS_TO_KPH
 
 
 def main():
