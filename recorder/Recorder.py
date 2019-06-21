@@ -205,18 +205,18 @@ class Recorder(object):
     def num_unsaved_observations(self):
         return self.recorded_obz_count - self.num_saved_observations
 
-    @staticmethod
-    def upload_artifacts(mp4_file:str, hdf5_observations: List[str]) \
-            -> Tuple[str, str, str, List[str]]:
-        youtube_id = utils.upload_to_youtube(mp4_file)
-        if youtube_id:
-            youtube_url = 'https://www.youtube.com/watch?v=%s' % youtube_id
-            log.info('Successfully uploaded to YouTube! %s', youtube_url)
-        else:
-            youtube_url = ''
-        mp4_url = upload_artifacts_to_s3([mp4_file], 'mp4')[0]
-        hdf5_urls = upload_artifacts_to_s3(hdf5_observations, 'hdf5')
-        return youtube_id, youtube_url, mp4_url, hdf5_urls
+
+def upload_artifacts(mp4_file:str, hdf5_observations: List[str]) \
+        -> Tuple[str, str, str, List[str]]:
+    youtube_id = utils.upload_to_youtube(mp4_file)
+    if youtube_id:
+        youtube_url = 'https://www.youtube.com/watch?v=%s' % youtube_id
+        log.info('Successfully uploaded to YouTube! %s', youtube_url)
+    else:
+        youtube_url = ''
+    mp4_url = upload_artifacts_to_s3([mp4_file], 'mp4')[0]
+    hdf5_urls = upload_artifacts_to_s3(hdf5_observations, 'hdf5')
+    return youtube_id, youtube_url, mp4_url, hdf5_urls
 
 
 def upload_artifacts_to_s3(file_paths:List[str], directory:str) -> List[str]:
@@ -247,34 +247,22 @@ def create_botleague_results(total_score, episode_scores, gist_url,
 
     # Add items to be uploaded by privileged code
     artifact_dir = c.PUBLIC_ARTIFACTS_DIR
-    s3_upload = 's3'
-    youtube_upload = 'youtube'
+    os.makedirs(artifact_dir, exist_ok=True)
 
-    # Add csvs that need to be uploaded
     csv_relative_dir = 'csvs'
-    ret.problem_specific.summary = make_needs_upload(
-        base_dir=artifact_dir, relative_dir=csv_relative_dir, file=summary_file,
-        upload_to=s3_upload)
-    ret.problem_specific.episodes = make_needs_upload(
-        base_dir=artifact_dir, relative_dir=csv_relative_dir, file=episodes_file,
-        upload_to=s3_upload)
 
-    # Add hdf5 files that need to be uploaded
-    hdf5_out = []
-    for hdf5_file in hdf5_observations:
-        hdf5_out.append(make_needs_upload(
-            base_dir=artifact_dir, relative_dir='hdf5_observations',
-            file=hdf5_file, upload_to=s3_upload))
-    ret.problem_specific.hdf5_observations = hdf5_out
+    summary_url, episodes_url = upload_artifacts_to_s3(
+        [summary_file, episodes_file], csv_relative_dir)
 
-    # Add mp4 as a file which needs to be uploaded
-    ret.mp4 = make_needs_upload(
-        base_dir=artifact_dir, relative_dir='', file=mp4_file,
-        upload_to=s3_upload)
+    ret.problem_specific.summary = summary_url
+    ret.problem_specific.episodes = episodes_url
 
-    ret.youtube = make_needs_upload(
-        base_dir=artifact_dir, relative_dir='', file=mp4_file,
-        upload_to=youtube_upload)
+    youtube_id, youtube_url, mp4_url, hdf5_urls = \
+        upload_artifacts(mp4_file, hdf5_observations)
+
+    ret.youtube = youtube_url
+    ret.mp4 = mp4_url
+    ret.problem_specific.hdf5_observations = hdf5_urls
 
     """
     {
@@ -308,6 +296,7 @@ def create_botleague_results(total_score, episode_scores, gist_url,
     """
 
     results_json_filename = join(artifact_dir, 'results.json')
+
     ret.to_json(filename=results_json_filename, indent=2)
     log.info('Wrote results to %s' % results_json_filename)
     copy_dir_clean(src=c.PUBLIC_ARTIFACTS_DIR,
