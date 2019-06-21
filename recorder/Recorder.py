@@ -231,11 +231,11 @@ def upload_artifacts_to_s3(file_paths:List[str], directory:str) -> List[str]:
     return ret
 
 
-def create_botleague_results(total_score, episode_scores, gist_url,
+def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
                              hdf5_observations, mp4_file, episodes_file,
                              summary_file, median_fps):
     ret = Box(default_box=True)
-    ret.score = total_score.median
+    ret.score = total_score.low
     ret.gist = gist_url
 
     ret.sensorimotor_specific.num_episodes = len(episode_scores)
