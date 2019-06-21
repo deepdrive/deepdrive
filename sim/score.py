@@ -12,22 +12,24 @@ import config as c
 
 class EpisodeScore(object):
     total = 0
-    gforce_penalty:float = 0
-    max_gforce:float = 0
-    max_kph:float = 0
-    avg_kph:float = 0
-    lane_deviation_penalty:float = 0
-    time_penalty:float = 0
-    progress_reward:float = 0
-    speed_reward:float = 0
-    progress:float = 0
-    prev_progress:float = 0
+    gforce_penalty: float = 0
+    max_gforce: float = 0
+    max_kph: float = 0
+    avg_kph: float = 0
+    lane_deviation_penalty: float = 0
+    time_penalty: float = 0
+    progress_reward: float = 0
+    speed_reward: float = 0
+    progress: float = 0
+    prev_progress: float = 0
     got_stuck = False
     wrong_way = False
-    start_time:float = 0
-    end_time:float = 0
-    episode_time:float = 0
-    num_steps:int = 0
+    start_time: float = 0
+    end_time: float = 0
+    episode_time: float = 0  # seconds
+    num_steps: int = 0
+    cm_along_route: float = 0
+    route_length_cm: float = 0
 
     def __init__(self):
         self.start_time = time.time()
@@ -46,16 +48,17 @@ class EpisodeScore(object):
 
 
 class TotalScore(object):
-    median:float
-    average:float
-    high:float
-    low:float
-    std:float
-    num_episodes:int = 0
-    num_steps:int = 0
-    max_gforce:float = 0
-    max_kph:float = 0
-    avg_kph:float = 0
+    median: float
+    average: float
+    high: float
+    low: float
+    std: float
+    num_episodes: int = 0
+    num_steps: int = 0
+    max_gforce: float = 0
+    max_kph: float = 0
+    avg_kph: float = 0
+    trip_speed_kph: float = 0
 
     def update(self, episode_scores:List[EpisodeScore]):
         totals = [e.total for e in episode_scores]
