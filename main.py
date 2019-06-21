@@ -333,6 +333,7 @@ def get_sim_args_from_command_args(args):
         randomize_shadow_level=args.randomize_shadow_level,
         randomize_month=args.randomize_month,
         image_resize_dims=tuple(json.loads(args.image_resize_dims)),
+        is_botleague=args.botleague,
     )
     return sim_args
 
