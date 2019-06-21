@@ -199,13 +199,12 @@ def main():
     if args.verbose:
         logs.set_level(logging.DEBUG)
 
-    if args.public:
-        if not c.PUBLIC:
-            answer = input('Please confirm you want to make the results '
-                           'of this evaluation public? ')
-            args.public = answer.lower() in ['y', 'yes']
-            if not args.public:
-                print('Answer was not "y" or "yes", not making public')
+    if args.public and not c.PUBLIC:
+        answer = input('Please confirm you want to make the results '
+                       'of this evaluation public? ')
+        args.public = answer.lower() in ['y', 'yes']
+        if not args.public:
+            print('Answer was not "y" or "yes", not making public')
 
     if args.hdf5_2_tfrecord:
         from agents.dagger.train import hdf5_to_tfrecord
