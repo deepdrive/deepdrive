@@ -1,6 +1,7 @@
 import shutil
 from typing import List, Tuple
 
+import requests
 from box import Box
 
 
@@ -301,6 +302,9 @@ def create_botleague_results(total_score, episode_scores, gist_url,
     log.info('Wrote results to %s' % results_json_filename)
     copy_dir_clean(src=c.PUBLIC_ARTIFACTS_DIR,
                    dest=c.LATEST_PUBLIC_ARTIFACTS_DIR)
+
+    resp = requests.post(os.environ['BOTLEAGUE_CALLBACK'], data=ret.to_dict())
+    return ret, resp
 
 
 def make_needs_upload(base_dir:str, relative_dir:str, file:str,
