@@ -310,7 +310,11 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
     copy_dir_clean(src=c.PUBLIC_ARTIFACTS_DIR,
                    dest=c.LATEST_PUBLIC_ARTIFACTS_DIR)
 
-    resp = requests.post(os.environ['BOTLEAGUE_CALLBACK'], data=ret.to_dict())
+    if c.BOTLEAGUE_CALLBACK:
+        resp = requests.post(c.BOTLEAGUE_CALLBACK, data=ret.to_dict())
+    else:
+        raise RuntimeError('No botleague callback set, cannot post results!')
+
     return ret, resp
 
 
