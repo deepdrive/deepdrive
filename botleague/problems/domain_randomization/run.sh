@@ -16,6 +16,5 @@ python main.py \
       --record \
       --eval-only \
       --render \
-      --public \
       --upload-gist \
       --image-resize-dims="[224,224,3]"
