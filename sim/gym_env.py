@@ -424,7 +424,7 @@ class DeepDriveEnv(gym.Env):
         done = False
         if obz:
             lap_number = obz.get('lap_number')
-            lap_via_progress = self.episode_score.progress > 99.9
+            lap_via_progress = self.episode_score.progress_pct > 99.9
             if lap_via_progress:
                 median_meters_per_sec = self.episode_score.cm_per_second_sampler.mean() / 100
                 est_travel_cm = median_meters_per_sec * self.episode_score.episode_time * 100  # cm travelled
@@ -609,8 +609,8 @@ class DeepDriveEnv(gym.Env):
             kph = meters_per_second * 3.6
             self.episode_score.max_kph = max(kph, self.episode_score.max_kph)
             self.total_score.max_kph = max(kph, self.total_score.max_kph)
-            self.episode_score.prev_progress = self.episode_score.progress
-            self.episode_score.progress = \
+            self.episode_score.prev_progress_pct = self.episode_score.progress_pct
+            self.episode_score.progress_pct = \
                 100 * self.distance_along_route / obz['route_length']
             self.episode_score.cm_along_route = self.distance_along_route
             self.episode_score.route_length_cm = obz['route_length']
@@ -632,7 +632,7 @@ class DeepDriveEnv(gym.Env):
         self.episode_score.progress_reward += progress_reward
         self.episode_score.speed_reward += speed_reward
 
-        self.display_stats['lap progress']['total'] = self.episode_score.progress or 0
+        self.display_stats['lap progress']['total'] = self.episode_score.progress_pct or 0
         self.display_stats['lap progress']['value'] = self.display_stats['lap progress']['total']
         self.display_stats['episode #']['total'] = self.total_laps
         self.display_stats['episode #']['value'] = self.total_laps

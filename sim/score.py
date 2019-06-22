@@ -1,5 +1,7 @@
+import math
 from typing import List
 
+import arrow
 import numpy as np
 
 
@@ -20,8 +22,8 @@ class EpisodeScore(object):
     time_penalty: float = 0
     progress_reward: float = 0
     speed_reward: float = 0
-    progress: float = 0
-    prev_progress: float = 0
+    progress_pct: float = 0
+    prev_progress_pct: float = 0
     got_stuck = False
     wrong_way = False
     start_time: float = 0
