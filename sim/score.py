@@ -49,7 +49,10 @@ class EpisodeScore(object):
         prop_names = defaults.keys()
         ret = {}
         for k in prop_names:
-            ret[k] = getattr(self, k, defaults[k])
+            v = getattr(self, k, defaults[k])
+            if k in ['start_time', 'end_time']:
+                v = str(arrow.get(v).to('local'))
+            ret[k] = v
         return ret
 
 

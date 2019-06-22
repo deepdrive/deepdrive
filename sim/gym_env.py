@@ -754,20 +754,16 @@ class DeepDriveEnv(gym.Env):
         summary_io = io.StringIO()
 
         writer = csv.writer(episodes_io)
+        # Write headers
+
+        headers = ['episode #']
+        # Relying on dir() sorting alphabetically
+        headers += list(EpisodeScore().serialize().keys())
+        writer.writerow(headers)
         for i, score in enumerate(self.episode_scores):
-            if i == 0:
-                writer.writerow(['episode #', 'score', 'speed reward',
-                                 'lane deviation penalty', 'gforce penalty',
-                                 'got stuck', 'wrong way', 'start', 'end',
-                                 'lap time'])
-            writer.writerow([i + 1, score.total,
-                             score.speed_reward,
-                             score.lane_deviation_penalty,
-                             score.gforce_penalty, score.got_stuck,
-                             score.wrong_way,
-                             str(arrow.get(score.start_time).to('local')),
-                             str(arrow.get(score.end_time).to('local')),
-                             score.episode_time])
+            episode_row = [i+1]
+            episode_row += score.serialize().values()
+            writer.writerow(episode_row)
 
         if self.recorder.main_args:
             main_args = str(self.recorder.main_args)
