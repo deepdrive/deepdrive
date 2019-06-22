@@ -483,7 +483,8 @@ class DeepDriveEnv(gym.Env):
             if self.is_stuck(obz) or score.wrong_way:
                 done = True
                 reward -= 10
-                # TODO: Scale cost by collision momentum when speed is returned
+                # TODONT: Scale cost by collision momentum when speed is returned
+                #  We now use g-force as a better proxy for this.
                 # if obz['last_collision'].time_utc:
                 #     reward *= obz['last_collision'].speed
 
