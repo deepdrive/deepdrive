@@ -449,6 +449,7 @@ class DeepDriveEnv(gym.Env):
         lap_done, lap_bonus = self.compute_lap_statistics(obz)
         reward = 0
         gforce_done = False
+        score = self.episode_score
         if obz:
             if self.is_sync:
                 step_time = self.period
@@ -457,9 +458,9 @@ class DeepDriveEnv(gym.Env):
             else:
                 step_time = None
 
-            self.episode_score.episode_time += (step_time or 0)
+            score.episode_time += (step_time or 0)
 
-            if self.episode_score.episode_time < HEAD_START_TIME:
+            if score.episode_time < HEAD_START_TIME:
                 # Give time to get on track after spawn
                 reward = 0
             else:
@@ -475,26 +476,25 @@ class DeepDriveEnv(gym.Env):
                     progress_reward, gforce_penalty, lane_deviation_penalty,
                     time_penalty, speed_reward)
 
-            self.episode_score.wrong_way = self.driving_wrong_way()
-            if self.episode_score.wrong_way:
+            score.wrong_way = self.driving_wrong_way()
+            if score.wrong_way:
                 log.warn('episode finished, going the wrong way')
 
-            # TODO: Collision or near collision
-            if self.is_stuck(obz) or self.episode_score.wrong_way:
+            if self.is_stuck(obz) or score.wrong_way:
                 done = True
                 reward -= 10
                 # TODO: Scale cost by collision momentum when speed is returned
                 # if obz['last_collision'].time_utc:
                 #     reward *= obz['last_collision'].speed
 
-            self.episode_score.cm_per_second_sampler.sample(obz['speed'])
-            self.episode_score.total += reward + lap_bonus
+            score.cm_per_second_sampler.sample(obz['speed'])
+            score.total += reward + lap_bonus
 
             last_collision = obz['last_collision']
             if last_collision['collidee_velocity'].any():
-                self.episode_score.collided_with_actor = True
+                score.collided_with_actor = True
             elif last_collision['time_stamp']:
-                self.episode_score.collided_with_non_actor = True
+                score.collided_with_non_actor = True
 
             # TODO: Add missing components from https://docs.google.com/document/d/1_M4d7KTTzWRV6NthQjINl68gfl_NdGKF41za91-7O7A/edit#
             #   like running traffic lights, crossing double yellows, etc...
@@ -506,8 +506,8 @@ class DeepDriveEnv(gym.Env):
             self.display_stats['episode score']['total'] = score.total
 
             log.debug('reward %r', reward)
-            log.debug('score %r', self.episode_score.total)
-            log.debug('progress %r', self.episode_score.progress)
+            log.debug('score %r', score.total)
+            log.debug('progress %r', score.progress_pct)
             log.debug('throttle %f', obz['throttle'])
             log.debug('steering %f', obz['steering'])
             log.debug('brake %f', obz['brake'])
