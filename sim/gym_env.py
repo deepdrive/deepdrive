@@ -918,13 +918,13 @@ class DeepDriveEnv(gym.Env):
         self.np_random = seeding.np_random(seed)
         # TODO: Generate random actions with this seed
 
-    def preprocess_observation(self, observation):
+    def preprocess_observation(self, obz):
         def has_cams(_obs):
             return getattr(_obs, 'cameras', None) is not None
-        if observation and len(observation.cameras[0].image_data):
-            ret = obj2dict(observation, exclude=['cameras'])
-            if observation.camera_count > 0 and has_cams(observation):
-                cameras = observation.cameras
+        if obz and len(obz.cameras[0].image_data):
+            ret = obj2dict(obz, exclude=['cameras'])
+            if obz.camera_count > 0 and has_cams(obz):
+                cameras = obz.cameras
                 ret['cameras'] = self.preprocess_cameras(cameras)
             else:
                 ret['cameras'] = []
@@ -932,7 +932,7 @@ class DeepDriveEnv(gym.Env):
             if ret['last_collision']:
                 ret['last_collision'] = obj2dict(ret['last_collision'])
         else:
-            if observation and len(observation.cameras[0].image_data) == 0:
+            if obz and len(obz.cameras[0].image_data) == 0:
                 log.warn('No camera data received - nulling observation')
             ret = None
         return ret
