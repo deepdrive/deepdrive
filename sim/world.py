@@ -48,3 +48,37 @@ def reset(enable_traffic=False):
 
 def set_ego_mph(min_mph, max_mph):
     return rpc('set_ego_mph', min_mph=min_mph, max_mph=max_mph)
+
+
+def get_agent_positions() -> List[list]:
+    """
+    :return: Positions of non-ego agents
+    """
+    start = time.time()
+    ret = rpc('get_agent_positions')
+    t = time.time() - start
+    log.debug('get_agent_positions() took %rs' % t)
+    return ret
+
+
+def get_agents() -> List[dict]:
+    """
+    :return: Detailed list of all agents in the scene
+    See: https://gist.github.com/crizCraig/b5f88911cae9dc346bf805498f31ec3f
+    """
+    start = time.time()
+    ret = rpc('get_agents')
+    t = time.time() - start
+    log.debug('get_agents() took %rs' % t)
+    return ret
+
+
+def get_observation() -> dict:
+    """
+    This is a combined call to the UEPy server to get all the data needed
+    for the step. The UEPy API server can only return one response per frame,
+    so at 60FPS latency will be minimum 17ms
+    :return: Info appropriate to return every step. 
+    """""
+    ret = rpc('get_observation')
+    return ret
