@@ -229,6 +229,10 @@ class Agent(object):
         action = Action(steering, throttle, has_control=has_control)
         if not has_control:
             # TODO: Move setpoint to env
+            # We should not be calling single purpose
+            # UEPy API methods this frequently, i.e. every step as the server
+            # can only respond to one message per frame.
+            # This should be moved to a combined call in step instead.
             world.set_ego_mph(TARGET_MPH, TARGET_MPH)
         return action
 
