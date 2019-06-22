@@ -702,8 +702,7 @@ class DeepDriveEnv(gym.Env):
 
         return ret
 
-    def aggregate_scores(self):
-        # TODO: Move this to score.py
+    def finalize_score(self):
         self.episode_score.end_time = time.time()
         self.episode_score.num_steps = self.step_num
 
