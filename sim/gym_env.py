@@ -496,10 +496,14 @@ class DeepDriveEnv(gym.Env):
             elif last_collision['time_stamp']:
                 self.episode_score.collided_with_non_actor = True
 
-            self.display_stats['time']['value'] = self.episode_score.episode_time
-            self.display_stats['time']['total'] = self.episode_score.episode_time
-            self.display_stats['episode score']['value'] = self.episode_score.total
-            self.display_stats['episode score']['total'] = self.episode_score.total
+            # TODO: Add missing components from https://docs.google.com/document/d/1_M4d7KTTzWRV6NthQjINl68gfl_NdGKF41za91-7O7A/edit#
+            #   like running traffic lights, crossing double yellows, etc...
+            self.check_closest_vehicle(obz, score)
+
+            self.display_stats['time']['value'] = score.episode_time
+            self.display_stats['time']['total'] = score.episode_time
+            self.display_stats['episode score']['value'] = score.total
+            self.display_stats['episode score']['total'] = score.total
 
             log.debug('reward %r', reward)
             log.debug('score %r', self.episode_score.total)
