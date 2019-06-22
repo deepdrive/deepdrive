@@ -2,7 +2,9 @@ import tensorflow as tf
 import time
 from tensorflow.python.client import timeline
 import numpy as np
-import logging as log
+import logs
+
+log = logs.get_log(__name__)
 
 
 IMAGE = tf.placeholder(tf.float64)
