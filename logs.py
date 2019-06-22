@@ -10,7 +10,7 @@ os.makedirs(c.LOG_DIR, exist_ok=True)
 log_format = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log_level = logging.INFO
-all_loggers = []
+all_loggers = {}
 rotators = {}
 
 
@@ -20,6 +20,8 @@ def get_log(namespace, filename='log.txt'):
     errors on Windows
     https://stackoverflow.com/questions/16712638
     """
+    if all_loggers.get(namespace):
+        return all_loggers[namespace]
     rotator = get_log_rotator(filename)
     ret = logging.getLogger(namespace)
     ret.addFilter(AnonymizeFilter())
@@ -34,7 +36,7 @@ def get_log(namespace, filename='log.txt'):
     ch.setFormatter(log_format)
     ret.addHandler(ch)
     ret.addHandler(rotator)
-    all_loggers.append(ret)
+    all_loggers[namespace] = ret
     return ret
 
 
@@ -51,7 +53,7 @@ def get_log_rotator(filename):
 def set_level(level):
     global log_level
     log_level = level
-    for l in all_loggers:
+    for l in all_loggers.values():
         l.setLevel(level)
 
 
