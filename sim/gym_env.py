@@ -376,7 +376,7 @@ class DeepDriveEnv(gym.Env):
         episode_info['reward'] = self.episode_score.total
         episode_info['length'] = self.step_num
         episode_info['time'] = self.episode_score.episode_time
-        self.aggregate_scores()
+        self.finalize_score()
         if self.tensorboard_writer is not None:
             import tensorflow as tf
             summary = tf.Summary()
