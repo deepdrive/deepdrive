@@ -250,8 +250,14 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
     ret.driving_specific.collided_with_non_actor = \
         total_score.collided_with_non_actor
 
-    # TODO: Add whether we collided with a non-actor
-    # TODO: Add closest distance to other actor
+    ret.driving_specific.closest_vehicle_meters = \
+        total_score.closest_vehicle_cm / 100
+
+    ret.driving_specific.closest_vehicle_cm_while_at_least_4kph = \
+        total_score.closest_vehicle_cm_while_at_least_4kph / 100
+
+    # TODO: Closest distance to pedestrians
+    # TODO: Highest lane deviation
 
     # Add items to be uploaded by privileged code
     artifact_dir = c.PUBLIC_ARTIFACTS_DIR

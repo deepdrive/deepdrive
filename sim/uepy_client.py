@@ -1,10 +1,14 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import sys
+import time
+
 import zmq
 import pyarrow
 
 import logs
+from utils import sizeof_fmt
 
 log = logs.get_log(__name__)
 
@@ -24,7 +28,7 @@ class UEPyClient(object):
         self.create_socket()
         # self._send(m.START, kwargs=kwargs)
 
-    def call(self, method, *args, **kwargs):
+    def call(self, method: str, *args, **kwargs):
         """
         Eval expressions against Unreal Python API
         :param method API method to execute
@@ -35,9 +39,23 @@ class UEPyClient(object):
         """
         ret = None
         try:
+            start_serialize = time.time()
             msg = pyarrow.serialize([method, args, kwargs]).to_buffer()
+
+            start_send = time.time()
             self.socket.send(msg)
-            ret = pyarrow.deserialize(self.socket.recv())
+            log.debug('send took %r' % (time.time() - start_send))
+
+            start_receive = time.time()
+            resp = self.socket.recv()
+            log.debug('receive took %r', (time.time() - start_receive))
+
+            size_formatted = sizeof_fmt(sys.getsizeof(resp))
+            log.debug('receive size was %s', size_formatted)
+
+            start_deserialize = time.time()
+            ret = pyarrow.deserialize(resp)
+            log.debug('deserialize took %r', (time.time() - start_deserialize))
         except zmq.error.Again:
             print('Waiting for uepy server')
             self.create_socket()
@@ -85,7 +103,10 @@ def rpc(method_name, *args, **kwargs):
     if CLIENT is None:
         CLIENT = UEPyClient()
 
-    return CLIENT.call(method_name, *args, **kwargs)
+    start_call = time.time()
+    ret = CLIENT.call(method_name, *args, **kwargs)
+    log.debug('call took %r' % (time.time() - start_call))
+    return ret
 
 
 def main():

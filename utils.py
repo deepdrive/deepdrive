@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+import math
 import re
 
 # TODO: Bootstrap future module to enable Python 2 support of install which depends on this file to do below
@@ -19,6 +20,7 @@ import sys
 import threading
 import time
 from os.path import exists, expanduser
+from typing import Tuple
 
 import numpy as np
 
@@ -510,7 +512,59 @@ def guarded_rmtree(dest, allow_small_paths=False):
         return shutil.rmtree(dest)
 
 
-if __name__ == '__main__':
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
+
+class timer:
+    def __init__(self, msg, fmt="%0.3g"):
+        self.msg = msg
+        self.fmt = fmt
+
+    def __enter__(self):
+        self.start = time.process_time()
+        return self
+
+    def __exit__(self, *args):
+        t = time.process_time() - self.start
+        log.info(("%s : " + self.fmt + " seconds") % (self.msg, t))
+        self.time = t
+
+
+def nearest_neighbor(me: np.array, them: np.array) -> Tuple[float, int]:
+    """
+    :param me: start point
+    :param them: other points
+    :return:
+    """
+    import scipy.spatial
+    if len(them) == 0:
+        distance, index = math.inf, -1
+    elif len(them) > 27:
+        # 27 derived from https://gist.github.com/crizCraig/fd3d04e28defa5d5cfc7f37757f81a26
+        with timer('kd tree total'):
+            kd_tree = scipy.spatial.cKDTree(them)
+            distance, index = kd_tree.query(me)
+    else:
+        with timer('brute force'):
+            min_dist = math.inf
+            min_index = -1
+            for index, point in enumerate(them):
+                dist = scipy.spatial.distance.cdist(
+                    np.array([point]), np.array([me]))[0][0]
+                if dist < min_dist:
+                    min_dist = dist
+                    min_index = index
+            distance = min_dist
+            index = min_index
+    return distance, index
+
+
+def main():
     # download('https://d1y4edi1yk5yok.cloudfront.net/sim/asdf.zip', r'C:\Users\a\src\beta\deepdrive-agents-beta\asdf')
     # read_hdf5_manual()
     # ensure_sim()
@@ -522,9 +576,46 @@ if __name__ == '__main__':
     # print(save_hdf5_recordings_to_png())
     # print(upload_to_gist('asdf', ['/home/c2/src/deepdrive/results/2018-05-30__02-40-01PM.csv', '/home/c2/src/deepdrive/results/2019-03-14__06-08-38PM.diff']))
     # log.info('testing %s', os.path.expanduser('~'))
-    import traceback
+    # import traceback
+    #
+    # traceback.print_stack(file=sys.stdout)
+    # log.info('testing %d', 1234)
+    # ensure_sim()
+    import scipy.spatial
 
-    traceback.print_stack(file=sys.stdout)
-    log.info('testing %d', 1234)
-    ensure_sim()
+    # vehicle_positions = [[-24164.44140625, 29898.431640625, 19338.546875],
+    #                      [-21652.052734375, 32871.953125, 19180.44921875],
+    #                      [-18885.00390625, 35396.0, 19488.966796875],
+    #                      [-15975.9833984375, 37886.96875, 19873.97265625],
+    #                      [-6273.73681640625, 38792.83984375, 21070.3828125]]
+
+    vehicle_positions = np.random.normal(size=(27, 3))
+
+    with timer('kd tree total'):
+        with timer('kd tree build'):
+            kd_tree = scipy.spatial.cKDTree(vehicle_positions)
+
+        ego_position = [8000.45654297, 27470.125, 24762.65039062]
+
+        with timer('kd tree query'):
+            distance, index = kd_tree.query(ego_position)
+
+    with timer('brute force'):
+        min_dist = None
+        min_index = -1
+        for index, point in enumerate(vehicle_positions):
+            dist = scipy.spatial.distance.cdist(
+                np.array([point]), np.array([ego_position]))
+            if min_dist is None or dist < min_dist:
+                min_dist = dist
+                min_index = index
+        distance = min_dist
+        index = min_index
+
+
+    pass
+
+
+if __name__ == '__main__':
+    main()
 

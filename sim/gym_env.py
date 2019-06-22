@@ -37,6 +37,7 @@ import deepdrive_simulation
 
 import config as c
 import logs
+import sim
 import util.ensure_sim
 import util.run_command
 from recorder.Recorder import Recorder
@@ -519,6 +520,20 @@ class DeepDriveEnv(gym.Env):
 
         return reward, done
 
+    def check_closest_vehicle(self, obz, score):
+        closest_vehicle_cm, _veh_index = \
+            utils.nearest_neighbor(
+                np.array(obz['position']),
+                np.array(obz['world']['vehicle_positions']),
+            )
+        score.closest_vehicle_cm = min(closest_vehicle_cm,
+                                       score.closest_vehicle_cm)
+        if (obz['speed'] * c.CMPS_TO_KPH) >= 4:
+            # Why 4kph: http://sparebumper.com/federal-bumper-standards/
+            score.closest_vehicle_cm_while_at_least_4kph = min(
+                closest_vehicle_cm,
+                score.closest_vehicle_cm_while_at_least_4kph)
+
     def log_up_time(self):
         log.info('up for %r' % arrow.get(time.time()).humanize(
             other=arrow.get(self.start_time), only_distance=True))
@@ -984,14 +999,17 @@ class DeepDriveEnv(gym.Env):
     def get_observation(self):
         start_get_obz = time.time()
         try:
-            obz = deepdrive_capture.step()
+            shared_mem_obz = deepdrive_capture.step()
+            uepy_obz = sim.world.get_observation()
             end_get_obz = time.time()
             log.debug('get obz took %fs', end_get_obz - start_get_obz)
         except SystemError as e:
             log.error('caught error during step' + str(e))
             ret = None
         else:
-            ret = self.preprocess_observation(obz)
+            ret = self.preprocess_observation(shared_mem_obz)
+            if ret is not None and uepy_obz['success']:
+                ret['world'] = uepy_obz['result']
 
         log.debug('completed capture step')
         return ret
