@@ -51,12 +51,15 @@ class Recorder(object):
         if self.should_record:
             log.info('Recording driving data to %s', self.hdf5_dir)
 
-    def step(self, obz, is_agent_action=True):
+    def step(self, obz, done, reward, action, is_agent_action=True):
         self.was_agent_action = is_agent_action
         log.debug('obz_exists? %r should_record? %r', obz is not None,
                   self.should_record)
         if self.should_record_obz(obz):
             log.debug('Recording frame')
+            obz['gym_done'] = done
+            obz['gym_reward'] = reward
+            obz['gym_action'] = action.serialize()
             self.obz_recording.append(obz)
             if TEST_SAVE_IMAGE:
                 utils.save_camera(obz['cameras'][0]['image'],

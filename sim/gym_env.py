@@ -323,7 +323,11 @@ class DeepDriveEnv(gym.Env):
         obz = self.postprocess_obz(obz)
 
         if self.recorder is not None:
-            self.recorder.step(obz, is_agent_action=dd_action.has_control)
+            self.recorder.step(obz, done, reward,
+                               dd_action, is_agent_action=dd_action.has_control)
+
+        # TODO: Remove things that we don't want botleague agents to be able
+        #   to use.
 
         return obz, reward, done, info
 
