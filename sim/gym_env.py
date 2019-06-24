@@ -310,9 +310,13 @@ class DeepDriveEnv(gym.Env):
         self.prev_step_time = now
         self.publish_to_dashboard()
         self.step_num += 1
+
+        # Info is just for OpenAI baselines.
+        # Info is not recorded in hdf5 logs, so
+        # don't put anything there that isn't in the observation if you want
+        # it to be in the drive logs.
         info = self.init_step_info()
         if done:
-            # For OpenAI baselines
             self.report_score(info)
 
         if obz is not None:
@@ -367,6 +371,15 @@ class DeepDriveEnv(gym.Env):
 
         'episode_time' was added here in order to comply with OpenAI baselines
         PPO2.
+
+        Info is just for OpenAI baselines. Info is not recorded in hdf5 logs, so
+        don't put anything there that isn't in the observation if you want
+        it to be in the drive logs.
+
+        We can selectively remove items from the observation if we want to hide
+        them from agents but still log them. However, until driving is amazing
+        in the simulator, we can just let agent developers decide what info
+        is interesting to them.
         """
         info = {}
         info['score'] = info.get('episode', {})
@@ -376,10 +389,13 @@ class DeepDriveEnv(gym.Env):
 
     def report_score(self, info):
         self.prev_lap_score = self.episode_score.total
+
+        # For OpenAI baselines
         info['episode'] = episode_info = {}
         episode_info['reward'] = self.episode_score.total
         episode_info['length'] = self.step_num
         episode_info['time'] = self.episode_score.episode_time
+
         self.finalize_score()
         if self.tensorboard_writer is not None:
             import tensorflow as tf
