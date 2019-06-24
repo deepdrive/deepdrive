@@ -566,8 +566,11 @@ class DeepDriveEnv(gym.Env):
     def get_lane_deviation_penalty(self, obz, time_passed):
         lane_deviation_penalty = 0.
         if 'distance_to_center_of_lane' in obz:
+            lane_deviation = obz['distance_to_center_of_lane']
+            self.episode_score.max_lane_deviation_cm = max(
+                self.episode_score.max_lane_deviation_cm, lane_deviation)
             lane_deviation_penalty = RewardCalculator.get_lane_deviation_penalty(
-                obz['distance_to_center_of_lane'], time_passed)
+                lane_deviation, time_passed)
 
         lane_deviation_penalty *= self.driving_style.value.lane_deviation_weight
         self.episode_score.lane_deviation_penalty += lane_deviation_penalty

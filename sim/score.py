@@ -36,6 +36,7 @@ class EpisodeScore(object):
     collided_with_non_actor: bool = False
     closest_vehicle_cm: float = math.inf
     closest_vehicle_cm_while_at_least_4kph: float = math.inf
+    max_lane_deviation_cm: float = 0
 
     def __init__(self):
         self.start_time = time.time()
@@ -72,6 +73,7 @@ class TotalScore(object):
     collided_with_non_actor: bool = False
     closest_vehicle_cm: float = math.inf
     closest_vehicle_cm_while_at_least_4kph: float = math.inf
+    max_lane_deviation_cm: float = 0
 
     def update(self, episode_scores:List[EpisodeScore]):
         totals = [e.total for e in episode_scores]
@@ -97,6 +99,8 @@ class TotalScore(object):
         self.closest_vehicle_cm_while_at_least_4kph = min(
             [e.closest_vehicle_cm_while_at_least_4kph for e in episode_scores])
 
+        self.max_lane_deviation_cm = max(
+            [e.max_lane_deviation_cm for e in episode_scores])
 
 def main():
     score = EpisodeScore()
