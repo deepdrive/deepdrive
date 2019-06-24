@@ -45,6 +45,12 @@ class Action(object):
                          has_control=self.has_control)
         return ret
 
+    def serialize(self):
+        ret = [self.steering, self.throttle, self.brake, self.handbrake,
+               self.has_control]
+        return ret
+
+
     @classmethod
     def from_gym(cls, action):
         has_control = True
