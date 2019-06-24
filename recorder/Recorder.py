@@ -255,8 +255,7 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
 
     ret.driving_specific.closest_vehicle_meters = \
         total_score.closest_vehicle_cm / 100
-
-    ret.driving_specific.closest_vehicle_cm_while_at_least_4kph = \
+    ret.driving_specific.closest_vehicle_meters_while_at_least_4kph = \
         total_score.closest_vehicle_cm_while_at_least_4kph / 100
 
     # TODO: Closest distance to pedestrians
