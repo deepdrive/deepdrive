@@ -115,11 +115,23 @@ def save_hdf5_task(out, filename):
             frame_grp = f.create_group('frame_%s' % str(i).zfill(10))
             add_collision_to_hdf5(frame, frame_grp)
             add_score_to_hdf5(frame, frame_grp)
+            add_world_to_hdf5(frame, frame_grp)
             add_cams_to_hdf5(frame, frame_grp, opts)
             del frame['cameras']
             for k, v in frame.items():
                 frame_grp.attrs[k] = v
     log.info('Saved to %s', filename)
+
+
+def add_world_to_hdf5(frame, frame_grp):
+    parent_key = 'world'
+    world = frame[parent_key]
+    world_grp = frame_grp.create_group(parent_key)
+    for k, v in world.items():
+        if k == 'vehicle_positions':
+            v = np.array(v)
+        world_grp.attrs[k] = v
+    del frame[parent_key]
 
 
 def add_cams_to_hdf5(frame, frame_grp, opts):
