@@ -543,7 +543,7 @@ class timer:
 
     def __exit__(self, *args):
         t = time.process_time() - self.start
-        log.info(("%s : " + self.fmt + " seconds") % (self.msg, t))
+        log.debug(("%s : " + self.fmt + " seconds") % (self.msg, t))
         self.time = t
 
 
