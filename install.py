@@ -2,6 +2,7 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 import argparse
 import os
+import shutil
 import tempfile
 from subprocess import Popen, PIPE
 import sys
@@ -186,12 +187,13 @@ def is_docker():
 
 
 def has_nvidia_docker():
-    return os.path.getsize('/usr/bin/nvidia-smi') != 0
+    return os.path.getsize(shutil.which('nvidia-smi')) != 0
 
 
 if __name__ == '__main__':
     if 'TEST_RUN_CMD' in os.environ:
-        run_command_no_deps('pip install sarge')
+        # run_command_no_deps('pip install sarge')
+        print(has_nvidia_docker())
     else:
         main()
 
