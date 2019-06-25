@@ -1,6 +1,6 @@
 .PHONY: package install commit clean bash version
 
-TAG=deepdriveio/deepdrive:domain_rand_bot
+TAG=deepdriveio/deepdrive:bot_domain_randomization
 DOCKER_OPTS=--net=host --runtime=nvidia
 RUN=docker run -it $(DOCKER_OPTS) $(TAG)
 
