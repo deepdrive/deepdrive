@@ -1,4 +1,4 @@
-.PHONY: package install commit clean bash version rerun server
+.PHONY: package install commit clean bash version rerun server update
 
 # Short-cuts to build and run Deepdrive in Docker
 
@@ -55,6 +55,8 @@ ARTIFACTS_FILE=$(RESULTS_DIR)/latest-artifacts.json
 SERVER=python main.py --server
 PUBLIC=DEEPDRIVE_PUBLIC=true
 
+DOCKER_BUILD_ARGS=--build-arg version=$(VERSION) -t $(TAG) -f Dockerfile .
+
 
 # Pass args to make command, i.e.
 #  make run args="echo yo did it!"
@@ -89,7 +91,10 @@ commit:
 	docker commit `docker ps --latest --format "{{.ID}}"` $(args)
 
 build:
-	docker build --build-arg version=$(VERSION) -t $(TAG) -f Dockerfile .
+	docker build $(DOCKER_BUILD_ARGS)
+
+update_sim:
+	docker build --build-arg update_sim=True $(DOCKER_BUILD_ARGS)
 
 push:
 	docker push $(TAG)

@@ -19,6 +19,7 @@ FROM adamrehn/ue4-runtime:tensorflow-virtualgl
 # python-software-properties
 
 ARG version=3.0
+ARG update_sim=False
 USER root
 
 # OS dependencies
@@ -90,7 +91,7 @@ COPY util/get_directories.py ./util/get_directories.py
 COPY VERSION logs.py ./
 
 # Download sim
-RUN python -c "from util.ensure_sim import ensure_sim; ensure_sim();"
+RUN python -c "from util.ensure_sim import ensure_sim; ensure_sim(update=$update_sim);"
 
 # Install
 COPY install.py ./
