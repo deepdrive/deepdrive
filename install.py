@@ -187,7 +187,7 @@ def is_docker():
 
 
 def has_nvidia_docker():
-    return os.path.getsize(shutil.which('nvidia-smi')) != 0
+    return 'NVIDIA_VISIBLE_DEVICES' in os.environ
 
 
 if __name__ == '__main__':
