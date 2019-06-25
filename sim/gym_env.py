@@ -40,7 +40,7 @@ import logs
 import sim
 import util.ensure_sim
 import util.run_command
-from recorder.Recorder import Recorder
+from recorder.recorder import Recorder
 import utils
 from sim import world, graphics
 from sim.action import Action, DiscreteActions

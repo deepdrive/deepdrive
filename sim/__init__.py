@@ -19,7 +19,7 @@ from sim import driving_style
 from sim.sim_args import SimArgs
 from sim.view_mode import ViewMode, ViewModeController
 from sim import world
-from recorder.Recorder import Recorder
+from recorder.recorder import Recorder
 
 log = logs.get_log(__name__)
 
