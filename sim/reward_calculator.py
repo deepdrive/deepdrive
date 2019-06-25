@@ -44,24 +44,27 @@ class RewardCalculator(object):
         return gforce_penalty
 
     @staticmethod
-    def get_progress_and_speed_reward(progress, time_passed):
+    def get_progress_and_speed_reward(progress_cm, time_passed):
         if not time_passed:
-            progress = speed_reward = meters_per_second = 0
+            progress_cm = speed_reward = meters_per_second = 0
         else:
-            progress = progress / 100.  # cm=>meters
-            meters_per_second = progress / time_passed
+            progress_cm = progress_cm / 100.  # cm=>meters
+
+            # TODO: meters per second can be off by around 1.5x - not sure why
+            #  yet. Possibly more time elapses in the sim than we are asking for
+            #  in sync mode.
+            meters_per_second = progress_cm / time_passed
             if meters_per_second < -400:
                 # Lap completed
-                # TODO: Read the lap length on reset and
                 log.debug('assuming lap complete, progress zero')
-                progress = meters_per_second = 0
+                progress_cm = meters_per_second = 0
 
             # Square the speed so to greatly outweigh the advantage
             # of getting more rewards by going slower.
             speed_reward = np.sign(meters_per_second) * meters_per_second ** 2 * time_passed
 
         progress_balance_coeff = 1.0
-        progress_reward = progress * progress_balance_coeff
+        progress_reward = progress_cm * progress_balance_coeff
 
         speed_balance_coeff = 0.15
         speed_reward *= speed_balance_coeff

@@ -623,14 +623,14 @@ class DeepDriveEnv(gym.Env):
                        obz['distance_along_route']
             else:
                 dist = obz['distance_along_route'] - self.start_distance_along_route
-            progress = dist - self.distance_along_route
+            progress_cm = dist - self.distance_along_route
             if self.distance_along_route:
                 self.previous_distance_along_route = self.distance_along_route
             self.distance_along_route = dist
             progress_reward, speed_reward, meters_per_second = \
                 RewardCalculator.get_progress_and_speed_reward(
-                    progress, time_passed)
-            kph = meters_per_second * 3.6
+                    progress_cm, time_passed)
+            kph = obz['speed'] * c.CMPS_TO_KPH
             self.episode_score.max_kph = max(kph, self.episode_score.max_kph)
             self.total_score.max_kph = max(kph, self.total_score.max_kph)
             self.episode_score.prev_progress_pct = self.episode_score.progress_pct
