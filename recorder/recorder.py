@@ -261,7 +261,7 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
     # TODO: Closest distance to pedestrians
 
     # Add items to be uploaded by privileged code
-    artifact_dir = c.PUBLIC_ARTIFACTS_DIR
+    artifact_dir = c.BOTLEAGUE_RESULTS_DIR
     os.makedirs(artifact_dir, exist_ok=True)
 
     csv_relative_dir = 'csvs'
@@ -313,9 +313,9 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
     results_json_filename = join(artifact_dir, 'results.json')
 
     ret.to_json(filename=results_json_filename, indent=2)
-    log.info('Wrote results to %s' % results_json_filename)
-    copy_dir_clean(src=c.PUBLIC_ARTIFACTS_DIR,
-                   dest=c.LATEST_PUBLIC_ARTIFACTS_DIR)
+    log.info('Wrote botleague results to %s' % results_json_filename)
+    copy_dir_clean(src=c.BOTLEAGUE_RESULTS_DIR,
+                   dest=c.LATEST_BOTLEAGUE_RESULTS)
 
     if c.BOTLEAGUE_CALLBACK:
         resp = requests.post(c.BOTLEAGUE_CALLBACK, data=ret.to_dict())
