@@ -19,7 +19,7 @@ import os
 import sys
 import threading
 import time
-from os.path import exists, expanduser
+from os.path import exists, expanduser, basename
 from typing import Tuple
 
 import numpy as np
@@ -332,7 +332,7 @@ def upload_to_youtube(file_path):
     _, options, _ = youtube_upload.main.get_options([])
     options._update_careful(dict(
         default_box=True,
-        title=file_path, privacy='unlisted', client_secrets='',
+        title=basename(file_path), privacy='unlisted', client_secrets='',
         credentials_file='', auth_browser=None,
         description='Deepdrive results for %s' % c.MAIN_ARGS))
 
