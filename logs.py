@@ -36,6 +36,7 @@ def get_log(namespace, filename='log.txt'):
     ch.setFormatter(log_format)
     ret.addHandler(ch)
     ret.addHandler(rotator)
+    ret.propagate = False
     all_loggers[namespace] = ret
     return ret
 
