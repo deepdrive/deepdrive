@@ -102,7 +102,7 @@ class Recorder(object):
                 save_thread.join()
             mp4_file = utils.hdf5_to_mp4()
             local_public_run = self.should_upload_gist and self.public
-            server_public_run = self.is_botleague
+            server_public_run = bool(c.BOTLEAGUE_CALLBACK)
             public_run = local_public_run or server_public_run
 
             if public_run:
@@ -123,13 +123,12 @@ class Recorder(object):
                 summary_file=c.SUMMARY_CSV_FILENAME,
                 mp4_file=mp4_file)
 
-            if self.is_botleague:
-                create_botleague_results(total_score, episode_scores, gist_url,
-                                         hdf5_observations,
-                                         mp4_file,
-                                         episodes_file=c.EPISODES_CSV_FILENAME,
-                                         summary_file=c.SUMMARY_CSV_FILENAME,
-                                         median_fps=median_fps)
+            create_botleague_results(total_score, episode_scores, gist_url,
+                                     hdf5_observations,
+                                     mp4_file,
+                                     episodes_file=c.EPISODES_CSV_FILENAME,
+                                     summary_file=c.SUMMARY_CSV_FILENAME,
+                                     median_fps=median_fps)
 
             # TODO: Create a Botleague compatible results.json file with
             #  - YouTube link
@@ -266,18 +265,19 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
 
     csv_relative_dir = 'csvs'
 
-    summary_url, episodes_url = upload_artifacts_to_s3(
-        [summary_file, episodes_file], csv_relative_dir)
+    if c.BOTLEAGUE_CALLBACK:
+        summary_url, episodes_url = upload_artifacts_to_s3(
+            [summary_file, episodes_file], csv_relative_dir)
 
-    ret.problem_specific.summary = summary_url
-    ret.problem_specific.episodes = episodes_url
+        ret.problem_specific.summary = summary_url
+        ret.problem_specific.episodes = episodes_url
 
-    youtube_id, youtube_url, mp4_url, hdf5_urls = \
-        upload_artifacts(mp4_file, hdf5_observations)
+        youtube_id, youtube_url, mp4_url, hdf5_urls = \
+            upload_artifacts(mp4_file, hdf5_observations)
 
-    ret.youtube = youtube_url
-    ret.mp4 = mp4_url
-    ret.problem_specific.hdf5_observations = hdf5_urls
+        ret.youtube = youtube_url
+        ret.mp4 = mp4_url
+        ret.problem_specific.hdf5_observations = hdf5_urls
 
     """
     {
@@ -320,7 +320,7 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
     if c.BOTLEAGUE_CALLBACK:
         resp = requests.post(c.BOTLEAGUE_CALLBACK, data=ret.to_dict())
     else:
-        raise RuntimeError('No botleague callback set, cannot post results!')
+        resp = None
 
     return ret, resp
 

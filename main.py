@@ -109,9 +109,6 @@ def add_standard_args(args:Args):
         '--server', action='store_true', default=False,
         help='Run as an API server', )
     args.add(
-        '--botleague', action='store_true', default=False,
-        help='This is a botleague server', )
-    args.add(
         '--upload-gist', action='store_true', default=False,
         help='Upload a private gist with driving performance'
              'stats csv files', )
@@ -332,7 +329,6 @@ def get_sim_args_from_command_args(args):
         randomize_shadow_level=args.randomize_shadow_level,
         randomize_month=args.randomize_month,
         image_resize_dims=tuple(json.loads(args.image_resize_dims)),
-        is_botleague=args.botleague,
     )
     return sim_args
 

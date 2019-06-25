@@ -8,7 +8,6 @@ export DEEPDRIVE_PUBLIC=true
 
 python main.py \
       --server \
-      --botleague \
       --view-mode-period=16 \
       --max-steps=100 \
       --max-episodes=1 \
