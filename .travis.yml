@@ -7,7 +7,7 @@ env:
 before_install:
   - sudo rm -f /etc/boto.cfg  # https://github.com/travis-ci/travis-ci/issues/7940
 install:
-  - pip install --verbose -r requirements.txt
+  - pip install -r requirements.txt
   - python install.py
 script:
   - DEEPDRIVE_DIR=/tmp/testdeepdrive pytest tests/unit_tests/test_sanity.py
