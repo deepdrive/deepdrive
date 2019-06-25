@@ -632,7 +632,7 @@ class DeepDriveEnv(gym.Env):
                     progress_cm, time_passed)
             kph = obz['speed'] * c.CMPS_TO_KPH
             self.episode_score.max_kph = max(kph, self.episode_score.max_kph)
-            self.total_score.max_kph = max(kph, self.total_score.max_kph)
+            self.episode_score.max_kph = max(kph, self.episode_score.max_kph)
             self.episode_score.prev_progress_pct = self.episode_score.progress_pct
             self.episode_score.progress_pct = \
                 100 * self.distance_along_route / obz['route_length']

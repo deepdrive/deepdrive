@@ -90,6 +90,7 @@ class TotalScore(object):
         trip_cm_per_second = float(np.mean(
             [e.cm_along_route / e.episode_time for e in episode_scores]))
         self.trip_speed_kph = trip_cm_per_second * c.CMPS_TO_KPH
+        self.max_kph = max([e.max_kph for e in episode_scores])
         self.collided_with_actor = any(e.collided_with_actor for e in
                                        episode_scores)
         self.collided_with_non_actor = any(e.collided_with_non_actor for e
@@ -101,6 +102,7 @@ class TotalScore(object):
 
         self.max_lane_deviation_cm = max(
             [e.max_lane_deviation_cm for e in episode_scores])
+
 
 def main():
     score = EpisodeScore()
