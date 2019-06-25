@@ -214,8 +214,7 @@ def main():
     elif args.server:
         from deepdrive_api import server
         sim_args = None
-        if args.botleague:
-            log.info('Starting a botleague evaluation')
+        log.info('Starting Deepdrive server')
         if len(sys.argv) > 2:
             # More than just --server was passed,
             # so sim will be configured purely on the server side,
