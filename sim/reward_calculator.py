@@ -59,7 +59,7 @@ class RewardCalculator(object):
                 log.debug('assuming lap complete, progress zero')
                 progress_cm = meters_per_second = 0
 
-            # Square the speed so to greatly outweigh the advantage
+            # Square the speed to greatly outweigh the advantage
             # of getting more rewards by going slower.
             speed_reward = np.sign(meters_per_second) * meters_per_second ** 2 * time_passed
 
