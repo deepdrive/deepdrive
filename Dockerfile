@@ -27,7 +27,7 @@ RUN apt-get update; apt-get install -y \
         libsdl2-2.0 \
         software-properties-common \
         sudo \
-        python3-venv \
+#        python3-venv \
         python3-pip \
         python3-dev \
         ffmpeg \
@@ -47,7 +47,6 @@ RUN adduser $user sudo
 RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Ensure ue4 owns directories needed to run Deepdrive
-USER $user
 #RUN sudo chown -R $user:$user /home/$user
 ENV DEEPDRIVE_SRC_DIR=/home/$user/src/deepdrive
 WORKDIR $DEEPDRIVE_SRC_DIR
@@ -55,10 +54,10 @@ WORKDIR $DEEPDRIVE_SRC_DIR
 #RUN sudo chmod -R 775 /home/$user
 
 # Create our virtual environment
-ARG venv=deepdrive_venv
-RUN python -m venv /home/$user/$venv
-ENV VIRTUAL_ENV /home/$user/$venv
-ENV PATH /home/$user/$venv/bin:$PATH
+#ARG venv=deepdrive_venv
+#RUN python -m venv /home/$user/$venv
+#ENV VIRTUAL_ENV /home/$user/$venv
+#ENV PATH /home/$user/$venv/bin:$PATH
 RUN which pip
 
 # Get the latest pip within the virtual environment
@@ -81,6 +80,8 @@ ENV DEEPDRIVE_DIR=/home/$user/Deepdrive
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
+USER $user
+
 # Copy minimum files needed for sim download
 COPY config/ ./config/
 COPY util/anonymize.py ./util/anonymize.py
@@ -95,7 +96,9 @@ RUN python -c "from util.ensure_sim import ensure_sim; ensure_sim(update=$update
 
 # Install
 COPY install.py ./
+USER root
 RUN python -u install.py
+USER $user
 
 # Commands useful for debugging
 #ENV PYTHONPATH=/home/$user/src/deepdrive:$PYTHONPATH
