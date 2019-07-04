@@ -1,6 +1,4 @@
 import sim
-from sim.uepy_client import rpc
-from sim.world import get_agents, get_agent_positions
 
 
 def main():
