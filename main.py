@@ -217,6 +217,8 @@ def main():
             # so sim will be configured purely on the server side,
             # vs purely from the client.
             sim_args = get_sim_args_from_command_args(args)
+        if sim_args is not None:
+            sim_args = sim_args.to_dict()
         server.start(sim, get_sim_path(), sim_args=sim_args)
         return
     else:
