@@ -25,7 +25,7 @@ simple-pid
 requests
 python-box
 sarge
-deepdrive-api==3.0.20190603042042
+deepdrive-api==3.0.20190703222442
 ue4_ci_helpers
 
 # Install from Github, editable
