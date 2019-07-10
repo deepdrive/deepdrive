@@ -67,7 +67,7 @@ python main.py --record --jitter-actions --sync
 ```
 
 Note that we recorded the baseline dataset in sync mode which is much slower than async mode. 
-Async mode _probably_ is fine to record in, we just haven't got around to trying it out for v2.1.
+Async mode _probably_ is fine to record in, we just haven't got around to trying it out for v3.
 
 Optional: Convert to HDF5 files to tfrecords (for training MNET2)
 ```
