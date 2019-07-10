@@ -79,7 +79,7 @@ python main.py --hdf5-2-tfrecord
 
 **Train** on recorded data
 ```
-python main.py --train [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2]
+python main.py --train [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2] --recording-dir <your-hdf5-or-tfrecord-dir>
 ```
 
 **Train** on the same dataset we used 
