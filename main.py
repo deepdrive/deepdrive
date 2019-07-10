@@ -203,6 +203,9 @@ def main():
         if not args.public:
             print('Answer was not "y" or "yes", not making public')
 
+    if args.recording_dir.startswith('~'):
+        args.recording_dir = os.path.expanduser(args.recording_dir)
+
     if args.hdf5_2_tfrecord:
         from agents.dagger.train import hdf5_to_tfrecord
         hdf5_to_tfrecord.encode(hdf5_path=args.recording_dir,
