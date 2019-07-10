@@ -1,4 +1,4 @@
-The following tutorial demonstrates the power of UnrealEnginePython to manipulate objects in the running game with Python, i.e. `import unreal_engine`. For more tutorials on how to use UnrealEnginePython (UEPy) see [the docs](https://github.com/deepdrive/UnrealEnginePython/tree/master/tutorials).
+The following tutorial demonstrates the power of UnrealEnginePython to manipulate objects in the running game with Python, i.e. `import unreal_engine`. For more tutorials on how to use UnrealEnginePython (UEPy) see [their docs](https://github.com/deepdrive/UnrealEnginePython/tree/master/tutorials).
 
 Here, we'll show how to print to the Unreal Logs, get the ego vehicle (your car), and move the ego vehicle around.
 
