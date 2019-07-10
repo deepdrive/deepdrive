@@ -265,7 +265,7 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
 
     csv_relative_dir = 'csvs'
 
-    if c.BOTLEAGUE_CALLBACK:
+    if c.BOTLEAGUE_CALLBACK or c.UPLOAD_RESULTS:
         summary_url, episodes_url = upload_artifacts_to_s3(
             [summary_file, episodes_file], csv_relative_dir)
 
