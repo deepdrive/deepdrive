@@ -278,6 +278,12 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
         ret.youtube = youtube_url
         ret.mp4 = mp4_url
         ret.problem_specific.hdf5_observations = hdf5_urls
+    else:
+        ret.mp4 = mp4_file
+        ret.problem_specific.hdf5_observations = hdf5_observations
+        ret.problem_specific.summary = summary_file
+        ret.problem_specific.episodes = episodes_file
+
 
     """
     {
