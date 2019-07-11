@@ -12,7 +12,7 @@ The easiest way to experiment with self-driving AI
 ## Optional - baseline agent requirements
 
 - CUDA capable GPU (tested and developed on 970, 1070, and 1060's)
-- Tensorflow 1.7+ [See Tensorflow install tips](#tensorflow-install-tips)
+- 1.7 <= Tensorflow < 2.0 [See Tensorflow install tips](#tensorflow-install-tips)
 
 ## Install
 

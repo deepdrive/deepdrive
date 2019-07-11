@@ -160,8 +160,15 @@ def check_tensorflow_gpu():
                       ' Tensorflow on GPU')
 
             min_version = '1.7'
+            max_version = '2.0'
             if semvar(tf.__version__) < semvar(min_version):
                 warn_msg = 'Tensorflow %s is less than the minimum ' \
+                           'required version (%s)' \
+                           % (tf.__version__, min_version)
+                print(error_msg % warn_msg, file=sys.stderr)
+                ret = False
+            elif semvar(tf.__version__) >= semvar(max_version):
+                warn_msg = 'Tensorflow %s is greater or equal to the maximum ' \
                            'required version (%s)' \
                            % (tf.__version__, min_version)
                 print(error_msg % warn_msg, file=sys.stderr)
