@@ -134,7 +134,6 @@ SIMPLE_PPO = False
 # PPO_RESUME_PATH = '/home/a/baselines_results/openai-2018-06-17-17-48-24-795338/checkpoints/03125'
 # PPO_RESUME_PATH = '/home/a/baselines_results/openai-2018-06-22-00-00-21-866205/checkpoints/03125'
 PPO_RESUME_PATH = None
-# TEST_PPO = False
 
 
 # API
