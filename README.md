@@ -51,12 +51,139 @@ If you run into issues, try starting the sim directly as Unreal may need to inst
 
 #### Running
 
-Run the **mnet2 baseline** agent
+A minimal agent can be run with
+
+```python
+import sim
+env = sim.start()
+forward = sim.action(throttle=1, steering=0, brake=0)
+while True:
+    observation, reward, done, info = env.step(forward)
+```
+
+##### Observation data
+
+All values returned in the observation keep Unreal conventions, specifically
+* All distances are in centimeters per Unreal's default data type
+* All rotations / angular values are in the order of roll, pitch, yaw in degrees
+* x,y,z is forward, right, up
+
+```
+
+{ 
+  
+  'acceleration': array([-264.26913452, -227.578125  ,  105.16122437]),
+  'angular_acceleration': array([210980.234375, 105423.765625,  38187.28125 ]),
+  'angular_velocity': array([2.59908962, 3.8214705 , 1.87282801]),
+  'brake': 0.0,
+  'camera_count': 1,
+  'cameras': [{  'aspect_ratio': 1.0,
+                 'capture_height': 227,
+                 'capture_width': 227,
+                 'depth_data': array([0.9995  , 0.9995  , 0.9995  , ..., 
+                     0.005146, 0.005146, 0.005146], dtype=float16),
+                 'horizontal_field_of_view': 1.7654,
+                 'id': 1,
+                 'image': array([[[ 40.,  78., 110.] ..., dtype=float32),
+                 'image_data': array([0.283  , 0.557  , 0.82, 
+                     ..., 0.02321, 0.02574, 0.02599], dtype=float16),
+                 'image_raw': array([[[144, 195, 233]..., dtype=uint8),
+                 'type': 0
+              }],
+  'capture_timestamp': 4132.511303506,
+  'dimension': array([514.99609375, 514.99609375,  91.1796875 ]),  # Vehicle dimensions
+  'distance_along_route': 70658.828125,  # centimeters of progress made along route to destination
+  'distance_to_center_of_lane': 1038.8463134765625,  # centimeters to center of lane
+  'world': { 'vehicle_positions': [ [ -15800.8193359375,
+                                      38030.23828125,
+                                      19894.62890625],
+                                    [ -13854.9384765625,
+                                      39296.91015625,
+                                      20041.6484375],
+                                    [ -10323.2744140625,
+                                      39767.69921875,
+                                      20409.265625],
+                                    [ -6528.05810546875,
+                                      38875.75390625,
+                                      21034.83984375],
+                                    [ 4577.29150390625,
+                                      36155.37890625,
+                                      22704.166015625]]},
+  'distance_to_next_agent': 326125.625, # Next agent in our lane 
+  'distance_to_next_opposing_agent': -1.0,  # Next agent in opposite lane
+  'distance_to_prev_agent': 30758.2734375,   # Next agent in our lane
+  'forward_vector': array([-0.8840133 , -0.4375411 , -0.16455328]),
+  'gym_action': [0, 1, 0, 0, True],
+  'gym_done': False,
+  'gym_reward': -2.4653405387152016,
+  'handbrake': 0,
+  'is_game_driving': 0,
+  'is_passing': 0,
+  'is_resetting': 205,
+  'lap_number': 0,
+  'last_collision': { 'collidee_velocity': array([0., 0., 0.]),
+                      'collision_location': 'rear_right_fender',
+                      'collision_normal': array([0., 0., 0.]),
+                      'time_since_last_collision': 0.0,
+                      'time_stamp': 4105.741911045,
+                      'time_utc': 1562958070},
+  'position': array([-10163.55371094,  17115.17382812,  22500.29492188]),
+  'right_vector': array([-0.8840133 , -0.4375411 , -0.16455328]),
+  'rotation': array([ 0.10010731, -0.16530512, -2.68199444]),
+  'route_length': 273551.21875,
+  'score': { 'avg_kph': 0,
+             'closest_vehicle_cm': 15812.662932649602,
+             'closest_vehicle_cm_while_at_least_4kph': 15812.662932649602,
+             'cm_along_route': 18730.72265625,
+             'collided_with_actor': False,
+             'collided_with_non_actor': True,
+             'end_time': '1969-12-31T16:00:00-08:00',
+             'episode_time': 11.5,
+             'gforce_penalty': 90.68476390028613,
+             'got_stuck': False,
+             'lane_deviation_penalty': 255.7695629358121,
+             'max_gforce': 0.8785649610557551,
+             'max_kph': 138.7572978515625,
+             'max_lane_deviation_cm': 1038.8463134765625,
+             'num_steps': 0,
+             'prev_progress_pct': 6.70844576752594,
+             'progress_pct': 6.8472451856879175,
+             'progress_reward': 0.0,
+             'route_length_cm': 273551.21875,
+             'speed_reward': 371.6081579415893,
+             'start_time': '2019-07-12T12:00:59.003417-07:00',
+             'time_penalty': 0.0,
+             'total': 25.15383110549117,
+             'wrong_way': False},
+  'speed': 3854.369384765625,
+  'steering': 0.0,
+  'throttle': 1.0,
+  'up_vector': array([-0.8840133 , -0.4375411 , -0.16455328]),
+  'velocity': array([-3404.32958984, -1700.12841797,  -613.90289307]),
+  'view_mode': 'normal',
+}
+```
+
+###### Want more?
+
+Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API via [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). Simply modify [get_observation](https://github.com/deepdrive/deepdrive-sim/blob/c2d26a38692f1db61d48986263b20721ab136fe3/Content/Scripts/api_methods.py#L56) in `api_methods.py`. 
+
+##### Examples
+
+* Synchronous forward-agent
+
+```
+python example_sync.py
+```
+
+* [Remote agent example](https://github.com/deepdrive/forward-agent) - operates over the network using the [deepdrive remote api](https://github.com/deepdrive/deepdrive-api)
+
+* **mnet2 baseline** agent
 ```
 python main.py --mnet2-baseline --experiment my-baseline-test
 ```
 
-Run in-game path follower
+* Built-in C++ [FSM](https://github.com/deepdrive/deepdrive-sim/tree/c2d26a38692f1db61d48986263b20721ab136fe3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/LocalAI/States) / [PID](https://github.com/deepdrive/deepdrive-sim/blob/v3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/DeepDriveAgentSteeringController.cpp) agent that can overtake in the canyons map
 ```
 python main.py --path-follower --experiment my-path-follower-test
 ```
