@@ -166,6 +166,10 @@ tensorboard --logdir <your-unzipped-dir>
 and checkout [this view](http://localhost:6006/#scalars&_smoothingWeight=0.935&runSelectionState=eyIyMDE4LTA3LTE5X18wNS01My0yN1BNIjp0cnVlLCIyMDE4LTA3LTE5X18wNS01MC01NFBNIjp0cnVlfQ%3D%3D&_ignoreYOutliers=false&tagFilter=error)
 , which graphs wall time.
 
+## Architecture
+
+![Deepdrive Architecture](/docs/images/deepdrive-architecture.svg)
+
 ## Frame rate issues on Linux
 
 If you experience low frame rates on Linux, you may need to install NVIDIA’s display drivers including their OpenGL drivers. We recommend installing these with CUDA which bundles the version you will need to run the baseline agent. Also, make sure to [plugin your laptop](https://help.ubuntu.com/community/PowerManagement/ReducedPower). If CUDA is installed, skip to testing [OpenGL](#opengl).
