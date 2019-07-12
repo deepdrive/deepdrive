@@ -49,8 +49,6 @@ If you run into issues, try starting the sim directly as Unreal may need to inst
 
 ## Usage
 
-#### Running
-
 A minimal agent can be run with
 
 ```python
@@ -61,7 +59,7 @@ while True:
     observation, reward, done, info = env.step(forward)
 ```
 
-##### Observation data
+### Observation data
 
 All values returned in the observation keep Unreal conventions, specifically
 * All distances are in centimeters per Unreal's default data type
@@ -164,13 +162,11 @@ All values returned in the observation keep Unreal conventions, specifically
 }
 ```
 
-###### Want more?
-
 Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API via [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). Simply modify [get_observation](https://github.com/deepdrive/deepdrive-sim/blob/c2d26a38692f1db61d48986263b20721ab136fe3/Content/Scripts/api_methods.py#L56) in `api_methods.py`. 
 
-##### Examples
+### Examples
 
-* Synchronous forward-agent
+#### Synchronous forward-agent
 
 ```
 python example_sync.py
@@ -178,17 +174,17 @@ python example_sync.py
 
 * [Remote agent example](https://github.com/deepdrive/forward-agent) - operates over the network using the [deepdrive remote api](https://github.com/deepdrive/deepdrive-api)
 
-* **mnet2 baseline** agent
+#### Mnet2 baseline agent
 ```
 python main.py --mnet2-baseline --experiment my-baseline-test
 ```
 
-* Built-in C++ [FSM](https://github.com/deepdrive/deepdrive-sim/tree/c2d26a38692f1db61d48986263b20721ab136fe3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/LocalAI/States) / [PID](https://github.com/deepdrive/deepdrive-sim/blob/v3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/DeepDriveAgentSteeringController.cpp) agent that can overtake in the canyons map
+#### Built-in C++ [FSM](https://github.com/deepdrive/deepdrive-sim/tree/c2d26a38692f1db61d48986263b20721ab136fe3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/LocalAI/States) / [PID](https://github.com/deepdrive/deepdrive-sim/blob/v3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/DeepDriveAgentSteeringController.cpp) agent that can overtake in the canyons map
 ```
 python main.py --path-follower --experiment my-path-follower-test
 ```
 
-**Record** training data for imitation learning / behavioral cloning
+#### Record training data for imitation learning / behavioral cloning
 ```
 python main.py --record --jitter-actions --sync
 ```
@@ -201,22 +197,19 @@ Optional: Convert to HDF5 files to tfrecords (for training MNET2)
 python main.py --hdf5-2-tfrecord
 ```
 
-
-#### Training
-
-**Train** on recorded data
+#### Train on recorded data
 ```
 python main.py --train [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2] --recording-dir <your-hdf5-or-tfrecord-dir>
 ```
 
-**Train** on the same dataset we used 
+#### Train on our dataset
 
 Grab the [dataset](#dataset)
 ```
 python main.py --train --recording-dir <the-directory-with-the-dataset> [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2]
 ```
 
-**Tensorboard**
+#### Tensorboard
 
 ```
 tensorboard --logdir="<your-deepdrive-home>/tensorflow"
@@ -224,7 +217,7 @@ tensorboard --logdir="<your-deepdrive-home>/tensorflow"
 
 Where `<your-deepdrive-home>` below is by default in `$HOME/Deepdrive` and can be configured in `$HOME/.deepdrive/deepdrive_dir`
 
-#### Unit Tests
+#### Running unit tests
 
 ```
 pytest tests/unit_tests/test_sanity.py
