@@ -61,7 +61,7 @@ Now open the Unreal Console again in the simulator with `` ` `` and hit the up a
 py.exec move_car_tutorial.py
 ```
 
-Weeeee, that was fun.
+Happy flying!!!
 
 Often when developing a UEPy script, you won't know the exact name of the object you want to manipulate. Some general methods for introspecting the games internal state are demonstrated with the following script
 
