@@ -41,7 +41,7 @@ You should then see "hello world" printed to the logs in the terminal:
 
 Now you know how to run Python within Unreal Engine. Let's do something more interesting!
 
-Let's fly! Paste the following into `move_car_tutorial.py`
+Paste the following into `move_car_tutorial.py`
 
 
 ```python
@@ -84,4 +84,4 @@ print(json.dumps(best_effort_serialize(ego, levels=5), indent=2))
 
 [Example output](https://gist.githubusercontent.com/crizCraig/b9f9f86dc404a5658a85328e490d585e/raw/111e2e717d06ccd928683a782d7a70009a785a62/gistfile1.txt) 
 
-Here you can see the wealth of functionality and information UnrealEnginePython provides. Imagine learning the game's state information with the [input remapping trick](https://arxiv.org/abs/1504.00702)! 
+Here you can see the wealth of functionality and information UnrealEnginePython provides, including the `get_actor_location` and `set_actor_location` methods we just demonstrated. Imagine learning the game's state information with the [input remapping trick](https://arxiv.org/abs/1504.00702)! 
