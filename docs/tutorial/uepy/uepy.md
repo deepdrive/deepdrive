@@ -2,6 +2,7 @@
 
 The following tutorial demonstrates the power of UnrealEnginePython to manipulate objects in the running game with Python, i.e. `import unreal_engine`. For more tutorials on how to use UnrealEnginePython (UEPy) see [their docs](https://github.com/deepdrive/UnrealEnginePython/tree/master/tutorials).
 
+## Hello world
 Here, we'll show how to print to the Unreal Logs, get the ego vehicle (your car), and move the ego vehicle around.
 
 Find your sim binaries by opening up `~/Deepdrive` and sorting by date 
@@ -15,7 +16,6 @@ Drill down to the Deepdrive binary
 Open a terminal, drag the file into the terminal, and press enter to open the sim in the terminal and see the logs.
 
 ![Terminal open sim](/docs/tutorial/uepy/terminal-open-sim.png)
-
 
 Once the sim is open and you see the, press `M` to drive the car manually.
 
@@ -38,6 +38,8 @@ py.exec move_car_tutorial.py
 You should then see "hello world" printed to the logs in the terminal:
 
 ![Terminal Hello World](/docs/tutorial/uepy/terminal-hello-world.png)
+
+## Get and set the ego's position
 
 Now you know how to run Python within Unreal Engine. Let's do something more interesting!
 
@@ -62,6 +64,8 @@ py.exec move_car_tutorial.py
 ```
 
 Happy flying!!!
+
+## Introspecting the Unreal API
 
 Often when developing a UEPy script, you won't know the exact name of the object you want to manipulate. Some general methods for introspecting the games internal state are demonstrated with the following script
 
