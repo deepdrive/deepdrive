@@ -88,15 +88,17 @@ PPO_BASELINE_WEIGHTS_VERSION = '03125'
 
 # Urls
 AWS_BUCKET = 'deepdrive'
-BUCKET_URL = 'https://s3-us-west-1.amazonaws.com/' + AWS_BUCKET
-BASE_WEIGHTS_URL = BUCKET_URL + '/weights'
+GCP_BUCKET = 'deepdriveio'
+AWS_BUCKET_URL = 'https://s3-us-west-1.amazonaws.com/' + AWS_BUCKET
+GCP_BUCKET_URL = 'https://storage.googleapis.com/' + GCP_BUCKET  # https://storage.googleapis.com/deepdriveio/filename.ext
+BASE_WEIGHTS_URL = AWS_BUCKET_URL + '/weights'
 ALEXNET_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/baseline_agent_weights.zip'
 ALEXNET_PRETRAINED_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, ALEXNET_PRETRAINED_NAME)
 MNET2_PRETRAINED_URL = '%s/%s.zip' % (BASE_WEIGHTS_URL, MNET2_PRETRAINED_NAME)
 MNET2_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/mnet2_baseline_weights.zip'
 PPO_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/ppo_baseline_agent_weights.zip'
 SIM_PREFIX = 'deepdrive-sim-' + OS_NAME
-YOU_GET_MY_JIST_URL = BUCKET_URL + '/yougetmyjist.json'
+YOU_GET_MY_JIST_URL = AWS_BUCKET_URL + '/yougetmyjist.json'
 
 
 # Sim
@@ -176,3 +178,4 @@ CMPS_TO_MPH = CMPS_TO_KPH * KPH_2_MPH
 
 BOTLEAGUE_CALLBACK = os.environ.get('BOTLEAGUE_CALLBACK', '')
 UPLOAD_RESULTS = os.environ.get('DEEPDRIVE_UPLOAD', '')
+

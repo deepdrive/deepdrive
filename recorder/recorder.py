@@ -222,14 +222,23 @@ def upload_artifacts(mp4_file:str, hdf5_observations: List[str]) \
     return youtube_id, youtube_url, mp4_url, hdf5_urls
 
 
-def upload_artifacts_to_s3(file_paths:List[str], directory:str) -> List[str]:
-    from ue4helpers import AWSUtils
+def upload_artifacts_to_s3(file_paths:List[str], directory:str,
+                           use_gcp=True) -> List[str]:
+    from ue4helpers import GCPUtils, AWSUtils
     ret = []
     for file_path in file_paths:
         s3path = 'artifacts/' + os.path.basename(c.RESULTS_DIR)
         key = s3path + ('/%s/' % directory) + os.path.basename(file_path)
-        AWSUtils.upload_file(c.AWS_BUCKET, key=key, filename=file_path)
-        ret.append('%s/%s' % (c.BUCKET_URL, key))
+        if use_gcp:
+            bucket = c.GCP_BUCKET
+            url = c.GCP_BUCKET_URL
+            storage_utils = GCPUtils
+        else:
+            bucket = c.AWS_BUCKET
+            url = c.AWS_BUCKET_URL
+            storage_utils = AWSUtils
+        storage_utils.upload_file(bucket, key=key, filename=file_path)
+        ret.append('%s/%s' % (url, key))
     return ret
 
 

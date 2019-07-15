@@ -27,7 +27,7 @@ def ensure_sim(update=False):
         if c.IS_LINUX or c.IS_WINDOWS:
             if os.environ.get('SIM_URL', 'latest') == 'latest':
                 log.info('Downloading latest sim')
-                url = c.BUCKET_URL + get_sim_url()
+                url = c.AWS_BUCKET_URL + get_sim_url()
             else:
                 url = os.environ['SIM_URL']
             sim_path = os.path.join(c.DEEPDRIVE_DIR, url.split('/')[-1][:-4])
@@ -40,7 +40,7 @@ def ensure_sim(update=False):
 
 
 def ensure_sim_python_binaries():
-    base_url = c.BUCKET_URL + '/embedded_python_for_unreal/'
+    base_url = c.AWS_BUCKET_URL + '/embedded_python_for_unreal/'
     if c.IS_WINDOWS:
         # These include Python and our requirements
         lib_url = base_url + 'windows/python_bin_with_libs.zip'
@@ -120,7 +120,7 @@ def get_sim_url():
     sim_versions = list(bucket.list(bucket_search_str))
     if not sim_versions:
         raise RuntimeError('Could not find a sim version matching %s '
-                           'in bucket %s' % (bucket_search_str, c.BUCKET_URL))
+                           'in bucket %s' % (bucket_search_str, c.AWS_BUCKET_URL))
     latest_sim_file, path_version = \
         sorted([(x.name, x.name.split('.')[-2]) for x in sim_versions],
                key=lambda y: y[1])[-1]
