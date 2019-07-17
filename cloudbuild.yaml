@@ -13,7 +13,7 @@ steps:
     './botleague/bots/domain_randomization'
   ]
   
-  # Build the problem image for the "Domain Randomization Sanity" Bot League problem
+  # Build the problem image for the "Domain Randomization Sanity" Bot League problem.
 - name: 'gcr.io/cloud-builders/docker'
   args: [
     'build',
