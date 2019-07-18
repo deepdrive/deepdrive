@@ -27,3 +27,6 @@ images:
 - 'gcr.io/$PROJECT_ID/deepdrive:3.0'
 - 'gcr.io/$PROJECT_ID/deepdrive:bot_domain_randomization'
 - 'gcr.io/$PROJECT_ID/deepdrive:problem_domain_randomization'
+
+# Store build logs in the CI logs GCS bucket
+logsBucket: "deepdrive-ci-logs"
