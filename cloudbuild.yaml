@@ -28,5 +28,8 @@ images:
 - 'gcr.io/$PROJECT_ID/deepdrive:bot_domain_randomization'
 - 'gcr.io/$PROJECT_ID/deepdrive:problem_domain_randomization'
 
+# Set an overall timeout of 30 minutes for the build
+timeout: "1800s"
+
 # Store build logs in the CI logs GCS bucket
 logsBucket: "deepdrive-ci-logs"
