@@ -162,7 +162,7 @@ All values returned in the observation keep Unreal conventions, specifically
 }
 ```
 
-Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API via [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). Simply modify [get_observation](https://github.com/deepdrive/deepdrive-sim/blob/c2d26a38692f1db61d48986263b20721ab136fe3/Content/Scripts/api_methods.py#L56) in `api_methods.py`. 
+Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API with [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). Simply modify [get_observation](https://github.com/deepdrive/deepdrive-sim/blob/c2d26a38692f1db61d48986263b20721ab136fe3/Content/Scripts/api_methods.py#L56) in `api_methods.py`. 
 
 ### Examples
 

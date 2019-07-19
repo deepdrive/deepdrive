@@ -1,4 +1,5 @@
-FROM deepdriveio/deepdrive:3.0
+ARG BASE_IMAGE=deepdriveio/deepdrive:3.0
+FROM ${BASE_IMAGE}
 ARG weights_dir=/home/${DEEPDRIVE_USER}/deepdrive_weights
 ARG weights_name="domain_randomization_2019-03-04__02-11-53PM"
 RUN mkdir $weights_dir
