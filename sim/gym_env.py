@@ -1220,7 +1220,7 @@ class DeepDriveEnv(gym.Env):
                 obz = deepdrive_capture.step()
             except SystemError as e:
                 log.error('caught error during step' + str(e))
-            time.sleep(0.25  * read_obz_count)
+            time.sleep(0.25 * read_obz_count)
             read_obz_count += 1
 
     def reset_capture(self, shared_mem_name, shared_mem_size):
