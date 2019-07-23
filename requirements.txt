@@ -9,7 +9,7 @@ requests
 clint
 Pillow==5.4.1
 boto
-future
+future==0.16.0  # For conan, grrr
 pyzmq
 enum34
 gputil
