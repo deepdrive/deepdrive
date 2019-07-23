@@ -145,20 +145,6 @@ def check_tensorflow_gpu():
             print(error_msg % 'Tensorflow not installed', file=sys.stderr)
             ret = False
         else:
-            try:
-                pkg_resources.get_distribution('tensorflow-gpu')
-            except pkg_resources.DistributionNotFound:
-                print('\n\n*** Warning: %s \n\n' %
-                      'tensorflow-gpu not found, performance will be severely'
-                      'degraded if run on CPU. '
-                      'HINT: Try "pip install tensorflow-gpu"')
-                # TODO: use get_available_gpu's on a given session or
-                #  confirm assumption the plain tensorflow package is always cpu
-                # TODO: Handle TPU's
-            else:
-                print('Found tensorflow-gpu - assuming you are running'
-                      ' Tensorflow on GPU')
-
             min_version = '1.7'
             max_version = '2.0'
             if semvar(tf.__version__) < semvar(min_version):
