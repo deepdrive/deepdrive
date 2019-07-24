@@ -482,10 +482,16 @@ def setup(sim_args, camera_rigs, net_name, net_path,
         return sim.start(**(sim_args.to_dict()))
 
     env = start_env()
-    agent = Agent(sess, should_jitter_actions=should_jitter_actions,
-                  net_path=net_path, path_follower=path_follower,
-                  net_name=net_name,
-                  driving_style=DrivingStyle.from_str(sim_args.driving_style))
+
+    try:
+        agent = Agent(sess, should_jitter_actions=should_jitter_actions,
+                      net_path=net_path, path_follower=path_follower,
+                      net_name=net_name,
+                      driving_style=DrivingStyle.from_str(sim_args.driving_style))
+    except Exception as e:
+        env.close()
+        raise e
+
     if net_path:
         log.info('Running tensorflow agent checkpoint: %s', net_path)
     return agent, env, should_rotate_camera_rigs, start_env
