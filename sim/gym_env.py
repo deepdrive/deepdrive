@@ -897,9 +897,6 @@ class DeepDriveEnv(gym.Env):
         self.open_sim()
         self.connect(cameras)
 
-    def __del__(self):
-        self.close()
-
     def close(self):
         # Only try to close things once, i.e. if __del__ is called after close()
         if self.tried_to_close:
