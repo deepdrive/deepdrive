@@ -270,6 +270,8 @@ def configure_net_args(args):
             url = str(args.net_path)
             import utils
             args.net_path = utils.download_weights(url)
+        if args.net_path.startswith('~'):
+            args.net_path = os.path.expanduser("~") + args.net_path[1:]
         if os.path.isdir(args.net_path):
             args.net_path = get_latest_model_from_path(args.net_path)
 
