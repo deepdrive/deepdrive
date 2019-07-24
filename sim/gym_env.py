@@ -922,6 +922,8 @@ class DeepDriveEnv(gym.Env):
         log.info('Closed dashboard')
         if self.dashboard_process is not None:
             self.dashboard_process.join(timeout=.25)
+        if self.renderer is not None:
+            self.renderer.close()
         if self.is_sync:
             deepdrive_client.deactivate_synchronous_stepping(self.client_id)
         deepdrive_capture.close()
