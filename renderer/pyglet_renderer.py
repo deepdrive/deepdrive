@@ -37,6 +37,11 @@ class PygletRenderer(Renderer):
         if obz is not None:
             self.pyglet_queue.put(obz['cameras'])
 
+    def close(self):
+        pass
+        # TODO: close stuff? works well without for now
+        # self.pyglet_process.join()
+
 
 def render_cameras(render_queue, cameras):
     import pyglet

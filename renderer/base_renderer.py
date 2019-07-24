@@ -7,6 +7,9 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
 
 class Renderer(object):
     def render(self, obz):
-        raise not NotImplementedError('Please define render in your child class')
+        raise NotImplementedError('Please define render in your child class')
+
+    def close(self):
+        raise NotImplementedError()
 
 
