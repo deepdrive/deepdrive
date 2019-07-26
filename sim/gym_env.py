@@ -600,6 +600,15 @@ class DeepDriveEnv(gym.Env):
                              'Recent g\'s were: %r',
                              list(reversed(list(sampler.q)[-10:])))
                     done = True
+                elif gs > 0.3:
+                    # https://www.quora.com/How-many-Gs-do-we-feel-driving-a-car
+                    score.jarring_gforce_seconds += time_passed
+                if gs > 0.1:
+                    # Based on regression model on page 47 - can achieve 92/100 comfort with 0.15 x and y acceleration
+                    # http://www.diva-portal.org/smash/get/diva2:950643/FULLTEXT01.pdf
+                    # Perhaps we should combine x, 0.15 and y 0.15
+                    score.uncomfortable_gforce_seconds += time_passed
+
                 self.display_stats['g-forces']['value'] = gs
                 self.display_stats['g-forces']['total'] = gs
                 gforce_penalty = RewardCalculator.get_gforce_penalty(

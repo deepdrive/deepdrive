@@ -249,10 +249,22 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
     ret.score = total_score.low
     ret.gist = gist_url
 
+    def sum_over_episodes(key):
+        return sum(getattr(e, key) for e in episode_scores)
+
     ret.sensorimotor_specific.num_episodes = len(episode_scores)
     ret.sensorimotor_specific.median_fps = median_fps
     ret.sensorimotor_specific.num_steps = total_score.num_steps
+    ret.sensorimotor_specific.total_episode_seconds = \
+        sum_over_episodes('episode_time')
 
+    ret.driving_specific.max_gforce = total_score.max_gforce
+    ret.driving_specific.uncomfortable_gforce_seconds = \
+        sum_over_episodes('uncomfortable_gforce_seconds')
+    ret.driving_specific.jarring_gforce_seconds = \
+        sum_over_episodes('jarring_gforce_seconds')
+    ret.driving_specific.harmful_gforces = \
+        any(e.harmful_gforces for e in episode_scores)
     ret.driving_specific.max_gforce = total_score.max_gforce
     ret.driving_specific.max_kph = total_score.max_kph
     ret.driving_specific.trip_speed_kph = total_score.trip_speed_kph

@@ -37,6 +37,9 @@ class EpisodeScore(object):
     closest_vehicle_cm: float = math.inf
     closest_vehicle_cm_while_at_least_4kph: float = math.inf
     max_lane_deviation_cm: float = 0
+    uncomfortable_gforce_seconds: float = 0
+    jarring_gforce_seconds: float = 0
+    harmful_gforces: bool = False
 
     def __init__(self):
         self.start_time = time.time()
