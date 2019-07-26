@@ -582,16 +582,17 @@ class DeepDriveEnv(gym.Env):
     def get_gforce_penalty(self, obz, time_passed):
         gforce_penalty = 0
         done = False
+        score = self.episode_score
 
         if 'acceleration' in obz:
             if time_passed is not None:
                 a = obz['acceleration']
                 gs = np.sqrt(a.dot(a)) / 980  # g = 980 cm/s**2
-                self.episode_score.max_gforce = \
-                    max(gs, self.episode_score.max_gforce)
+                score.max_gforce = \
+                    max(gs, score.max_gforce)
                 self.total_score.max_gforce = \
                     max(gs, self.total_score.max_gforce)
-                sampler = self.episode_score.gforce_sampler
+                sampler = score.gforce_sampler
                 sampler.sample(gs)
                 three_second_avg = self.average_gs(sampler, secs=3)
                 if gs > 1 or three_second_avg > 1:
@@ -617,10 +618,10 @@ class DeepDriveEnv(gym.Env):
                     gs, time_passed)
 
         gforce_penalty *= self.driving_style.value.gforce_weight
-        self.episode_score.gforce_penalty += gforce_penalty
+        score.gforce_penalty += gforce_penalty
 
-        self.display_stats['gforce penalty']['value'] = -self.episode_score.gforce_penalty
-        self.display_stats['gforce penalty']['total'] = -self.episode_score.gforce_penalty
+        self.display_stats['gforce penalty']['value'] = -score.gforce_penalty
+        self.display_stats['gforce penalty']['total'] = -score.gforce_penalty
         return gforce_penalty, done
 
     def get_progress_and_speed_reward(self, obz, time_passed, gforce_penalty,
