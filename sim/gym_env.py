@@ -594,7 +594,9 @@ class DeepDriveEnv(gym.Env):
                 sampler = self.episode_score.gforce_sampler
                 sampler.sample(gs)
                 three_second_avg = self.average_gs(sampler, secs=3)
-                if gs > 5 or three_second_avg > 4:
+                if gs > 1 or three_second_avg > 1:
+                    # https://www.quora.com/How-many-Gs-do-we-feel-driving-a-car
+                    score.harmful_gforces = True
                     # Game over
                     log.warn('G-force limit exceeded, game over. '
                              'Recent g\'s were: %r',
