@@ -211,12 +211,16 @@ class Recorder(object):
 
 def upload_artifacts(mp4_file:str, hdf5_observations: List[str]) \
         -> Tuple[str, str, str, List[str]]:
-    youtube_id = utils.upload_to_youtube(mp4_file)
-    if youtube_id:
-        youtube_url = 'https://www.youtube.com/watch?v=%s' % youtube_id
-        log.info('Successfully uploaded to YouTube! %s', youtube_url)
+    if 'UPLOAD_TO_YOUTUBE' in os.environ:
+        youtube_id = utils.upload_to_youtube(mp4_file)
+        if youtube_id:
+            youtube_url = 'https://www.youtube.com/watch?v=%s' % youtube_id
+            log.info('Successfully uploaded to YouTube! %s', youtube_url)
+        else:
+            youtube_url = ''
     else:
         youtube_url = ''
+        youtube_id = ''
     mp4_url = upload_artifacts_to_s3([mp4_file], 'mp4')[0]
     hdf5_urls = upload_artifacts_to_s3(hdf5_observations, 'hdf5')
     return youtube_id, youtube_url, mp4_url, hdf5_urls
