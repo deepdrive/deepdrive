@@ -145,6 +145,9 @@ def fine_tune_all_layers(data_dir, train_dir, train_args=None):
         max_number_of_steps=9707,
         # Performance degrades by 20e3 despite eval still dropping.
         # TODO: Find out why
+        #  (perhaps https://github.com/felipecode/coiltraine will say more) -
+        #  basically we must do early stopping before loss indicates it to get
+        #  optimum driving performance
         batch_size=16,
         learning_rate=0.00004,
         learning_rate_decay_type='fixed',
