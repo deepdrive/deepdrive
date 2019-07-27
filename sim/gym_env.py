@@ -177,13 +177,13 @@ class DeepDriveEnv(gym.Env):
     def init_display_stats(self) -> OrderedDict:
         disp_stats = OrderedDict()
         disp_stats['g-forces']                = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 3,    'units': 'g'}
-        disp_stats['gforce penalty']          = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 0,    'units': ''}
-        disp_stats['lane deviation penalty']  = {'total': 0, 'value': 0, 'ymin': -100,   'ymax': 0,    'units': ''}
+        # disp_stats['gforce penalty']          = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 0,    'units': ''}
+        # disp_stats['lane deviation penalty']  = {'total': 0, 'value': 0, 'ymin': -100,   'ymax': 0,    'units': ''}
         disp_stats['lap progress']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 100,  'units': '%'}
-        disp_stats['speed reward']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5000, 'units': ''}
+        # disp_stats['speed reward']            = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5000, 'units': ''}
         disp_stats['episode #']               = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 5,    'units': ''}
         disp_stats['time']                    = {'total': 0, 'value': 0, 'ymin': 0,      'ymax': 500,  'units': 's'}
-        disp_stats['episode score']           = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 4000, 'units': ''}
+        # disp_stats['episode score']           = {'total': 0, 'value': 0, 'ymin': -500,   'ymax': 4000, 'units': ''}
         return disp_stats
 
     def open_sim(self):
@@ -523,8 +523,8 @@ class DeepDriveEnv(gym.Env):
 
             self.display_stats['time']['value'] = score.episode_time
             self.display_stats['time']['total'] = score.episode_time
-            self.display_stats['episode score']['value'] = score.total
-            self.display_stats['episode score']['total'] = score.total
+            # self.display_stats['episode score']['value'] = score.total
+            # self.display_stats['episode score']['total'] = score.total
 
             log.debug('reward %r', reward)
             log.debug('score %r', score.total)
@@ -575,8 +575,8 @@ class DeepDriveEnv(gym.Env):
         lane_deviation_penalty *= self.driving_style.value.lane_deviation_weight
         self.episode_score.lane_deviation_penalty += lane_deviation_penalty
 
-        self.display_stats['lane deviation penalty']['value'] = -lane_deviation_penalty
-        self.display_stats['lane deviation penalty']['total'] = -self.episode_score.lane_deviation_penalty
+        # self.display_stats['lane deviation penalty']['value'] = -lane_deviation_penalty
+        # self.display_stats['lane deviation penalty']['total'] = -self.episode_score.lane_deviation_penalty
         return lane_deviation_penalty
 
     def get_gforce_penalty(self, obz, time_passed):
@@ -620,8 +620,8 @@ class DeepDriveEnv(gym.Env):
         gforce_penalty *= self.driving_style.value.gforce_weight
         score.gforce_penalty += gforce_penalty
 
-        self.display_stats['gforce penalty']['value'] = -score.gforce_penalty
-        self.display_stats['gforce penalty']['total'] = -score.gforce_penalty
+        # self.display_stats['gforce penalty']['value'] = -score.gforce_penalty
+        # self.display_stats['gforce penalty']['total'] = -score.gforce_penalty
         return gforce_penalty, done
 
     def get_progress_and_speed_reward(self, obz, time_passed, gforce_penalty,
@@ -672,8 +672,8 @@ class DeepDriveEnv(gym.Env):
         self.display_stats['lap progress']['value'] = self.display_stats['lap progress']['total']
         self.display_stats['episode #']['total'] = self.total_laps
         self.display_stats['episode #']['value'] = self.total_laps
-        self.display_stats['speed reward']['total'] = self.episode_score.speed_reward
-        self.display_stats['speed reward']['value'] = self.episode_score.speed_reward
+        # self.display_stats['speed reward']['total'] = self.episode_score.speed_reward
+        # self.display_stats['speed reward']['value'] = self.episode_score.speed_reward
 
         return progress_reward, speed_reward
 
