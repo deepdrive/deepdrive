@@ -513,7 +513,7 @@ class DeepDriveEnv(gym.Env):
 
             last_collision = obz['last_collision']
             if last_collision['collidee_velocity'].any():
-                score.collided_with_actor = True
+                score.collided_with_vehicle = True
             elif last_collision['time_stamp']:
                 score.collided_with_non_actor = True
 

@@ -133,7 +133,7 @@ All values returned in the observation keep Unreal conventions, specifically
              'closest_vehicle_cm': 15812.662932649602,
              'closest_vehicle_cm_while_at_least_4kph': 15812.662932649602,
              'cm_along_route': 18730.72265625,
-             'collided_with_actor': False,
+             'collided_with_vehicle': False,
              'collided_with_non_actor': True,
              'end_time': '1969-12-31T16:00:00-08:00',
              'episode_time': 11.5,

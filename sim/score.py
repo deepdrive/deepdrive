@@ -32,7 +32,7 @@ class EpisodeScore(object):
     num_steps: int = 0
     cm_along_route: float = 0
     route_length_cm: float = 0
-    collided_with_actor: bool = False
+    collided_with_vehicle: bool = False
     collided_with_non_actor: bool = False
     closest_vehicle_cm: float = math.inf
     closest_vehicle_cm_while_at_least_4kph: float = math.inf
@@ -72,7 +72,7 @@ class TotalScore(object):
     max_kph: float = 0
     avg_kph: float = 0
     trip_speed_kph: float = 0
-    collided_with_actor: bool = False
+    collided_with_vehicle: bool = False
     collided_with_non_actor: bool = False
     closest_vehicle_cm: float = math.inf
     closest_vehicle_cm_while_at_least_4kph: float = math.inf
@@ -94,8 +94,8 @@ class TotalScore(object):
             [e.cm_along_route / e.episode_time for e in episode_scores]))
         self.trip_speed_kph = trip_cm_per_second * c.CMPS_TO_KPH
         self.max_kph = max([e.max_kph for e in episode_scores])
-        self.collided_with_actor = any(e.collided_with_actor for e in
-                                       episode_scores)
+        self.collided_with_vehicle = any(e.collided_with_vehicle for e in
+                                         episode_scores)
         self.collided_with_non_actor = any(e.collided_with_non_actor for e
                                            in episode_scores)
         self.closest_vehicle_cm = min(
