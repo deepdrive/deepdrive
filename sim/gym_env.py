@@ -603,7 +603,7 @@ class DeepDriveEnv(gym.Env):
                              'Recent g\'s were: %r',
                              list(reversed(list(sampler.q)[-10:])))
                     done = True
-                elif gs > 0.3:
+                elif gs > 0.4:
                     # https://www.quora.com/How-many-Gs-do-we-feel-driving-a-car
                     score.jarring_gforce_seconds += time_passed
                 if gs > 0.1:
