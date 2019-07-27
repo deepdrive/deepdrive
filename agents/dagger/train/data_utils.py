@@ -123,9 +123,6 @@ def load_file(h5_filename, overfit=False, mute_spurious_targets=False):
         for frame in frames:
             # Just use one camera for now
             out_images.append(frame['cameras'][0]['image'])
-
-            # TODO(py27): Python versions < 3.5 do not support starred
-            #  expressions in tuples, lists, and sets
             out_targets.append([*normalize_frame(frame, mute_spurious_targets)])
     except Exception as e:
         log.error('Could not load %s - skipping - error was: %r',
@@ -204,10 +201,6 @@ class Dataset(object):
             for file_name in self._files:
                 log.info('queueing data from %s for iterate once', file_name)
                 yield file_name
-
-        # TODO(py27): Python versions < 3.3 do not support this syntax.
-        #  Delegating to a subgenerator is available since Python 3.3;
-        #  use explicit iteration over subgenerator instead.
         yield from batch_gen(file_stream(), batch_size,
                              mute_spurious_targets=self.mute_spurious_targets)
 
@@ -220,13 +213,6 @@ class Dataset(object):
                     log.info('queueing data from %s for iterate forever',
                              file_name)
                     yield file_name
-
-        # TODO: Make Python 2 compatible with something like
-        # for x in batch_gen(file_stream(), batch_size):
-        #     yield x
-        # TODO(py27): Python versions < 3.3 do not support this syntax.
-        # Delegating to a subgenerator is available since Python 3.3;
-        # use explicit iteration over subgenerator instead.
         yield from batch_gen(file_stream(), batch_size, self.overfit,
                              self.mute_spurious_targets)
 
