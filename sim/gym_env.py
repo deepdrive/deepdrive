@@ -289,51 +289,62 @@ class DeepDriveEnv(gym.Env):
         self.sess = session
 
     def step(self, action):
+        try:
+            ret = self.inner_step(action)
+        except Exception as e:
+            self.close()
+            raise e
+        return ret
+
+    def inner_step(self, action):
         if self.surpassed_max_episodes():
-            return None, 0, True, {'should_close': True}
-        dd_action = self.get_dd_action(action)
-        send_control_start = time.time()
-        self.send_control(dd_action)
-        log.debug('send_control took %fs', time.time() - send_control_start)
+            ret = None, 0, True, {'should_close': True}
+        else:
+            dd_action = self.get_dd_action(action)
+            send_control_start = time.time()
+            self.send_control(dd_action)
+            log.debug('send_control took %fs', time.time() - send_control_start)
 
-        obz = self.get_observation()
-        if not obz:
-            log.debug('Observation not available - step %r', self.step_num)
+            obz = self.get_observation()
+            if not obz:
+                log.debug('Observation not available - step %r', self.step_num)
 
-        self.last_obz = obz
-        if self.should_render:
-            self.render()
+            self.last_obz = obz
+            if self.should_render:
+                self.render()
 
-        now = time.time()
+            now = time.time()
 
-        done, reward = self.get_reward_timed(now, obz)
-        self.prev_step_time = now
-        self.publish_to_dashboard()
-        self.step_num += 1
+            done, reward = self.get_reward_timed(now, obz)
+            self.prev_step_time = now
+            self.publish_to_dashboard()
+            self.step_num += 1
 
-        # Info is just for OpenAI baselines.
-        # Info is not recorded in hdf5 logs, so
-        # don't put anything there that isn't in the observation if you want
-        # it to be in the drive logs.
-        info = self.init_step_info()
-        if done:
-            self.report_score(info)
+            # Info is just for OpenAI baselines.
+            # Info is not recorded in hdf5 logs, so
+            # don't put anything there that isn't in the observation if you want
+            # it to be in the drive logs.
+            info = self.init_step_info()
+            if done:
+                self.report_score(info)
 
-        if obz is not None:
-            obz['score'] = self.episode_score.serialize()
+            if obz is not None:
+                obz['score'] = self.episode_score.serialize()
 
-        self.regulate_fps()
-        self.view_mode_controller.step(self.client_id)
-        obz = self.postprocess_obz(obz)
+            self.regulate_fps()
+            self.view_mode_controller.step(self.client_id)
+            obz = self.postprocess_obz(obz)
 
-        if self.recorder is not None:
-            self.recorder.step(obz, done, reward,
-                               dd_action, is_agent_action=dd_action.has_control)
+            if self.recorder is not None:
+                self.recorder.step(obz, done, reward,
+                                   dd_action,
+                                   is_agent_action=dd_action.has_control)
 
-        # TODO: Remove things that we don't want botleague agents to be able
-        #   to use.
+            # TODO: Remove things that we don't want botleague agents to be able
+            #   to use.
 
-        return obz, reward, done, info
+            ret = obz, reward, done, info
+        return ret
 
     def get_reward_timed(self, now, obz):
         start_reward_stuff = time.time()
@@ -898,9 +909,6 @@ class DeepDriveEnv(gym.Env):
         self.open_sim()
         self.connect(cameras)
 
-    def __del__(self):
-        self.close()
-
     def close(self):
         # Only try to close things once, i.e. if __del__ is called after close()
         if self.tried_to_close:
@@ -923,6 +931,8 @@ class DeepDriveEnv(gym.Env):
         log.info('Closed dashboard')
         if self.dashboard_process is not None:
             self.dashboard_process.join(timeout=.25)
+        if self.renderer is not None:
+            self.renderer.close()
         if self.is_sync:
             deepdrive_client.deactivate_synchronous_stepping(self.client_id)
         deepdrive_capture.close()
@@ -1232,7 +1242,7 @@ class DeepDriveEnv(gym.Env):
                 obz = deepdrive_capture.step()
             except SystemError as e:
                 log.error('caught error during step' + str(e))
-            time.sleep(0.25  * read_obz_count)
+            time.sleep(0.25 * read_obz_count)
             read_obz_count += 1
 
     def reset_capture(self, shared_mem_name, shared_mem_size):

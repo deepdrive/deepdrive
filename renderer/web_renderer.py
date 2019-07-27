@@ -56,7 +56,7 @@ class WebRenderer(Renderer):
                                           name='streaming server', daemon=True)
         self.web_server_process.start()
 
-    def __del__(self):
+    def close(self):
         self.socket.close()
         self.context.term()
         try:

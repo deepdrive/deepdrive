@@ -103,7 +103,7 @@ def start_local_env(args:SimArgs):
     return env
 
 
-def add_recorder(_env, args:SimArgs):
+def add_recorder(_env, args: SimArgs):
     if args.is_remote_client:
         main_args = args.client_main_args
     else:
