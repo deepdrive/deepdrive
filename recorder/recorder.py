@@ -250,110 +250,116 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
                              hdf5_observations, mp4_file, episodes_file,
                              summary_file, median_fps):
     ret = Box(default_box=True)
-    ret.score = total_score.low
-    ret.gist = gist_url
+    ts = total_score
+    if gist_url:
+        ret.gist = gist_url
 
     def sum_over_episodes(key):
         return sum(getattr(e, key) for e in episode_scores)
 
-    ret.sensorimotor_specific.num_episodes = len(episode_scores)
-    ret.sensorimotor_specific.median_fps = median_fps
-    ret.sensorimotor_specific.num_steps = total_score.num_steps
-    ret.sensorimotor_specific.total_episode_seconds = \
-        sum_over_episodes('episode_time')
-
-    ret.driving_specific.max_gforce = total_score.max_gforce
-    ret.driving_specific.uncomfortable_gforce_seconds = \
-        sum_over_episodes('uncomfortable_gforce_seconds')
-    ret.driving_specific.jarring_gforce_seconds = \
-        sum_over_episodes('jarring_gforce_seconds')
-    ret.driving_specific.harmful_gforces = \
-        any(e.harmful_gforces for e in episode_scores)
-    ret.driving_specific.max_gforce = total_score.max_gforce
-    ret.driving_specific.max_kph = total_score.max_kph
-    ret.driving_specific.trip_speed_kph = total_score.trip_speed_kph
-    ret.driving_specific.collided_with_actor = total_score.collided_with_actor
-    ret.driving_specific.collided_with_non_actor = \
-        total_score.collided_with_non_actor
-    ret.driving_specific.closest_vehicle_meters = \
-        total_score.closest_vehicle_cm / 100
-    ret.driving_specific.closest_vehicle_meters_while_at_least_4kph = \
-        total_score.closest_vehicle_cm_while_at_least_4kph / 100
-    ret.driving_specific.max_lane_deviation_meters = \
-        total_score.max_lane_deviation_cm / 100
-
-    # TODO: Closest distance to pedestrians
-
-    # Add items to be uploaded by privileged code
+    ret.sensorimotor_specific = get_sensorimotor_specific_results(
+        episode_scores, median_fps, sum_over_episodes, ts)
+    total_time = ret.sensorimotor_specific.total_episode_seconds
+    ret.driving_specific, ds_score = get_driving_specific_results(
+        episode_scores, sum_over_episodes, total_time, ts)
+    ret.score = ds_score
     artifact_dir = c.BOTLEAGUE_RESULTS_DIR
     os.makedirs(artifact_dir, exist_ok=True)
-
     csv_relative_dir = 'csvs'
-
     if c.BOTLEAGUE_CALLBACK or c.UPLOAD_RESULTS:
-        summary_url, episodes_url = upload_artifacts_to_s3(
-            [summary_file, episodes_file], csv_relative_dir)
-
-        ret.problem_specific.summary = summary_url
-        ret.problem_specific.episodes = episodes_url
-
-        youtube_id, youtube_url, mp4_url, hdf5_urls = \
-            upload_artifacts(mp4_file, hdf5_observations)
-
-        ret.youtube = youtube_url
-        ret.mp4 = mp4_url
-        ret.problem_specific.hdf5_observations = hdf5_urls
+        create_uploaded_artifacts(csv_relative_dir, episodes_file,
+                                  hdf5_observations, mp4_file, ret,
+                                  summary_file)
     else:
-        ret.mp4 = mp4_file
-        ret.problem_specific.hdf5_observations = hdf5_observations
-        ret.problem_specific.summary = summary_file
-        ret.problem_specific.episodes = episodes_file
+        use_local_artifacts(episodes_file, hdf5_observations, mp4_file, ret,
+                            summary_file)
+    store_results(artifact_dir, ret)
+    resp = send_results(ret)
+
+    return ret, resp
 
 
-    """
-    {
+def send_results(ret):
+    if c.BOTLEAGUE_CALLBACK:
+        resp = requests.post(c.BOTLEAGUE_CALLBACK, data=ret.to_dict())
+    else:
+        resp = None
+    return resp
 
-    # Added by botleague liaison
-  "problem": "domain_randomization",
-  "username": "curie",
-  "botname": "forward-agent",
-  "status": "success",
-  "utc_timestamp": 87600000,
-  "docker_digest": "qewrqwerqwer",
 
-  # Added by Adam using docker logs
-  "log": "https://gist.githubusercontent.com/crizCraig/38f19d2e3226a822c6ce09ea618ac7ab/raw/32108e3a290a4bccea38b1bade31d6a4b42b32ce/gistfile1.txt",
-  
-  # Added by Adam
-  "docker_image_url": "https://s3-us-west-1.amazonaws.com/ci/build/12341234/agent.tar",
-  
-  
-  "json_commit": "https://github.com/deepdrive/agent-zoo/commit/4a0e6af15c5ee05b62c6705d40aece250112a57d",
-  "source_commit": "https://github.com/curie/forward-agent/commit/defc93d95944099d3e61cda6542bb4ffe7a28abf",
-
-  "youtube": "https://www.youtube.com/watch?v=rjZCjosEFpI&t=2575s",
-  "mp4": "https://s3-us-west-1.amazonaws.com/ci/build/12341234/asdf.mp4",
-  "sensorimotor_specific": {
-      "max_step_milliseconds": 500.134323,
-      "dropped_steps": 34,
-  },
-
-}
-    """
-
+def store_results(artifact_dir, ret):
     results_json_filename = join(artifact_dir, 'results.json')
-
     ret.to_json(filename=results_json_filename, indent=2)
     log.info('Wrote botleague results to %s' % results_json_filename)
     copy_dir_clean(src=c.BOTLEAGUE_RESULTS_DIR,
                    dest=c.LATEST_BOTLEAGUE_RESULTS)
 
-    if c.BOTLEAGUE_CALLBACK:
-        resp = requests.post(c.BOTLEAGUE_CALLBACK, data=ret.to_dict())
-    else:
-        resp = None
 
-    return ret, resp
+def get_sensorimotor_specific_results(episode_scores, median_fps,
+                                      sum_over_episodes, ts) -> Box:
+    ret = Box()
+    ret.num_episodes = len(episode_scores)
+    ret.median_fps = median_fps
+    ret.num_steps = ts.num_steps
+    ret.total_episode_seconds = sum_over_episodes('episode_time')
+    return ret
+
+
+def use_local_artifacts(episodes_file, hdf5_observations, mp4_file, ret,
+                        summary_file):
+    ret.mp4 = mp4_file
+    ret.problem_specific.hdf5_observations = hdf5_observations
+    ret.problem_specific.summary = summary_file
+    ret.problem_specific.episodes = episodes_file
+
+
+def create_uploaded_artifacts(csv_relative_dir, episodes_file,
+                              hdf5_observations, mp4_file, ret, summary_file):
+    summary_url, episodes_url = upload_artifacts_to_s3(
+        [summary_file, episodes_file], csv_relative_dir)
+    ret.problem_specific.summary = summary_url
+    ret.problem_specific.episodes = episodes_url
+    youtube_id, youtube_url, mp4_url, hdf5_urls = \
+        upload_artifacts(mp4_file, hdf5_observations)
+    ret.youtube = youtube_url
+    ret.mp4 = mp4_url
+    ret.problem_specific.hdf5_observations = hdf5_urls
+
+
+def get_driving_specific_results(episode_scores, sum_over_episodes,
+                                 total_time, ts):
+    # TODO: Closest distance to pedestrians
+    # See https://docs.google.com/spreadsheets/d/1Nm7_3vUYM5pIs2zLWM2lO_TCoIlVpwX-YRLVo4S4-Cc/edit#gid=0
+    #   for balancing score coefficients
+
+    ret = Box()
+    score = 0
+    ret.max_gforce = ts.max_gforce
+    ret.uncomfortable_gforce_seconds = sum_over_episodes(
+        'uncomfortable_gforce_seconds')
+    ret.jarring_gforce_seconds = \
+        sum_over_episodes('jarring_gforce_seconds')
+    ret.harmful_gforces = \
+        any(e.harmful_gforces for e in episode_scores)
+    ret.comfort_pct = 100 - ret.uncomfortable_gforce_seconds / total_time * 100
+    score -= ret.comfort_pct * 100
+    ret.jarring_pct = ret.jarring_gforce_seconds / total_time * 100
+    score -= ret.jarring_pct * 500
+    ret.max_gforce = ts.max_gforce
+    ret.max_kph = ts.max_kph
+    ret.trip_speed_kph = ts.trip_speed_kph
+    score += ts.trip_speed_kph * 10
+    ret.collided_with_vehicle = ts.collided_with_vehicle
+    if ts.collided_with_vehicle:
+        score -= 1e4
+    ret.collided_with_non_actor = ts.collided_with_non_actor
+    if ts.collided_with_non_actor:
+        score -= 2.5e3
+    ret.closest_vehicle_meters = ts.closest_vehicle_cm / 100
+    ret.closest_vehicle_meters_while_at_least_4kph = \
+        ts.closest_vehicle_cm_while_at_least_4kph / 100
+    ret.max_lane_deviation_meters = ts.max_lane_deviation_cm / 100
+    return ret, score
 
 
 def make_needs_upload(base_dir:str, relative_dir:str, file:str,
