@@ -114,7 +114,7 @@ class Recorder(object):
                     public=True)
                 log.info('gist uploaded to %s', gist_url)
             else:
-                gist_url = 'not uploaded'
+                gist_url = None
 
             hdf5_observations = glob.glob(c.HDF5_SESSION_DIR + '/*.hdf5')
             self.create_artifacts_inventory(
