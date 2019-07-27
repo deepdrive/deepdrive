@@ -29,7 +29,7 @@ class SimArgs:
     recording_dir: str = c.RECORDING_DIR
     image_resize_dims: Tuple[int] = None
     should_normalize_image: bool = True
-    reset_returns_zero: bool = False  # TODO: Change once dagger agents confirmed working with True
+    reset_returns_zero: bool = True  # TODO: Change once dagger agents confirmed working with True
     eval_only: bool = False
     upload_gist: bool = False
     public: bool = False
