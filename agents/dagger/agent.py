@@ -154,7 +154,7 @@ class Agent(object):
             # if actual_speed > 0.8 * (max_meters_per_sec * 100):
             #     desired_speed *= 0.8
 
-            # TODO: Support different driving styles
+            # TODO(post v3): Support different driving styles
 
             # desired_throttle = get_throttle(actual_speed, desired_speed * 0.48)
 
@@ -228,7 +228,7 @@ class Agent(object):
             raise ValueError('Unexpected action jitter state')
         action = Action(steering, throttle, has_control=has_control)
         if not has_control:
-            # TODO: Move setpoint to env
+            # TODO(post v3): Move setpoint to env
             # We should not be calling single purpose
             # UEPy API methods this frequently, i.e. every step as the server
             # can only respond to one message per frame.
@@ -266,7 +266,7 @@ class Agent(object):
         if image_shape is None:
             raise RuntimeError('Image shape not defined')
         if is_frozen:
-            # TODO: Get frozen nets working
+            # TODO(post v3): Get frozen nets working
 
             # We load the protobuf file from the disk and parse it to
             # retrieve the unserialized graph_def

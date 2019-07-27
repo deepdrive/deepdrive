@@ -79,7 +79,7 @@ def train_mobile_net(data_dir, resume_dir=None,
                                      'fine_tune_new_layers', None)))
         isolate_in_process(eval_mobile_net, args=(data_dir,))
     else:
-        # TODO: Fix MNET2/tf-slim issue resuming with train_dir
+        # TODO(post v3): Fix MNET2/tf-slim issue resuming with train_dir
         train_dir = resume_dir
         print('resume_dir is ', resume_dir)
 

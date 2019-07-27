@@ -136,7 +136,7 @@ def save_tfrecord_file(file_idx, filename, images, targets):
 
 
 def encode(parallelize=True, hdf5_path=c.RECORDING_DIR, experiment=None):
-    # TODO: Get a couple separate hdf5 files from different
+    # TODO(post v3): Get a couple separate hdf5 files from different
     #  situations / view modes for eval
     hdf5_to_convert_path = get_hdf5_path_to_convert(hdf5_path)
     train_dataset = get_dataset(hdf5_to_convert_path, train=True)

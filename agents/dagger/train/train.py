@@ -82,7 +82,7 @@ def run(resume_dir=None, data_dir=c.RECORDING_DIR, agent_name=None,
 
 def custom_train_loop(agent_name, data_dir, eval_only,
                       freeze_pretrained, overfit, resume_dir, tf_debug):
-    # TODO: Don't use generic word like 'model' here that other projects often use.
+    # TODO(post v3): Don't use generic word like 'model' here that other projects often use.
     # Need to rename/retrain saved models tho...
     with tf.variable_scope("model"):
         global_step = tf.get_variable("global_step", [], tf.int32,

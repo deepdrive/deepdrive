@@ -55,7 +55,7 @@ class BootstrapRLGymEnv(gym.Wrapper):
         if self.simple_test:
             shape = (5,)
         else:
-            # TODO: Add prior 200ms, 500ms, 1s and 2s mobilenet activations, along with speed, acceleration, and other stats we get from obz
+            # TODO(post v3): Add prior 200ms, 500ms, 1s and 2s mobilenet activations, along with speed, acceleration, and other stats we get from obz
             speed_length = 1
             acceleration_length = 3  # x,y,z
             previous_output_length = 3  # steer,throttle,handbrake
