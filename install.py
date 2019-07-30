@@ -10,8 +10,6 @@ import platform
 from distutils.spawn import find_executable
 from distutils.version import LooseVersion as semvar
 
-import pkg_resources
-
 DIR = os.path.dirname(os.path.realpath(__file__))
 
 IS_LINUX = sys.platform == 'linux' or sys.platform == 'linux2'
