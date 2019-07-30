@@ -136,7 +136,7 @@ def check_tensorflow_gpu(is_install=False):
         print(error_msg % 'Using Docker but not nvidia-docker runtime', file=sys.stderr)
         ret = False
     else:
-        if is_install:
+        if not is_install:
             import h5py  # importing tensorflow later causes seg faults
         try:
             import tensorflow as tf
