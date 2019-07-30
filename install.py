@@ -72,7 +72,7 @@ def main():
         # Docker does not build with nvidia runtime. We can do this if
         # we want by setting the default docker runtime to nvidia, but
         # we don't want to require that people do this.
-        check_tensorflow_gpu()
+        check_tensorflow_gpu(is_install=True)
 
     # Install sarge to nicely stream commands and wheel for precompiled packages
     run_command_no_deps(py + ' -m pip install sarge wheel', verbose=True)
@@ -122,7 +122,7 @@ def check_nvidia_docker():
         return True
 
 
-def check_tensorflow_gpu():
+def check_tensorflow_gpu(is_install=False):
     error_msg = \
         '\n\n*** Warning: %s, Tensorflow agents will not be available. ' \
         'HINT: Install Tensorflow or use the python / virtualenv ' \
@@ -136,7 +136,8 @@ def check_tensorflow_gpu():
         print(error_msg % 'Using Docker but not nvidia-docker runtime', file=sys.stderr)
         ret = False
     else:
-        import h5py  # importing tensorflow later causes seg faults
+        if is_install:
+            import h5py  # importing tensorflow later causes seg faults
         try:
             import tensorflow as tf
         except ImportError:
