@@ -288,7 +288,7 @@ and checkout [this view](http://localhost:6006/#scalars&_smoothingWeight=0.935&r
 
 ## Architecture
 
-![Deepdrive Architecture](./docs/images/architecture.png)
+![Deepdrive Architecture](./docs/images/deepdrive-arch.png)
 
 ## Frame rate issues on Linux
 
