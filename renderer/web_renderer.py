@@ -60,7 +60,7 @@ class WebRenderer(Renderer):
         self.socket.close()
         self.context.term()
         try:
-            self.web_server_process.join()
+            self.web_server_process.join(timeout=.25)
         except Exception as e:
             # TODO: Find out why we cannot web server process on close.
             pass
