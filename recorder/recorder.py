@@ -102,7 +102,7 @@ class Recorder(object):
                 save_thread.join()
             mp4_file = utils.hdf5_to_mp4()
             local_public_run = self.should_upload_gist and self.public
-            server_public_run = bool(c.BOTLEAGUE_CALLBACK)
+            server_public_run = bool(c.UPLOAD_RESULTS)
             public_run = local_public_run or server_public_run
 
             if public_run:
@@ -266,7 +266,7 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
     artifact_dir = c.BOTLEAGUE_RESULTS_DIR
     os.makedirs(artifact_dir, exist_ok=True)
     csv_relative_dir = 'csvs'
-    if c.BOTLEAGUE_CALLBACK or c.UPLOAD_RESULTS:
+    if c.UPLOAD_RESULTS:
         create_uploaded_artifacts(csv_relative_dir, episodes_file,
                                   hdf5_observations, mp4_file, ret,
                                   summary_file)
@@ -274,17 +274,8 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
         use_local_artifacts(episodes_file, hdf5_observations, mp4_file, ret,
                             summary_file)
     store_results(artifact_dir, ret)
-    resp = send_results(ret)
 
-    return ret, resp
-
-
-def send_results(ret):
-    if c.BOTLEAGUE_CALLBACK:
-        resp = requests.post(c.BOTLEAGUE_CALLBACK, data=ret.to_dict())
-    else:
-        resp = None
-    return resp
+    return ret
 
 
 def store_results(artifact_dir, ret):
