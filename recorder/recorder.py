@@ -221,13 +221,13 @@ def upload_artifacts(mp4_file:str, hdf5_observations: List[str]) \
     else:
         youtube_url = ''
         youtube_id = ''
-    mp4_url = upload_artifacts_to_s3([mp4_file], 'mp4')[0]
-    hdf5_urls = upload_artifacts_to_s3(hdf5_observations, 'hdf5')
+    mp4_url = upload_artifacts_to_cloud([mp4_file], 'mp4')[0]
+    hdf5_urls = upload_artifacts_to_cloud(hdf5_observations, 'hdf5')
     return youtube_id, youtube_url, mp4_url, hdf5_urls
 
 
-def upload_artifacts_to_s3(file_paths:List[str], directory:str,
-                           use_gcp=True) -> List[str]:
+def upload_artifacts_to_cloud(file_paths:List[str], directory:str,
+                              use_gcp=True) -> List[str]:
     from ue4helpers import GCPUtils, AWSUtils
     ret = []
     for file_path in file_paths:
@@ -306,7 +306,7 @@ def use_local_artifacts(episodes_file, hdf5_observations, mp4_file, ret,
 
 def create_uploaded_artifacts(csv_relative_dir, episodes_file,
                               hdf5_observations, mp4_file, ret, summary_file):
-    summary_url, episodes_url = upload_artifacts_to_s3(
+    summary_url, episodes_url = upload_artifacts_to_cloud(
         [summary_file, episodes_file], csv_relative_dir)
     ret.problem_specific.summary = summary_url
     ret.problem_specific.episodes = episodes_url

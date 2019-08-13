@@ -83,7 +83,9 @@ LOG_DIR = p.join(DEEPDRIVE_DIR, 'log')
 RESULTS_BASE_DIR = p.join(DEEPDRIVE_DIR, 'results')
 RESULTS_DIR = p.join(RESULTS_BASE_DIR, DATE_STR + '_' + RUN_ID)
 BOTLEAGUE_RESULTS_DIR = p.join(RESULTS_DIR, 'botleague_results')
-LATEST_BOTLEAGUE_RESULTS = p.join(RESULTS_BASE_DIR, 'latest_botleague_results')
+LATEST_BOTLEAGUE_RESULTS = os.environ.get('BOTLEAGUE_RESULT_FILEPATH',
+                                          p.join(RESULTS_BASE_DIR,
+                                                 'latest_botleague_results'))
 TENSORFLOW_OUT_DIR = p.join(DEEPDRIVE_DIR, 'tensorflow')
 WEIGHTS_DIR = p.join(DEEPDRIVE_DIR, 'weights')
 BASELINES_DIR = p.join(DEEPDRIVE_DIR, 'baselines_results')

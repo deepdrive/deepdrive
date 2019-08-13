@@ -506,7 +506,7 @@ def copy_dir_clean(src, dest):
     if exists(dest):
         log.info('Removing %s', dest)
         guarded_rmtree(dest)
-    log.info('Copying static files to %s', dest)
+    log.info('Copying files to %s', dest)
     shutil.copytree(src, dest)
 
 
