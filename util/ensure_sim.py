@@ -23,7 +23,7 @@ log = logs.get_log(__name__)
 def ensure_sim(update=False):
     actual_path, expected_path = get_sim_bin_path(return_expected_path=True)
     if update or actual_path is None:
-        print('\n--------- Simulator not found, downloading ----------')
+        print('\n--------- Updating to latest simulator ----------')
         if c.IS_LINUX or c.IS_WINDOWS:
             if os.environ.get('SIM_URL', 'latest') == 'latest':
                 log.info('Downloading latest sim')

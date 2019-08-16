@@ -123,6 +123,9 @@ def add_standard_args(args:Args):
         help='Resize the image coming from the cameras. This was added as '
              'we trained MNET (224x224) on old AlexNet data (227x227), and'
              'wanted to test using the same transformation.')
+    args.add(
+        '--update-sim', action='store_true', default=False,
+        help='Update sim to the latest version', )
 
 
 def add_agent_args(args):
@@ -195,6 +198,11 @@ def main():
     c.MAIN_ARGS = vars(args)  # For documenting runs
     if args.verbose:
         logs.set_level(logging.DEBUG)
+
+    if args.update_sim:
+        from util.ensure_sim import ensure_sim
+        ensure_sim(update=True)
+        return
 
     if args.public and not c.PUBLIC:
         answer = input('Please confirm you want to make the results '
