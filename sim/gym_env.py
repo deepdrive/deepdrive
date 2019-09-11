@@ -5,6 +5,7 @@ import platform
 import shutil
 
 # noinspection PyUnresolvedReferences
+import traceback
 from typing import List
 
 from tensorflow.python.client.session import SessionInterface
@@ -1240,8 +1241,10 @@ class DeepDriveEnv(gym.Env):
                 raise RuntimeError(error_msg)
             try:
                 obz = deepdrive_capture.step()
-            except SystemError as e:
+            except Exception as e:
+                traceback.print_stack()
                 log.error('caught error during step' + str(e))
+
             time.sleep(0.25 * read_obz_count)
             read_obz_count += 1
 
