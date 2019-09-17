@@ -227,12 +227,12 @@ class DeepDriveEnv(gym.Env):
 
             pass
         else:
-            cmd = util.ensure_sim.get_sim_bin_path()
+            cmd = [util.ensure_sim.get_sim_bin_path(), '-opengl4']
 
             if log.getEffectiveLevel() < 20:  # More verbose than info (i.e. debug)
                 cmd += ' -LogCmds="LogPython Verbose, LogSharedMemoryImpl_Linux VeryVerbose, LogDeepDriveAgent VeryVerbose"'
 
-            self.sim_process = Popen(util.ensure_sim.get_sim_bin_path())
+            self.sim_process = Popen(cmd)
             log.info('Starting simulator at %s '
                      '(takes a few seconds the first time).', cmd)
 
