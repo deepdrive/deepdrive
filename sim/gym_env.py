@@ -1206,6 +1206,7 @@ class DeepDriveEnv(gym.Env):
 
         connect()
         if self.connection_props:
+            ensure_sim.check_pyarrow_compat()
             log.info('Connecting to an already open sim')
             self.unregister_cameras()
             for _client_id in range(1, self.connection_props['client_id']):

@@ -11,9 +11,11 @@ from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
                              str, super, zip)
 
 import deepdrive_api.utils
+from deepdrive_api.utils import check_pyarrow_compatibility
 import config as c
 import logs
 from util.run_command import run_command
+
 
 from util.download import download
 
@@ -155,3 +157,26 @@ def get_sim_project_dir():
 
     return path
 
+
+def check_pyarrow_compat():
+    try:
+        import ue4cli
+        manager = ue4cli.UnrealManagerFactory.create()
+        try:
+            unreal_root = manager.getEngineRoot()
+        except ue4cli.UnrealManagerException.UnrealManagerException:
+            log.warning("""
+Unable to find Unreal Engine root directory. Please run
+
+ue4 setroot <your-unreal-directory>
+
+""")
+            return
+
+        check_pyarrow_compatibility(unreal_root)
+    except:
+        log.exception('Could not check for pyarrow compatibility, if you see '
+                      'segfaults serializing UEPY data, ensure the '
+                      'UEPY embedded python pyarrow version matches the '
+                      'the pyarrow version being used by this python '
+                      'interpreter')

@@ -27,6 +27,7 @@ python-box
 sarge
 deepdrive-api>=3.0.20190703222442
 ue4_ci_helpers>=0.0.9
+ue4cli
 
 # Install from Github, editable
 #-e git://github.com/deepdrive/gist.git#egg=python-gist==0.6.1.dev42
