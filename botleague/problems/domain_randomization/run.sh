@@ -4,7 +4,7 @@ set -e
 
 export DEEPDRIVE_PUBLIC=true
 
-# TODO!!! Think about how you'll fan out and fan in results.
+# TODO!!! Think about how you'll fan out and fan in results for an individual bot.
 
 python main.py \
       --server \
