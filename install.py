@@ -95,7 +95,7 @@ def main():
     # # TODO: Remove dev0 once 3.0 is stable
     # run_command_with_sarge(py + ' -m pip install {pip_args} "deepdrive > {major_minor_version}.*dev0"'.format(
 
-    run_command_with_sarge(py + ' -m pip install {pip_args} "deepdrive==3.0.20190625221105.dev0"'.format(
+    run_command_with_sarge(py + ' -m pip install {pip_args} "deepdrive==3.0.20190920222155.dev0"'.format(
         major_minor_version=c.MAJOR_MINOR_VERSION_STR, pip_args=pip_args))
 
     # noinspection PyUnresolvedReferences
