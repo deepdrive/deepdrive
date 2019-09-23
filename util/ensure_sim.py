@@ -97,6 +97,8 @@ def get_sim_bin_path(return_expected_path=False):
     sim_path = get_sim_path()
     if c.REUSE_OPEN_SIM:
         return None
+    elif sim_path is None:
+        expected_path = None
     elif c.IS_LINUX:
         if os.path.exists(sim_path + '/LinuxNoEditor'):
             expected_path = sim_path + '/LinuxNoEditor/DeepDrive/Binaries/Linux/DeepDrive*'
@@ -110,7 +112,11 @@ def get_sim_bin_path(return_expected_path=False):
             sim_path, 'WindowsNoEditor', 'DeepDrive', 'Binaries', 'Win64',
             'DeepDrive*.exe')
 
-    path = get_from_glob(expected_path)
+    if expected_path is not None:
+        path = get_from_glob(expected_path)
+    else:
+        path = None
+
     if path and not os.path.exists(path):
         ret = None
     else:
@@ -146,7 +152,10 @@ def get_sim_path() -> str:
             os.path.join(c.DEEPDRIVE_DIR, 'deepdrive-sim-*-%s.*'
                                           % c.version.MAJOR_MINOR_VERSION_STR))
         paths = [p for p in paths if not p.endswith('.zip')]
-        ret = list(sorted(paths))[-1]
+        if paths:
+            ret = list(sorted(paths))[-1]
+        else:
+            ret = None
     return ret
 
 def get_sim_project_dir():
@@ -188,3 +197,6 @@ ue4 setroot <your-unreal-directory>
                       'UEPY embedded python pyarrow version matches the '
                       'the pyarrow version being used by this python '
                       'interpreter')
+
+if __name__ == '__main__':
+    ensure_sim()
