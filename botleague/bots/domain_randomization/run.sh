@@ -2,4 +2,5 @@
 
 python main.py \
     --net-path="${HOME}/deepdrive_weights/domain_randomization" \
-    --remote
+    --remote \
+      && echo "Bot finished running successfully."

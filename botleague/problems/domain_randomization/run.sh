@@ -16,4 +16,5 @@ python main.py \
       --eval-only \
       --render \
       --upload-gist \
-      --image-resize-dims="[224,224,3]"
+      --image-resize-dims="[224,224,3]" \
+      && echo "Sim finished running successfully. Check above for results."
