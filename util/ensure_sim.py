@@ -45,7 +45,7 @@ def ensure_sim(update=False):
 def get_sim_name_from_url(url, include_file_extension=False):
     ret = url.split('/')[-1]
     if not include_file_extension:
-        ret = ''.join(ret.split('.')[:-1])
+        ret = '.'.join(ret.split('.')[:-1])
     return ret
 
 
