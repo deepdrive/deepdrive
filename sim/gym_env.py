@@ -1129,7 +1129,7 @@ class DeepDriveEnv(gym.Env):
         log.error(
             'Server client version mismatch server@%s client@%s - closed sim' %
             (server_version_str, self.client_version))
-        sim_url = util.ensure_sim.get_sim_url()
+        sim_url = util.ensure_sim.get_latest_sim_url()
         if sim_url:
             answer = input('We\'ve found a version of the sim which matches your '
                            'client. Would you like to download it now? [y/n] ')

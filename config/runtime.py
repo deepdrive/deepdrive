@@ -99,6 +99,7 @@ MNET2_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/mnet2_baseline_weights.zip'
 PPO_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/ppo_baseline_agent_weights.zip'
 SIM_PREFIX = 'deepdrive-sim-' + OS_NAME
 YOU_GET_MY_JIST_URL = AWS_BUCKET_URL + '/yougetmyjist.json'
+SIM_URL = os.environ.get('SIM_URL')
 
 
 # Sim

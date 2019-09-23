@@ -27,18 +27,26 @@ def ensure_sim(update=False):
     if update or actual_path is None:
         print('\n--------- Updating to latest simulator ----------')
         if c.IS_LINUX or c.IS_WINDOWS:
-            if os.environ.get('SIM_URL', 'latest') == 'latest':
+            if c.SIM_URL is None:
                 log.info('Downloading latest sim')
-                url = c.AWS_BUCKET_URL + get_sim_url()
+                url = c.AWS_BUCKET_URL + get_latest_sim_url()
             else:
-                url = os.environ['SIM_URL']
-            sim_path = os.path.join(c.DEEPDRIVE_DIR, url.split('/')[-1][:-4])
+                log.info(f'Using configured SIM_URL {c.SIM_URL}')
+                url = c.SIM_URL
+            sim_path = os.path.join(c.DEEPDRIVE_DIR, get_sim_name_from_url(url))
             download(url, sim_path, warn_existing=False, overwrite=False)
         else:
             raise NotImplementedError(
                 'Sim download not yet implemented for this OS')
     ensure_executable(get_sim_bin_path())
     ensure_sim_python_binaries()
+
+
+def get_sim_name_from_url(url, include_file_extension=False):
+    ret = url.split('/')[-1]
+    if not include_file_extension:
+        ret = ''.join(ret.split('.')[:-1])
+    return ret
 
 
 def ensure_sim_python_binaries():
@@ -114,7 +122,7 @@ def get_sim_bin_path(return_expected_path=False):
         return ret
 
 
-def get_sim_url():
+def get_latest_sim_url():
     sim_prefix = 'sim/' + c.SIM_PREFIX
     conn = S3Connection(anon=True)
     bucket = conn.get_bucket('deepdrive')
@@ -129,17 +137,17 @@ def get_sim_url():
     return '/' + latest_sim_file
 
 
-def get_sim_path():
-    orig_path = os.path.join(c.DEEPDRIVE_DIR, 'sim')
-    version_paths = glob.glob(
-        os.path.join(c.DEEPDRIVE_DIR, 'deepdrive-sim-*-%s.*'
-                                      % c.version.MAJOR_MINOR_VERSION_STR))
-    version_paths = [vp for vp in version_paths if not vp.endswith('.zip')]
-    if version_paths:
-        return list(sorted(version_paths))[-1]
+def get_sim_path() -> str:
+    if c.SIM_URL:
+        sim_dir = get_sim_name_from_url(c.SIM_URL)
+        ret = os.path.join(c.DEEPDRIVE_DIR, sim_dir)
     else:
-        return orig_path
-
+        paths = glob.glob(
+            os.path.join(c.DEEPDRIVE_DIR, 'deepdrive-sim-*-%s.*'
+                                          % c.version.MAJOR_MINOR_VERSION_STR))
+        paths = [p for p in paths if not p.endswith('.zip')]
+        ret = list(sorted(paths))[-1]
+    return ret
 
 def get_sim_project_dir():
     if c.REUSE_OPEN_SIM:
