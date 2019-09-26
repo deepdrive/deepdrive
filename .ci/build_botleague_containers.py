@@ -9,18 +9,13 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(DIR)
 
 def main():
-
-    if not '--problems-only' in sys.argv:
-        bot_dirs = glob(f'{join(ROOT, "botleague")}/bots/*')
-
-    build_problem_containers()
-
-
-def build_problem_containers():
+    bot_dirs = glob(f'{join(ROOT, "botleague")}/bots/*')
     problem_dirs = glob(f'{join(ROOT, "botleague")}/problems/*')
 
-    for pdir in problem_dirs:
-        os.system(f'cd {pdir} && make && make push')
+    for pdir in problem_dirs + bot_dirs:
+        exit_code = os.system(f'cd {pdir} && make && make push')
+        if exit_code != 0:
+            raise RuntimeError('Error building problem container, check above')
 
     # Get names of docker files, build them
 

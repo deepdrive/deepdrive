@@ -12,6 +12,4 @@ git checkout -qf ${DEEPDRIVE_COMMIT}
 # Build base container
 make
 
-
-
-python3 -u .ci/build_problem_containers.py --problems-only
+python3 -u .ci/build_problem_containers.py
