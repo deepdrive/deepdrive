@@ -1,17 +1,10 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
-from future.builtins import (ascii, bytes, chr, dict, filter, hex, input,
-                             int, map, next, oct, open, pow, range, round,
-                             str, super, zip)
-
 from collections import deque
 
 
-class ExperienceBuffer(object):
+class ExperienceBuffer:
     def __init__(self, step_seconds=0.25, seconds_to_keep=2, fade_fn=None):
-        self.step_seconds = step_seconds  # type: float
-        self.seconds_to_keep = seconds_to_keep  # type: int
+        self.step_seconds: float = step_seconds
+        self.seconds_to_keep: int = seconds_to_keep
 
         self.max_length = int(self.seconds_to_keep / self.step_seconds)
         self.buffer = deque(maxlen=self.max_length)
