@@ -15,4 +15,4 @@ git checkout -qf ${DEEPDRIVE_COMMIT}
 # Build base container
 make
 
-python3 -u .ci/build_botleague_containers.py
+python3 -u .ci/build_botleague_containers.py || bash
