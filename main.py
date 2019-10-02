@@ -21,6 +21,7 @@ from util.ensure_sim import get_sim_path
 import sim
 import logs
 from util.args import Args
+from util.ensure_sim import ensure_sim
 
 log = logs.get_log(__name__)
 
@@ -200,7 +201,6 @@ def main():
         logs.set_level(logging.DEBUG)
 
     if args.update_sim:
-        from util.ensure_sim import ensure_sim
         ensure_sim(update=True)
         return
 
@@ -230,6 +230,7 @@ def main():
             sim_args = get_sim_args_from_command_args(args)
         if sim_args is not None:
             sim_args = sim_args.to_dict()
+        ensure_sim()
         server.start(sim, get_sim_path(), sim_args=sim_args)
         return
     else:
