@@ -16,6 +16,12 @@ def main():
     bot_dirs = glob(f'{join(ROOT, "botleague")}/bots/*')
     problem_dirs = glob(f'{join(ROOT, "botleague")}/problems/*')
 
+    if 'BUILD_ID' in os.environ:
+        os.environ['TAG_BUILD_ID'] = f'_{os.environ["BUILD_ID"]}'
+    else:
+        os.environ['TAG_BUILD_ID'] = 'local_build'
+
+
     for pdir in problem_dirs + bot_dirs:
         exit_code = os.system(f'cd {pdir} && make && make push')
         if exit_code != 0:
