@@ -9,6 +9,10 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(DIR)
 
 def main():
+    # Get password from botleague_helpers
+    # Add GOOGLE_APPLICATION_CREDENTIALS=/root/.gcpcreds/VoyageProject-d33af8724280.json to problem-worker "deepdrive-build" type
+    # Add docker creds to environment via the worker (see the sim build for how)
+
     bot_dirs = glob(f'{join(ROOT, "botleague")}/bots/*')
     problem_dirs = glob(f'{join(ROOT, "botleague")}/problems/*')
 

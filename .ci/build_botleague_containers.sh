@@ -8,11 +8,12 @@ set -o pipefail  # Causes a pipeline to return the exit status of the last comma
 DIR=`dirname "$0"`
 cd ${DIR}/..
 
-git clone --depth=1 --branch ${DEEPDRIVE_BRANCH} https://github.com/deepdrive/deepdrive
 cd deepdrive
+git clean -fxd
+git fetch origin ${DEEPDRIVE_BRANCH}
 git checkout -qf ${DEEPDRIVE_COMMIT}
 
 # Build base container
 make
 
-python3 -u .ci/build_botleague_containers.py || bash
+python3 -u .ci/build_botleague_containers.py

@@ -7,8 +7,9 @@ RUN apt-get update
 RUN apt-get -y install docker-ce
 
 
-RUN mkdir problem-worker
-WORKDIR problem-worker
+RUN mkdir deepdrive-build
+WORKDIR deepdrive-build
+RUN git clone https://github.com/deepdrive/deepdrive
 COPY requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt
 
