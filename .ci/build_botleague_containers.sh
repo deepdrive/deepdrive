@@ -13,4 +13,5 @@ git checkout -qf ${DEEPDRIVE_COMMIT}
 # Build base container
 make
 
+cat <<< ${DOCKER_PASSWORD} | docker login --username ${DOCKER_USERNAME} --password-stdin
 python3 -u .ci/build_botleague_containers.py
