@@ -50,3 +50,6 @@ def run_botleague_ci_for_deepdrive_build(branch, commit, job):
     if passed_ci:
         # TODO: Promote botleague containers to defaults
         pass
+
+if __name__ == '__main__':
+    main()
