@@ -32,7 +32,8 @@ def main():
 
 
 def run_botleague_ci_for_deepdrive_build(branch, commit, job):
-    build_results = Box.from_json(job.results.json_results_from_logs)
+    if dbox(job.results).json_results_from_logs:
+        build_results = Box.from_json(job.results.json_results_from_logs)
 
     def set_version(problem_def, version):
         # Deepdrive sim sets the problem version, which is appropriate since
