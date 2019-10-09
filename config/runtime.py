@@ -22,6 +22,7 @@ try:
     RNG_SEED = 0
     rng = seeding.np_random(RNG_SEED)[0]
 except Exception as e:
+    # noinspection PyUnresolvedReferences
     import __main__
     if getattr(__main__, '__file__', None) != 'install.py':
         raise e

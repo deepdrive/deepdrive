@@ -139,6 +139,7 @@ def check_tensorflow_gpu(is_install=False):
         if not is_install:
             import h5py  # importing tensorflow later causes seg faults
         try:
+            # noinspection PyUnresolvedReferences
             import tensorflow as tf
         except ImportError:
             print(error_msg % 'Tensorflow not installed', file=sys.stderr)
