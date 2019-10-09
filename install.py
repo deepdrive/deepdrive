@@ -63,6 +63,34 @@ def check_py_version():
         raise RuntimeError('Error: Python 3.5+ is required to run deepdrive')
 
 
+def get_latest_valid_bindings():
+    _, _, major_minor = get_version_info()
+    aws_bucket = 'deepdrive'
+    aws_bucket_url = 'https://s3-us-west-1.amazonaws.com/' + aws_bucket
+    from boto.s3.connection import S3Connection
+    prefix = f'validated-bindings-versions/{major_minor}'
+    conn = S3Connection(anon=True)
+    bucket = conn.get_bucket('deepdrive')
+    bucket_search_str = prefix
+    bindings_versions = list(bucket.list(bucket_search_str))
+    if not bindings_versions:
+        raise RuntimeError('Could not find a bindings version matching %s '
+                           'in bucket %s' % (bucket_search_str, aws_bucket_url))
+
+    bindings_versions = [b.name.split('/')[1] for b in bindings_versions]
+    bindings_versions = sorted(bindings_versions)
+
+    ret = bindings_versions[-1]
+    return ret
+
+
+def get_version_info():
+    version_str = open(os.path.join(DIR, 'VERSION')).read()
+    major_minor_version = semvar(version_str).version[:2]
+    major_minor_version_str = '.'.join(str(vx) for vx in major_minor_version)
+    return version_str, major_minor_version, major_minor_version_str
+
+
 def main():
     print('Checking python version...', end='')
     py = check_py_version()
@@ -75,7 +103,9 @@ def main():
         check_tensorflow_gpu(is_install=True)
 
     # Install sarge to nicely stream commands and wheel for precompiled packages
-    run_command_no_deps(py + ' -m pip install sarge wheel', verbose=True)
+    # Install requests and boto to get bindings version
+    run_command_no_deps(py + ' -m pip install sarge wheel requests boto',
+                        verbose=True)
 
     if 'ubuntu' in platform.platform().lower() and not is_docker():
         # Install tk for dashboard
@@ -95,8 +125,10 @@ def main():
     # # TODO: Remove dev0 once 3.0 is stable
     # run_command_with_sarge(py + ' -m pip install {pip_args} "deepdrive > {major_minor_version}.*dev0"'.format(
 
-    run_command_with_sarge(py + ' -m pip install {pip_args} "deepdrive==3.0.20190920222155.dev0"'.format(
-        major_minor_version=c.MAJOR_MINOR_VERSION_STR, pip_args=pip_args))
+    bindings_version = get_latest_valid_bindings()
+
+    run_command_with_sarge(
+        f'{py} -m pip install {pip_args} "deepdrive=={bindings_version}.dev0"')
 
     # noinspection PyUnresolvedReferences
     import config.check_bindings
@@ -186,9 +218,8 @@ def has_nvidia_docker():
 
 
 if __name__ == '__main__':
-    if 'TEST_RUN_CMD' in os.environ:
-        # run_command_no_deps('pip install sarge')
-        print(has_nvidia_docker())
+    if '--test-get-bindings-version' in sys.argv:
+        get_latest_valid_bindings()
     else:
         main()
 
