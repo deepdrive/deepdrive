@@ -56,7 +56,8 @@ def run_botleague_ci_for_deepdrive_build(branch, commit, job):
         version=commit,
         pr_message=pr_message,
         set_version_fn=set_version,
-        supported_problems=problem_constants.constants.SUPPORTED_PROBLEMS)
+        supported_problems=problem_constants.constants.SUPPORTED_PROBLEMS,
+        container_postfix=get_tag_build_id())
 
     if passed_ci:
         # TODO: Promote botleague containers to defaults

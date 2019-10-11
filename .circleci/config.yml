@@ -10,8 +10,9 @@ jobs:
       - run: sudo chown -R circleci:circleci /usr/local/bin
       - run: sudo chown -R circleci:circleci /usr/local/lib/python3.7/site-packages
       - run: sudo chown -R circleci:circleci /usr/local/share
-      - run: pip install -r .circleci/requirements.txt
+      - run: pip install -r .ci/requirements.txt
       - run: pip install --upgrade --force-reinstall --ignore-installed --no-cache-dir git+git://github.com/botleague/botleague-helpers#egg=botleague-helpers
       - run: pip install --upgrade --force-reinstall --ignore-installed --no-cache-dir git+git://github.com/deepdrive/problem-constants#egg=problem-constants
-      - run: python -u .circleci/cloud_ci.py
+      - run: cd .ci && make run
+      - run: python -u .ci/cloud_ci.py
 
