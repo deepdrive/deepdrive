@@ -127,6 +127,8 @@ def main():
 
     bindings_version = get_latest_valid_bindings()
 
+    print(f'Installing latest valid sim-bindings {bindings_version}')
+
     run_command_with_sarge(
         f'{py} -m pip install {pip_args} "deepdrive=={bindings_version}.dev0"')
 
