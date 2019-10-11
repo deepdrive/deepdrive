@@ -27,7 +27,7 @@ def download(url, directory, warn_existing=True, overwrite=False):
     else:
         os.makedirs(directory, exist_ok=True)
 
-    log.info('Downloading %s to %s...', url, directory)
+    log.info('Downloading %s to %s/ ...', url, directory)
 
     request = requests.get(url, stream=True)
     filename = url.split('/')[-1]
