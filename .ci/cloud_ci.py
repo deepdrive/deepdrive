@@ -28,6 +28,13 @@ DIR = dirname(realpath(__file__))
 
 @log.catch(reraise=True)
 def main():
+
+    # TODO: Get the docker tags we need to test in the botleague CI and send
+    #  them the botleague ci run.
+
+    # TODO: Then promote our build specific docker tags to the defaults
+    #  if we are the highest build id.
+
     build_and_run_botleague_ci(
         build_url='https://sim.deepdrive.io/build-deepdrive',
         run_botleague_ci_wrapper_fn=run_botleague_ci_for_deepdrive_build)
