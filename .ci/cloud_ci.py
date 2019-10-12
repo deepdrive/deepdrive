@@ -10,10 +10,9 @@ from os.path import dirname, realpath, join
 from botleague_helpers.ci import build_and_run_botleague_ci, run_botleague_ci, \
     dbox
 from box import Box, BoxList
-
-import problem_constants.constants
-
 from loguru import logger as log
+
+from problem_constants.constants import SUPPORTED_PROBLEMS
 
 from utils import get_tag_build_id
 # from logs import log
@@ -56,7 +55,7 @@ def run_botleague_ci_for_deepdrive_build(branch, commit, job):
         version=commit,
         pr_message=pr_message,
         set_version_fn=set_version,
-        supported_problems=problem_constants.constants.SUPPORTED_PROBLEMS,
+        supported_problems=SUPPORTED_PROBLEMS,
         container_postfix=get_tag_build_id())
 
     if passed_ci:

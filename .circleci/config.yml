@@ -43,5 +43,5 @@ jobs:
             docker login -u $DOCKER_USER -p $DOCKER_PASS
             . venv/bin/activate
             cd .ci && make run
-            python -u .ci/cloud_ci.py
+            python -u cloud_ci.py
 
