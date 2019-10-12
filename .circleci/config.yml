@@ -37,7 +37,7 @@ jobs:
             tar -xz -C /tmp -f /tmp/docker-$VER.tgz
             sudo mv /tmp/docker/* /usr/bin
       - run: |
-          echo "$DOCKER_PASS" | sudo docker login --username $DOCKER_USER --password-stdin
+           sudo docker login -u $DOCKER_USER -p $DOCKER_PASS
       - run: cd .ci && make run
       - run: python -u .ci/cloud_ci.py
 
