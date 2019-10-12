@@ -10,7 +10,20 @@ jobs:
       - run: sudo chown -R circleci:circleci /usr/local/bin
       - run: sudo chown -R circleci:circleci /usr/local/lib/python3.7/site-packages
       - run: sudo chown -R circleci:circleci /usr/local/share
+
+      - restore_cache:
+          keys:
+            - dd-dependencies-{{ checksum ".ci/requirements.txt" }}
+            # fallback to using the latest cache if no exact match is found
+            - dd-dependencies-
+
       - run: pip install -r .ci/requirements.txt
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: dd-dependencies-{{ checksum ".ci/requirements.txt" }}
+
       - run: pip install --upgrade --force-reinstall --ignore-installed --no-cache-dir git+git://github.com/botleague/botleague-helpers#egg=botleague-helpers
       - run: pip install --upgrade --force-reinstall --ignore-installed --no-cache-dir git+git://github.com/deepdrive/problem-constants#egg=problem-constants
       - setup_remote_docker:
