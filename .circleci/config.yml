@@ -7,17 +7,18 @@ jobs:
           ENABLE_SIM_BUILD: true
     steps:
       - checkout
-      - run: sudo chown -R circleci:circleci /usr/local/bin
-      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.7/site-packages
-      - run: sudo chown -R circleci:circleci /usr/local/share
-
       - restore_cache:
           keys:
             - dd-dependencies-{{ checksum ".ci/requirements.txt" }}
             # fallback to using the latest cache if no exact match is found
             - dd-dependencies-
 
-      - run: pip install -r .ci/requirements.txt
+      - run:
+          name: install dependencies
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            pip install -r .ci/requirements.txt
 
       - save_cache:
           paths:
