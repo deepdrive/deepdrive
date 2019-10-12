@@ -19,14 +19,14 @@ jobs:
             python3 -m venv venv
             . venv/bin/activate
             pip install -r .ci/requirements.txt
+            pip install --upgrade --force-reinstall --ignore-installed --no-cache-dir git+git://github.com/botleague/botleague-helpers#egg=botleague-helpers
+            pip install --upgrade --force-reinstall --ignore-installed --no-cache-dir git+git://github.com/deepdrive/problem-constants#egg=problem-constants
 
       - save_cache:
           paths:
             - ./venv
           key: dd-dependencies-{{ checksum ".ci/requirements.txt" }}
 
-      - run: pip install --upgrade --force-reinstall --ignore-installed --no-cache-dir git+git://github.com/botleague/botleague-helpers#egg=botleague-helpers
-      - run: pip install --upgrade --force-reinstall --ignore-installed --no-cache-dir git+git://github.com/deepdrive/problem-constants#egg=problem-constants
       - setup_remote_docker:
           docker_layer_caching: true
       - run:
