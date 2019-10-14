@@ -8,4 +8,8 @@ ue4-ci-helpers
 awscli
 loguru
 
+# These are upgraded in circle's config.yml, but installing here allows caching
+# their transitive dependencies.
+git+git://github.com/botleague/botleague-helpers#egg=botleague-helpers
+git+git://github.com/deepdrive/problem-constants#egg=problem-constants
 
