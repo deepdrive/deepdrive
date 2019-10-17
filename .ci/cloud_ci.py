@@ -52,11 +52,8 @@ def run_botleague_ci_for_deepdrive_build(branch, commit, job):
         set_version_fn=set_version,
         supported_problems=SUPPORTED_PROBLEMS,
         container_postfix=container_postfix)
-
-    if passed_ci:
-        import build_botleague_containers
-        os.environ['TAG_BUILD_ID'] = ''  # Just in case
-        build_botleague_containers.main()
+    if not passed_ci:
+        raise RuntimeError('Failed Botleague CI')
 
 if __name__ == '__main__':
     main()
