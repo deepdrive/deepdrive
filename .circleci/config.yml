@@ -43,6 +43,6 @@ jobs:
             docker login -u $DOCKER_USER -p $DOCKER_PASS
             [ -z "$BOTLEAGUE_GITHUB_TOKEN" ] && echo "Need to set BOTLEAGUE_GITHUB_TOKEN" && exit 1;
             . venv/bin/activate
-            cd .ci && make run
-            python -u cloud_ci.py
+            cd .ci && make build_botleague
+            python -u cloud_ci.py && make push_botleague
 

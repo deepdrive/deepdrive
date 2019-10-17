@@ -13,8 +13,6 @@ def main():
     bot_dirs = glob(f'{join(ROOT, "botleague")}/bots/*')
     problem_dirs = glob(f'{join(ROOT, "botleague")}/problems/*')
 
-    os.environ['TAG_BUILD_ID'] = get_tag_build_id()
-
     # Get names of docker files, build them
     for pdir in problem_dirs + bot_dirs:
         exit_code = os.system(f'cd {pdir} && make && make push')
