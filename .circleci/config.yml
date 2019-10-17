@@ -28,7 +28,6 @@ jobs:
           key: dd-dependencies-{{ checksum ".ci/requirements.txt" }}
 
       - setup_remote_docker:
-          docker_layer_caching: true
       - run:
           name: Install Docker client
           command: |
