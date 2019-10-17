@@ -3,8 +3,6 @@ import sys
 from glob import glob
 from os.path import join
 
-from utils import get_tag_build_id
-
 DIR = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(DIR)
 
