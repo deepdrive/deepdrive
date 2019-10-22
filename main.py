@@ -237,7 +237,7 @@ def main():
         camera_rigs = get_camera_rigs(args)
         driving_style = DrivingStyle.from_str(args.driving_style)
         if args.path_follower:
-            run_path_follower(args, driving_style, camera_rigs)
+            run_path_follower(args, camera_rigs)
         else:
             run_tf_based_models(args, camera_rigs, driving_style)
 
@@ -354,7 +354,7 @@ def get_sim_args_from_command_args(args):
     return sim_args
 
 
-def run_path_follower(args, driving_style, camera_rigs):
+def run_path_follower(args, camera_rigs):
     """
     Runs the C++ PID-based path follower agent which uses a reference
     spline in the center of the lane, and speed annotations on tight turns
@@ -362,26 +362,35 @@ def run_path_follower(args, driving_style, camera_rigs):
     Refer to https://github.com/deepdrive/deepdrive-sim/tree/b21e0a0bf8cec60538425fa41b5fc5ee28142556/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent
     """
     done = False
-    episode_count = 1
     gym_env = None
     try:
-        cams = camera_rigs
+        sim_args = get_sim_args_from_command_args(args)
+        if sim_args is not None:
+            sim_args = sim_args.to_dict()
+        else:
+            sim_args = {}
+        cameras = camera_rigs
         if isinstance(camera_rigs[0], list):
-            cams = cams[0]
-        gym_env = sim.start(experiment=args.experiment, env_id=args.env_id,
-                            fps=args.fps,
-                            driving_style=driving_style,
-                            is_remote_client=args.remote,
-                            render=args.render, cameras=cams,
-                            enable_traffic=args.enable_traffic,
-                            ego_mph=args.ego_mph)
+            cameras = cameras[0]
+        sim_args['cameras'] = cameras
+        gym_env = sim.start(**sim_args)
         log.info('Path follower drive mode')
-        for episode in range(episode_count):
-            if done:
-                gym_env.reset()
-            while True:
+        episode_num = 0
+        info = {}
+        def should_stop(index, step_info):
+            if dbox(step_info).should_close:
+                return True
+            elif args.max_episodes:
+                return index >= args.max_episodes
+            else:
+                return False
+
+        while not should_stop(episode_num, info):
+            episode_num += 1
+            done = False
+            while not done:
                 action = sim.action(has_control=False)
-                obz, reward, done, _ = gym_env.step(action)
+                obz, reward, done, info = gym_env.step(action)
                 if done:
                     gym_env.reset()
     except KeyboardInterrupt:
