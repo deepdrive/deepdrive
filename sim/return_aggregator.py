@@ -12,7 +12,7 @@ import utils
 import config as c
 
 
-class EpisodeScore(object):
+class EpisodeReturn(object):
     total = 0
     gforce_penalty: float = 0
     max_gforce: float = 0
@@ -49,7 +49,7 @@ class EpisodeScore(object):
         self.gforce_sampler = Sampler()
 
     def serialize(self):
-        defaults = utils.obj2dict(EpisodeScore)
+        defaults = utils.obj2dict(EpisodeReturn)
         prop_names = defaults.keys()
         ret = {}
         for k in prop_names:
@@ -60,7 +60,7 @@ class EpisodeScore(object):
         return ret
 
 
-class TotalScore(object):
+class TotalReturn(object):
     median: float
     average: float
     high: float
@@ -78,40 +78,40 @@ class TotalScore(object):
     closest_vehicle_cm_while_at_least_4kph: float = math.inf
     max_lane_deviation_cm: float = 0
 
-    def update(self, episode_scores:List[EpisodeScore]):
-        totals = [e.total for e in episode_scores]
+    def update(self, episode_returns:List[EpisodeReturn]):
+        totals = [e.total for e in episode_returns]
         self.median = float(np.median(totals))
         self.average = float(np.mean(totals))
         self.high = float(max(totals))
         self.low = float(min(totals))
         self.std = float(np.std(totals))
-        self.num_episodes = len(episode_scores)
+        self.num_episodes = len(episode_returns)
         cm_per_second_means = \
-            [e.cm_per_second_sampler.mean() for e in episode_scores]
+            [e.cm_per_second_sampler.mean() for e in episode_returns]
         cm_per_second_avg = float(np.mean(cm_per_second_means))
         self.avg_kph = cm_per_second_avg * c.CMPS_TO_KPH
         trip_cm_per_second = float(np.mean(
-            [e.cm_along_route / e.episode_time for e in episode_scores]))
+            [e.cm_along_route / e.episode_time for e in episode_returns]))
         self.trip_speed_kph = trip_cm_per_second * c.CMPS_TO_KPH
-        self.max_kph = max([e.max_kph for e in episode_scores])
+        self.max_kph = max([e.max_kph for e in episode_returns])
         self.collided_with_vehicle = any(e.collided_with_vehicle for e in
-                                         episode_scores)
+                                         episode_returns)
         self.collided_with_non_actor = any(e.collided_with_non_actor for e
-                                           in episode_scores)
+                                           in episode_returns)
         self.closest_vehicle_cm = min(
-            [e.closest_vehicle_cm for e in episode_scores])
+            [e.closest_vehicle_cm for e in episode_returns])
         self.closest_vehicle_cm_while_at_least_4kph = min(
-            [e.closest_vehicle_cm_while_at_least_4kph for e in episode_scores])
+            [e.closest_vehicle_cm_while_at_least_4kph for e in episode_returns])
 
         self.max_lane_deviation_cm = max(
-            [e.max_lane_deviation_cm for e in episode_scores])
+            [e.max_lane_deviation_cm for e in episode_returns])
 
 
 def main():
-    score = EpisodeScore()
+    episode_return = EpisodeReturn()
     from utils import obj2dict
     now = time.time()
-    ser = obj2dict(score)
+    ser = obj2dict(episode_return)
     took = time.time() - now
     print('took %f s' % took)
     print(ser)

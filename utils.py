@@ -27,6 +27,8 @@ import numpy as np
 
 import h5py
 import requests
+from box import Box
+
 import config as c
 import logs
 from util.anonymize import anonymize_user_home
@@ -115,7 +117,7 @@ def save_hdf5_task(out, filename):
         for i, frame in enumerate(out):
             frame_grp = f.create_group('frame_%s' % str(i).zfill(10))
             add_collision_to_hdf5(frame, frame_grp)
-            add_score_to_hdf5(frame, frame_grp)
+            add_return_to_hdf5(frame, frame_grp)
             add_world_to_hdf5(frame, frame_grp)
             add_cams_to_hdf5(frame, frame_grp, opts)
             del frame['cameras']
@@ -151,16 +153,16 @@ def add_cams_to_hdf5(frame, frame_grp, opts):
             camera_grp.attrs[k] = v
 
 
-def add_score_to_hdf5(frame, frame_grp):
-    from sim.score import EpisodeScore
-    score = frame['score']
-    score_grp = frame_grp.create_group('score')
-    defaults = obj2dict(EpisodeScore)
+def add_return_to_hdf5(frame, frame_grp):
+    from sim.return_aggregator import EpisodeReturn
+    episode_return = frame['episode_return']
+    return_grp = frame_grp.create_group('episode_return')
+    defaults = obj2dict(EpisodeReturn)
     prop_names = defaults.keys()
     for k in prop_names:
         if 'sampler' not in k.lower():
-            score_grp.attrs[k] = score.get(k, defaults[k])
-    del frame['score']
+            return_grp.attrs[k] = episode_return.get(k, defaults[k])
+    del frame['episode_return']
 
 
 def add_collision_to_hdf5(frame, frame_grp):
@@ -575,6 +577,14 @@ def nearest_neighbor(me: np.array, them: np.array) -> Tuple[float, int]:
             distance = min_dist
             index = min_index
     return distance, index
+
+
+def dbox(obj=None, **kwargs):
+    if kwargs:
+        obj = dict(kwargs)
+    else:
+        obj = obj or {}
+    return Box(obj, default_box=True)
 
 
 def main():

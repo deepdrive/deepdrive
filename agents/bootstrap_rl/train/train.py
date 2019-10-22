@@ -88,8 +88,8 @@ class BootstrapRLGymEnv(gym.Wrapper):
             action[Action.HANDBRAKE_INDEX] = [0]
 
         obz, reward, done, info = self.env.step(action)
-        if 'score' in info and 'episode_time' in info['score']:
-            self.experience_buffer.maybe_add(obz, info['score']['episode_time'])
+        if 'episode_return' in info and 'episode_time' in info['episode_return']:
+            self.experience_buffer.maybe_add(obz, info['episode_return']['episode_time'])
         self.previous_obz = obz
         action, net_out = self.dagger_agent.act(obz, reward, done)
         if net_out is None:

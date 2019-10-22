@@ -129,7 +129,7 @@ All values returned in the observation keep Unreal conventions, specifically
   'right_vector': array([-0.8840133 , -0.4375411 , -0.16455328]),
   'rotation': array([ 0.10010731, -0.16530512, -2.68199444]),
   'route_length': 273551.21875,
-  'score': { 'avg_kph': 0,
+  'episode_return': { 'avg_kph': 0,
              'closest_vehicle_cm': 15812.662932649602,
              'closest_vehicle_cm_while_at_least_4kph': 15812.662932649602,
              'cm_along_route': 18730.72265625,

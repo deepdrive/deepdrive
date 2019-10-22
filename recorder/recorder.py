@@ -13,7 +13,7 @@ from os.path import join, basename
 import config as c
 import logs
 import utils
-from sim.score import TotalScore, EpisodeScore
+from sim.return_aggregator import TotalReturn, EpisodeReturn
 from util.anonymize import anonymize_user_home
 from utils import copy_dir_clean
 
@@ -84,7 +84,7 @@ class Recorder(object):
         ):
             self.save_recordings()
 
-    def close(self, total_score:TotalScore, episode_scores:List[EpisodeScore],
+    def close(self, total_return:TotalReturn, episode_returns:List[EpisodeReturn],
               median_fps:float, ):
         log.info('Closing recorder')
         if self.eval_only:
@@ -123,7 +123,7 @@ class Recorder(object):
                 summary_file=c.SUMMARY_CSV_FILENAME,
                 mp4_file=mp4_file)
 
-            create_botleague_results(total_score, episode_scores, gist_url,
+            create_botleague_results(total_return, episode_returns, gist_url,
                                      hdf5_observations,
                                      mp4_file,
                                      episodes_file=c.EPISODES_CSV_FILENAME,
@@ -246,22 +246,22 @@ def upload_artifacts_to_cloud(file_paths:List[str], directory:str,
     return ret
 
 
-def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
+def create_botleague_results(total_return: TotalReturn, episode_returns, gist_url,
                              hdf5_observations, mp4_file, episodes_file,
                              summary_file, median_fps):
     ret = Box(default_box=True)
-    ts = total_score
+    ts = total_return
     if gist_url:
         ret.gist = gist_url
 
     def sum_over_episodes(key):
-        return sum(getattr(e, key) for e in episode_scores)
+        return sum(getattr(e, key) for e in episode_returns)
 
     ret.sensorimotor_specific = get_sensorimotor_specific_results(
-        episode_scores, median_fps, sum_over_episodes, ts)
+        episode_returns, median_fps, sum_over_episodes, ts)
     total_time = ret.sensorimotor_specific.total_episode_seconds
     ret.driving_specific, ds_score = get_driving_specific_results(
-        episode_scores, sum_over_episodes, total_time, ts)
+        episode_returns, sum_over_episodes, total_time, ts)
     ret.score = ds_score
     artifact_dir = c.BOTLEAGUE_RESULTS_DIR
     os.makedirs(artifact_dir, exist_ok=True)
@@ -280,16 +280,17 @@ def create_botleague_results(total_score: TotalScore, episode_scores, gist_url,
 
 def store_results(artifact_dir, ret):
     results_json_filename = join(artifact_dir, 'results.json')
+    log.info(f'Results:\n{ret.to_json(indent=2)}')
     ret.to_json(filename=results_json_filename, indent=2)
     log.info('Wrote botleague results to %s' % results_json_filename)
     copy_dir_clean(src=c.BOTLEAGUE_RESULTS_DIR,
                    dest=c.LATEST_BOTLEAGUE_RESULTS)
 
 
-def get_sensorimotor_specific_results(episode_scores, median_fps,
+def get_sensorimotor_specific_results(episode_returns, median_fps,
                                       sum_over_episodes, ts) -> Box:
     ret = Box()
-    ret.num_episodes = len(episode_scores)
+    ret.num_episodes = len(episode_returns)
     ret.median_fps = median_fps
     ret.num_steps = ts.num_steps
     ret.total_episode_seconds = sum_over_episodes('episode_time')
@@ -317,7 +318,7 @@ def create_uploaded_artifacts(csv_relative_dir, episodes_file,
     ret.problem_specific.hdf5_observations = hdf5_urls
 
 
-def get_driving_specific_results(episode_scores, sum_over_episodes,
+def get_driving_specific_results(episode_returns, sum_over_episodes,
                                  total_time, ts):
     # TODO: Closest distance to pedestrians
     # See https://docs.google.com/spreadsheets/d/1Nm7_3vUYM5pIs2zLWM2lO_TCoIlVpwX-YRLVo4S4-Cc/edit#gid=0
@@ -331,7 +332,7 @@ def get_driving_specific_results(episode_scores, sum_over_episodes,
     ret.jarring_gforce_seconds = \
         sum_over_episodes('jarring_gforce_seconds')
     ret.harmful_gforces = \
-        any(e.harmful_gforces for e in episode_scores)
+        any(e.harmful_gforces for e in episode_returns)
     ret.comfort_pct = 100 - ret.uncomfortable_gforce_seconds / total_time * 100
     score -= ret.comfort_pct * 100
     ret.jarring_pct = ret.jarring_gforce_seconds / total_time * 100

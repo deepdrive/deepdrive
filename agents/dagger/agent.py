@@ -84,7 +84,7 @@ class Agent(object):
                 raise
 
         if self.should_jitter_actions:
-            episode_time = obz.get('score', {}).get('episode_time',
+            episode_time = obz.get('episode_return', {}).get('episode_time',
                                                     None) if obz else None
             if episode_time is None or episode_time < 10:
                 # Hold off a bit at start of episode

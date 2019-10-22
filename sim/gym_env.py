@@ -47,7 +47,7 @@ from sim import world, graphics
 from sim.action import Action, DiscreteActions
 from sim.graphics import set_capture_graphics
 from sim.reward_calculator import RewardCalculator
-from sim.score import EpisodeScore, TotalScore
+from sim.return_aggregator import EpisodeReturn, TotalReturn
 from sim.view_mode import ViewModeController
 from sim import DrivingStyle
 from renderer import renderer_factory, base_renderer
@@ -138,12 +138,12 @@ class DeepDriveEnv(gym.Env):
         self.previous_distance_along_route:float = 0
 
         # reward
-        self.episode_score:EpisodeScore = EpisodeScore()
-        self.total_score:TotalScore = TotalScore()
+        self.episode_return:EpisodeReturn = EpisodeReturn()
+        self.total_return:TotalReturn = TotalReturn()
 
         # laps
         self.lap_number = None
-        self.prev_lap_score = 0
+        self.prev_lap_return = 0
         self.total_laps = 0
 
         # domain randomization
@@ -153,7 +153,7 @@ class DeepDriveEnv(gym.Env):
 
         self.is_botleague: bool = False
 
-        self.episode_scores:List[EpisodeScore] = []
+        self.episode_returns:List[EpisodeReturn] = []
 
         try:
             self.git_commit = str(util.run_command.run_command(
@@ -328,10 +328,10 @@ class DeepDriveEnv(gym.Env):
             # it to be in the drive logs.
             info = self.init_step_info()
             if done:
-                self.report_score(info)
+                self.report_return(info)
 
             if obz is not None:
-                obz['score'] = self.episode_score.serialize()
+                obz['episode_return'] = self.episode_return.serialize()
 
             self.regulate_fps()
             self.view_mode_controller.step(self.client_id)
@@ -395,34 +395,34 @@ class DeepDriveEnv(gym.Env):
         is interesting to them.
         """
         info = {}
-        info['score'] = info.get('episode', {})
-        info['score']['episode_time'] = self.episode_score.episode_time
+        info['episode_return'] = info.get('episode', {})
+        info['episode_return']['episode_time'] = self.episode_return.episode_time
 
         return info
 
-    def report_score(self, info):
-        self.prev_lap_score = self.episode_score.total
+    def report_return(self, info):
+        self.prev_lap_return = self.episode_return.total
 
         # For OpenAI baselines
         info['episode'] = episode_info = {}
-        episode_info['reward'] = self.episode_score.total
+        episode_info['reward'] = self.episode_return.total
         episode_info['length'] = self.step_num
-        episode_info['time'] = self.episode_score.episode_time
+        episode_info['time'] = self.episode_return.episode_time
 
-        self.finalize_score()
+        self.finalize_reward()
         if self.tensorboard_writer is not None:
             import tensorflow as tf
             summary = tf.Summary()
-            summary.value.add(tag="score/total", simple_value=self.episode_score.total)
-            summary.value.add(tag="score/episode_length", simple_value=self.step_num)
-            summary.value.add(tag="score/episode_time", simple_value=self.episode_score.episode_time)
-            summary.value.add(tag="score/speed_reward", simple_value=self.episode_score.speed_reward)
+            summary.value.add(tag="reward/total", simple_value=self.episode_return.total)
+            summary.value.add(tag="reward/episode_length", simple_value=self.step_num)
+            summary.value.add(tag="reward/episode_time", simple_value=self.episode_return.episode_time)
+            summary.value.add(tag="reward/speed_reward", simple_value=self.episode_return.speed_reward)
 
-            summary.value.add(tag="score/lane_deviation_penalty", simple_value=self.episode_score.lane_deviation_penalty)
-            summary.value.add(tag="score/gforce_penalty", simple_value=self.episode_score.gforce_penalty)
-            summary.value.add(tag="score/got_stuck", simple_value=self.episode_score.got_stuck)
-            summary.value.add(tag="score/wrong_way", simple_value=self.episode_score.wrong_way)
-            summary.value.add(tag="score/time_penalty", simple_value=self.episode_score.time_penalty)
+            summary.value.add(tag="reward/lane_deviation_penalty", simple_value=self.episode_return.lane_deviation_penalty)
+            summary.value.add(tag="reward/gforce_penalty", simple_value=self.episode_return.gforce_penalty)
+            summary.value.add(tag="reward/got_stuck", simple_value=self.episode_return.got_stuck)
+            summary.value.add(tag="reward/wrong_way", simple_value=self.episode_return.wrong_way)
+            summary.value.add(tag="reward/time_penalty", simple_value=self.episode_return.time_penalty)
 
             self.tensorboard_writer.add_summary(summary)
             self.tensorboard_writer.flush()
@@ -457,10 +457,10 @@ class DeepDriveEnv(gym.Env):
         done = False
         if obz:
             lap_number = obz.get('lap_number')
-            lap_via_progress = self.episode_score.progress_pct > 99.9
+            lap_via_progress = self.episode_return.progress_pct > 99.9
             if lap_via_progress:
-                median_meters_per_sec = self.episode_score.cm_per_second_sampler.mean() / 100
-                est_travel_cm = median_meters_per_sec * self.episode_score.episode_time * 100  # cm travelled
+                median_meters_per_sec = self.episode_return.cm_per_second_sampler.mean() / 100
+                est_travel_cm = median_meters_per_sec * self.episode_return.episode_time * 100  # cm travelled
                 took_shortcut = est_travel_cm < (obz['route_length'] * 0.9)
                 if took_shortcut:
                     log.warn('Shortcut detected, not scoring lap')
@@ -482,7 +482,7 @@ class DeepDriveEnv(gym.Env):
         lap_done, lap_bonus = self.compute_lap_statistics(obz)
         reward = 0
         gforce_done = False
-        score = self.episode_score
+        episode_return = self.episode_return
         if obz:
             if self.is_sync:
                 step_time = self.period
@@ -491,9 +491,9 @@ class DeepDriveEnv(gym.Env):
             else:
                 step_time = None
 
-            score.episode_time += (step_time or 0)
+            episode_return.episode_time += (step_time or 0)
 
-            if score.episode_time < HEAD_START_TIME:
+            if episode_return.episode_time < HEAD_START_TIME:
                 # Give time to get on track after spawn
                 reward = 0
             else:
@@ -509,11 +509,11 @@ class DeepDriveEnv(gym.Env):
                     progress_reward, gforce_penalty, lane_deviation_penalty,
                     time_penalty, speed_reward)
 
-            score.wrong_way = self.driving_wrong_way()
-            if score.wrong_way:
+            episode_return.wrong_way = self.driving_wrong_way()
+            if episode_return.wrong_way:
                 log.warn('episode finished, going the wrong way')
 
-            if self.is_stuck(obz) or score.wrong_way:
+            if self.is_stuck(obz) or episode_return.wrong_way:
                 done = True
                 reward -= 10
                 # TODONT: Scale cost by collision momentum when speed is returned
@@ -521,27 +521,27 @@ class DeepDriveEnv(gym.Env):
                 # if obz['last_collision'].time_utc:
                 #     reward *= obz['last_collision'].speed
 
-            score.cm_per_second_sampler.sample(obz['speed'])
-            score.total += reward + lap_bonus
+            episode_return.cm_per_second_sampler.sample(obz['speed'])
+            episode_return.total += reward + lap_bonus
 
             last_collision = obz['last_collision']
             if last_collision['collidee_velocity'].any():
-                score.collided_with_vehicle = True
+                episode_return.collided_with_vehicle = True
             elif last_collision['time_stamp']:
-                score.collided_with_non_actor = True
+                episode_return.collided_with_non_actor = True
 
             # TODO: Add missing components from https://docs.google.com/document/d/1_M4d7KTTzWRV6NthQjINl68gfl_NdGKF41za91-7O7A/edit#
             #   like running traffic lights, crossing double yellows, etc...
-            self.check_closest_vehicle(obz, score)
+            self.check_closest_vehicle(obz, episode_return)
 
-            self.display_stats['time']['value'] = score.episode_time
-            self.display_stats['time']['total'] = score.episode_time
-            # self.display_stats['episode score']['value'] = score.total
-            # self.display_stats['episode score']['total'] = score.total
+            self.display_stats['time']['value'] = episode_return.episode_time
+            self.display_stats['time']['total'] = episode_return.episode_time
+            # self.display_stats['episode reward']['value'] = episode_return.total
+            # self.display_stats['episode reward']['total'] = episode_return.total
 
             log.debug('reward %r', reward)
-            log.debug('score %r', score.total)
-            log.debug('progress %r', score.progress_pct)
+            log.debug('return %r', episode_return.total)
+            log.debug('progress %r', episode_return.progress_pct)
             log.debug('throttle %f', obz['throttle'])
             log.debug('steering %f', obz['steering'])
             log.debug('brake %f', obz['brake'])
@@ -558,19 +558,19 @@ class DeepDriveEnv(gym.Env):
 
         return reward, done
 
-    def check_closest_vehicle(self, obz, score):
+    def check_closest_vehicle(self, obz, episode_return):
         closest_vehicle_cm, _veh_index = \
             utils.nearest_neighbor(
                 np.array(obz['position']),
                 np.array(obz['world']['vehicle_positions']),
             )
-        score.closest_vehicle_cm = min(closest_vehicle_cm,
-                                       score.closest_vehicle_cm)
+        episode_return.closest_vehicle_cm = \
+            min(closest_vehicle_cm, episode_return.closest_vehicle_cm)
         if (obz['speed'] * c.CMPS_TO_KPH) >= 4:
             # Why 4kph: http://sparebumper.com/federal-bumper-standards/
-            score.closest_vehicle_cm_while_at_least_4kph = min(
+            episode_return.closest_vehicle_cm_while_at_least_4kph = min(
                 closest_vehicle_cm,
-                score.closest_vehicle_cm_while_at_least_4kph)
+                episode_return.closest_vehicle_cm_while_at_least_4kph)
 
     def log_up_time(self):
         log.info('up for %r' % arrow.get(time.time()).humanize(
@@ -580,37 +580,37 @@ class DeepDriveEnv(gym.Env):
         lane_deviation_penalty = 0.
         if 'distance_to_center_of_lane' in obz:
             lane_deviation = obz['distance_to_center_of_lane']
-            self.episode_score.max_lane_deviation_cm = max(
-                self.episode_score.max_lane_deviation_cm, lane_deviation)
+            self.episode_return.max_lane_deviation_cm = max(
+                self.episode_return.max_lane_deviation_cm, lane_deviation)
             lane_deviation_penalty = RewardCalculator.get_lane_deviation_penalty(
                 lane_deviation, time_passed)
 
         lane_deviation_penalty *= self.driving_style.value.lane_deviation_weight
-        self.episode_score.lane_deviation_penalty += lane_deviation_penalty
+        self.episode_return.lane_deviation_penalty += lane_deviation_penalty
 
         # self.display_stats['lane deviation penalty']['value'] = -lane_deviation_penalty
-        # self.display_stats['lane deviation penalty']['total'] = -self.episode_score.lane_deviation_penalty
+        # self.display_stats['lane deviation penalty']['total'] = -self.episode_return.lane_deviation_penalty
         return lane_deviation_penalty
 
     def get_gforce_penalty(self, obz, time_passed):
         gforce_penalty = 0
         done = False
-        score = self.episode_score
+        episode_return = self.episode_return
 
         if 'acceleration' in obz:
             if time_passed is not None:
                 a = obz['acceleration']
                 gs = np.sqrt(a.dot(a)) / 980  # g = 980 cm/s**2
-                score.max_gforce = \
-                    max(gs, score.max_gforce)
-                self.total_score.max_gforce = \
-                    max(gs, self.total_score.max_gforce)
-                sampler = score.gforce_sampler
+                episode_return.max_gforce = \
+                    max(gs, episode_return.max_gforce)
+                self.total_return.max_gforce = \
+                    max(gs, self.total_return.max_gforce)
+                sampler = episode_return.gforce_sampler
                 sampler.sample(gs)
                 three_second_avg = self.average_gs(sampler, secs=3)
                 if gs > 1 or three_second_avg > 1:
                     # https://www.quora.com/How-many-Gs-do-we-feel-driving-a-car
-                    score.harmful_gforces = True
+                    episode_return.harmful_gforces = True
                     # Game over
                     log.warn('G-force limit exceeded, game over. '
                              'Recent g\'s were: %r',
@@ -618,12 +618,12 @@ class DeepDriveEnv(gym.Env):
                     done = True
                 elif gs > 0.4:
                     # https://www.quora.com/How-many-Gs-do-we-feel-driving-a-car
-                    score.jarring_gforce_seconds += time_passed
+                    episode_return.jarring_gforce_seconds += time_passed
                 if gs > 0.1:
                     # Based on regression model on page 47 - can achieve 92/100 comfort with 0.15 x and y acceleration
                     # http://www.diva-portal.org/smash/get/diva2:950643/FULLTEXT01.pdf
                     # Perhaps we should combine x, 0.15 and y 0.15
-                    score.uncomfortable_gforce_seconds += time_passed
+                    episode_return.uncomfortable_gforce_seconds += time_passed
 
                 self.display_stats['g-forces']['value'] = gs
                 self.display_stats['g-forces']['total'] = gs
@@ -631,10 +631,10 @@ class DeepDriveEnv(gym.Env):
                     gs, time_passed)
 
         gforce_penalty *= self.driving_style.value.gforce_weight
-        score.gforce_penalty += gforce_penalty
+        episode_return.gforce_penalty += gforce_penalty
 
-        # self.display_stats['gforce penalty']['value'] = -score.gforce_penalty
-        # self.display_stats['gforce penalty']['total'] = -score.gforce_penalty
+        # self.display_stats['gforce penalty']['value'] = -episode_return.gforce_penalty
+        # self.display_stats['gforce penalty']['total'] = -episode_return.gforce_penalty
         return gforce_penalty, done
 
     def get_progress_and_speed_reward(self, obz, time_passed, gforce_penalty,
@@ -656,18 +656,18 @@ class DeepDriveEnv(gym.Env):
                 RewardCalculator.get_progress_and_speed_reward(
                     progress_cm, time_passed)
             kph = obz['speed'] * c.CMPS_TO_KPH
-            self.episode_score.max_kph = max(kph, self.episode_score.max_kph)
-            self.episode_score.max_kph = max(kph, self.episode_score.max_kph)
-            self.episode_score.prev_progress_pct = self.episode_score.progress_pct
-            self.episode_score.progress_pct = \
+            self.episode_return.max_kph = max(kph, self.episode_return.max_kph)
+            self.episode_return.max_kph = max(kph, self.episode_return.max_kph)
+            self.episode_return.prev_progress_pct = self.episode_return.progress_pct
+            self.episode_return.progress_pct = \
                 100 * self.distance_along_route / obz['route_length']
-            self.episode_score.cm_along_route = self.distance_along_route
-            self.episode_score.route_length_cm = obz['route_length']
+            self.episode_return.cm_along_route = self.distance_along_route
+            self.episode_return.route_length_cm = obz['route_length']
 
         progress_reward *= self.driving_style.value.progress_weight
         speed_reward *= self.driving_style.value.speed_weight
 
-        if self.episode_score.episode_time < 2:
+        if self.episode_return.episode_time < 2:
             # Speed reward is too big at reset due to small offset between
             # origin and spawn, so clip it to avoid incenting resets
             speed_reward = min(max(speed_reward, -1), 1)
@@ -678,22 +678,22 @@ class DeepDriveEnv(gym.Env):
             speed_reward /= 2
             progress_reward /= 2
 
-        self.episode_score.progress_reward += progress_reward
-        self.episode_score.speed_reward += speed_reward
+        self.episode_return.progress_reward += progress_reward
+        self.episode_return.speed_reward += speed_reward
 
-        self.display_stats['lap progress']['total'] = self.episode_score.progress_pct or 0
+        self.display_stats['lap progress']['total'] = self.episode_return.progress_pct or 0
         self.display_stats['lap progress']['value'] = self.display_stats['lap progress']['total']
         self.display_stats['episode #']['total'] = self.total_laps
         self.display_stats['episode #']['value'] = self.total_laps
-        # self.display_stats['speed reward']['total'] = self.episode_score.speed_reward
-        # self.display_stats['speed reward']['value'] = self.episode_score.speed_reward
+        # self.display_stats['speed reward']['total'] = self.episode_return.speed_reward
+        # self.display_stats['speed reward']['value'] = self.episode_return.speed_reward
 
         return progress_reward, speed_reward
 
     def get_time_penalty(self, _obz, time_passed):
         time_penalty = time_passed or 0
         time_penalty *= self.driving_style.value.time_weight
-        self.episode_score.time_penalty += time_penalty
+        self.episode_return.time_penalty += time_penalty
         return time_penalty
 
     def combine_rewards(self, progress_reward, gforce_penalty,
@@ -739,7 +739,7 @@ class DeepDriveEnv(gym.Env):
                          self.steps_crawling,
                          self.steps_crawling_with_throttle_on, time_crawling)
                 self.set_forward_progress()
-                self.episode_score.got_stuck = True
+                self.episode_return.got_stuck = True
                 ret = True
         else:
             log.debug('speed greater than 1m/s, not stuck')
@@ -751,17 +751,17 @@ class DeepDriveEnv(gym.Env):
 
         return ret
 
-    def finalize_score(self):
-        self.episode_score.end_time = time.time()
-        self.episode_score.num_steps = self.step_num
+    def finalize_reward(self):
+        self.episode_return.end_time = time.time()
+        self.episode_return.num_steps = self.step_num
 
-        self.total_score.num_steps += self.step_num
-        log.info('episode time %r', self.episode_score.episode_time)
-        self.episode_scores.append(self.episode_score)
-        self.total_score.update(self.episode_scores)
-        log.info('benchmark lap #%d score: %f - average: %f',
-                 len(self.episode_scores), self.episode_score.total,
-                 self.total_score.average)
+        self.total_return.num_steps += self.step_num
+        log.info('episode time %r', self.episode_return.episode_time)
+        self.episode_returns.append(self.episode_return)
+        self.total_return.update(self.episode_returns)
+        log.info('benchmark lap #%d reward: %f - average: %f',
+                 len(self.episode_returns), self.episode_return.total,
+                 self.total_return.average)
         file_prefix = self.experiment + '_' if self.experiment else ''
         diff_filename = '%s%s.diff' % (file_prefix, c.DATE_STR)
         diff_filepath = os.path.join(c.RESULTS_DIR, diff_filename)
@@ -770,30 +770,30 @@ class DeepDriveEnv(gym.Env):
             with open(diff_filepath, 'w', encoding='utf-8') as diff_file:
                 diff_file.write(self.git_diff)
 
-        self.write_result_csvs(self.total_score.average, diff_filename,
-                               self.total_score.high, self.total_score.low,
-                               self.total_score.median, self.total_score.std)
+        self.write_result_csvs(self.total_return.average, diff_filename,
+                               self.total_return.high, self.total_return.low,
+                               self.total_return.median, self.total_return.std)
         summary_file = anonymize_user_home(
             os.path.normpath(c.EPISODES_CSV_FILENAME))
         episodes_file = anonymize_user_home(
             os.path.normpath(c.EPISODES_CSV_FILENAME))
-        log.info('median score %r', self.total_score.median)
-        log.info('avg score %r', self.total_score.average)
-        log.info('std %r', self.total_score.std)
-        log.info('high score %r', self.total_score.high)
-        log.info('low score %r', self.total_score.low)
+        log.info('median reward %r', self.total_return.median)
+        log.info('avg reward %r', self.total_return.average)
+        log.info('std %r', self.total_return.std)
+        log.info('high reward %r', self.total_return.high)
+        log.info('low reward %r', self.total_return.low)
         log.info('progress_reward %r',
-                 self.episode_score.progress_reward)
+                 self.episode_return.progress_reward)
         log.info('speed_reward %r',
-                 self.episode_score.speed_reward)
+                 self.episode_return.speed_reward)
         log.info('lane_deviation_penalty %r',
-                 self.episode_score.lane_deviation_penalty)
+                 self.episode_return.lane_deviation_penalty)
         log.info('time_penalty %r',
-                 self.episode_score.time_penalty)
+                 self.episode_return.time_penalty)
         log.info('gforce_penalty %r',
-                 self.episode_score.gforce_penalty)
+                 self.episode_return.gforce_penalty)
         log.info('episode_time %r',
-                 self.episode_score.episode_time)
+                 self.episode_return.episode_time)
         log.info('wrote results to %s and %s', summary_file, episodes_file)
 
     def write_result_csvs(self, average, diff_filename, high, low, median, std):
@@ -806,11 +806,11 @@ class DeepDriveEnv(gym.Env):
 
         headers = ['episode #']
         # Relying on dir() sorting alphabetically
-        headers += list(EpisodeScore().serialize().keys())
+        headers += list(EpisodeReturn().serialize().keys())
         writer.writerow(headers)
-        for i, score in enumerate(self.episode_scores):
+        for i, episode_return in enumerate(self.episode_returns):
             episode_row = [i+1]
-            episode_row += score.serialize().values()
+            episode_row += episode_return.serialize().values()
             writer.writerow(episode_row)
 
         if self.recorder.main_args:
@@ -819,11 +819,11 @@ class DeepDriveEnv(gym.Env):
             main_args = ''
         writer = csv.writer(summary_io)
         writer.writerow(['Stat', 'Value'])
-        writer.writerow(['median score', median])
-        writer.writerow(['avg score', average])
+        writer.writerow(['median reward', median])
+        writer.writerow(['avg reward', average])
         writer.writerow(['std', std])
-        writer.writerow(['high score', high])
-        writer.writerow(['low score', low])
+        writer.writerow(['high reward', high])
+        writer.writerow(['low reward', low])
         writer.writerow(['env', self.spec.id])
         writer.writerow(['cmd args', ', '.join(sys.argv[1:])])
         writer.writerow(['main args', main_args])
@@ -880,7 +880,7 @@ class DeepDriveEnv(gym.Env):
         self.previous_distance_along_route = 0
         self.start_distance_along_route = None
         self.prev_step_time = None
-        self.episode_score = EpisodeScore()
+        self.episode_return = EpisodeReturn()
         self.start_time = time.time()
         self.started_driving_wrong_way_time = None
         set_capture_graphics(shadow_level=0)
@@ -919,8 +919,8 @@ class DeepDriveEnv(gym.Env):
             self.tried_to_close = True
 
         if self.recorder is not None:
-            self.recorder.close(total_score=self.total_score,
-                                episode_scores=self.episode_scores,
+            self.recorder.close(total_return=self.total_return,
+                                episode_returns=self.episode_returns,
                                 median_fps=self.fps_tracker.median(), )
         if self.dashboard_pub is not None:
             try:
@@ -1401,7 +1401,7 @@ class DeepDriveEnv(gym.Env):
 
     def surpassed_max_episodes(self) -> bool:
         if self.max_episodes is not None and \
-                len(self.episode_scores) >= self.max_episodes:
+                len(self.episode_returns) >= self.max_episodes:
             log.info('Max episodes of %r reached.', self.max_episodes)
             self.should_close = True
             return True
