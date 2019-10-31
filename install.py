@@ -107,11 +107,17 @@ def main():
     run_command_no_deps(py + ' -m pip install sarge wheel requests boto',
                         verbose=True)
 
+
     if 'ubuntu' in platform.platform().lower() and not is_docker():
         # Install tk for dashboard
         run_command_with_sarge('sudo apt-get install -y python3-tk', throw=False)
 
-    run_command_with_sarge(py + ' -m pip install -r requirements.txt')
+    if os.name == 'nt':
+        req_filename = 'requirements-windows.txt'
+    else:
+        req_filename = 'requirements.txt'
+
+    run_command_with_sarge(f'{py} -m pip install -r {req_filename}')
 
     # Create deepdrive directory
     import config as c
@@ -223,5 +229,8 @@ if __name__ == '__main__':
     if '--test-get-bindings-version' in sys.argv:
         get_latest_valid_bindings()
     else:
-        main()
+        try:
+            main()
+        except:
+            print('Install failed, fix issues above and rerun install.py')
 
