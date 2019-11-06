@@ -125,7 +125,7 @@ class DeepDriveEnv(gym.Env):
         self.tried_to_close:bool = False
         self.scenario_index: int = c.DEFAULT_SCENARIO_INDEX
 
-        if not c.REUSE_OPEN_SIM:
+        if not c.REUSE_OPEN_SIM and not self._try_connect():
             util.ensure_sim.ensure_sim()
 
         self.client_version = pkg_resources.get_distribution(
@@ -1201,26 +1201,25 @@ class DeepDriveEnv(gym.Env):
 
             self.cameras = cameras
 
+    def _try_connect(self) -> bool:
+        try:
+            self.connection_props = deepdrive_client.create(
+                '127.0.0.1', 9876)
+            if isinstance(self.connection_props, int):
+                raise Exception(
+                    'You have an old version of the deepdrive client - '
+                    'try uninstalling and reinstalling with pip')
+            if (not self.connection_props or
+                    not self.connection_props['max_capture_resolution']):
+                # Try again
+                return False
+            self.check_version()
+
+        except deepdrive_client.time_out:
+            self._try_connect()
+        return True
+
     def _connect_with_retries(self):
-
-        def connect():
-            try:
-                self.connection_props = deepdrive_client.create(
-                    '127.0.0.1', 9876)
-                if isinstance(self.connection_props, int):
-                    raise Exception(
-                        'You have an old version of the deepdrive client - '
-                        'try uninstalling and reinstalling with pip')
-                if (not self.connection_props or
-                        not self.connection_props['max_capture_resolution']):
-                    # Try again
-                    return
-                self.check_version()
-
-            except deepdrive_client.time_out:
-                connect()
-
-        connect()
         if self.connection_props:
             ensure_sim.check_pyarrow_compat()
             log.info('Connecting to an already open sim')
@@ -1245,7 +1244,7 @@ class DeepDriveEnv(gym.Env):
                             cxn_attempts,
                             max_cxn_attempts, round(sleep, 0))
                 time.sleep(sleep)
-                connect()
+                self._try_connect()
             if cxn_attempts >= max_cxn_attempts:
                 raise RuntimeError('Could not connect to the environment')
 
