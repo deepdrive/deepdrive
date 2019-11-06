@@ -14,9 +14,11 @@ echo:
 	echo $(TAG_BUILD_ID)
 
 build_botleague:
+	echo Building release candidate botleague containers
 	$(BUILD_BOTLEAGUE)
 
 push_botleague:
+	echo Pushing botleague containers to release
 	$(PUSH_BOTLEAGUE)
 
 bash:
