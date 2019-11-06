@@ -7,7 +7,7 @@ def main():
     done = False
     while not done:
         observation, reward, done, info = env.step(forward)
-
+    env.close()
 
 if __name__ == '__main__':
     main()
