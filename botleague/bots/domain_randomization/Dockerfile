@@ -1,4 +1,4 @@
-FROM deepdriveio/deepdrive:3.0
+FROM deepdriveio/deepdrive:3.1
 ENV WEIGHTS_DIR=/home/${DEEPDRIVE_USER}/deepdrive_weights
 ENV WEIGHTS_NAME="domain_randomization_2019-03-04__02-11-53PM"
 # TODO: Move below to python when adding more bots
