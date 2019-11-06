@@ -101,6 +101,9 @@ PPO_BASELINE_WEIGHTS_URL = BASE_WEIGHTS_URL + '/ppo_baseline_agent_weights.zip'
 SIM_PREFIX = 'deepdrive-sim-' + OS_NAME
 YOU_GET_MY_JIST_URL = AWS_BUCKET_URL + '/yougetmyjist.json'
 SIM_URL = os.environ.get('SIM_URL')
+DEFAULT_SCENARIO_INDEX = -1
+KEVINDALE_BARE_MAP_PARAM = '/DeepDriveKevindalePlugin/DeepDrive/Maps/DeepDriveSim_Kevindale_Bare'
+KEVINDALE_FULL_MAP_PARAM = '/DeepDriveKevindalePlugin/DeepDrive/Maps/DeepDriveSim_Kevindale_Full'
 
 
 # Sim

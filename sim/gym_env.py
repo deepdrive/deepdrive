@@ -123,6 +123,7 @@ class DeepDriveEnv(gym.Env):
         self.image_resize_dims:np.ndarray = None
         self.should_normalize_image:bool = False
         self.tried_to_close:bool = False
+        self.scenario_index: int = c.DEFAULT_SCENARIO_INDEX
 
         if not c.REUSE_OPEN_SIM:
             util.ensure_sim.ensure_sim()
@@ -193,49 +194,64 @@ class DeepDriveEnv(gym.Env):
         if c.REUSE_OPEN_SIM:
             return
         if self.use_sim_start_command:
-            log.info('Starting simulator with command %s - this will take a '
-                     'few seconds.', c.SIM_START_COMMAND)
-
-            self.sim_process = Popen(c.SIM_START_COMMAND)
-
-            import win32gui
-            import win32process
-
-            def get_hwnds_for_pid(pid):
-                def callback(hwnd, _hwnds):
-                    if win32gui.IsWindowVisible(hwnd) and win32gui.IsWindowEnabled(hwnd):
-                        _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
-                        if found_pid == pid:
-                            _hwnds.append(hwnd)
-                    return True
-
-                hwnds = []
-                win32gui.EnumWindows(callback, hwnds)
-                return hwnds
-
-            focused = False
-            while not focused:
-                time.sleep(1)
-                dd_hwnds = get_hwnds_for_pid(self.sim_process.pid)
-                if not dd_hwnds:
-                    log.info('No windows found, waiting')
-                else:
-                    try:
-                        win32gui.SetForegroundWindow(dd_hwnds[0])
-                        focused = True
-                    except:
-                        log.info('Window not ready, waiting')
-
-            pass
+            self.sim_start_cmd_windows()
         else:
-            cmd = [util.ensure_sim.get_sim_bin_path(), '-opengl4']
-
+            sim_bin_path = util.ensure_sim.get_sim_bin_path()
+            parts = sim_bin_path.split(os.path.sep)
+            sim_version = [p for p in parts if p.startswith(c.SIM_PREFIX)]
+            if not sim_version:
+                raise RuntimeError(f'{sim_bin_path} is too old, please run '
+                                   f'install.py to update your sim')
+            sim_version = semvar(sim_version[0].split('-')[-1])
+            cmd = [sim_bin_path]
+            if self.scenario_index != c.DEFAULT_SCENARIO_INDEX:
+                min_kevindale_version = semvar('3.0.20191103201659')
+                if sim_version < min_kevindale_version:
+                    raise RuntimeError(
+                        f'{sim_bin_path} is too old to run this map, please run '
+                                   f'install.py to update your sim')
+                cmd += [c.KEVINDALE_FULL_MAP_PARAM,
+                        '-scenario_mode',
+                        f'-scenario_index={self.scenario_index}']
+            cmd.append('-opengl4')
             if log.getEffectiveLevel() < 20:  # More verbose than info (i.e. debug)
                 cmd += ' -LogCmds="LogPython Verbose, LogSharedMemoryImpl_Linux VeryVerbose, LogDeepDriveAgent VeryVerbose"'
 
             self.sim_process = Popen(cmd)
             log.info('Starting simulator at %s '
                      '(takes a few seconds the first time).', cmd)
+
+    def sim_start_cmd_windows(self):
+        log.info('Starting simulator with command %s - this will take a '
+                 'few seconds.', c.SIM_START_COMMAND)
+        self.sim_process = Popen(c.SIM_START_COMMAND)
+        import win32gui
+        import win32process
+        def get_hwnds_for_pid(pid):
+            def callback(hwnd, _hwnds):
+                if win32gui.IsWindowVisible(hwnd) and win32gui.IsWindowEnabled(
+                        hwnd):
+                    _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
+                    if found_pid == pid:
+                        _hwnds.append(hwnd)
+                return True
+
+            hwnds = []
+            win32gui.EnumWindows(callback, hwnds)
+            return hwnds
+
+        focused = False
+        while not focused:
+            time.sleep(1)
+            dd_hwnds = get_hwnds_for_pid(self.sim_process.pid)
+            if not dd_hwnds:
+                log.info('No windows found, waiting')
+            else:
+                try:
+                    win32gui.SetForegroundWindow(dd_hwnds[0])
+                    focused = True
+                except:
+                    log.info('Window not ready, waiting')
 
     def close_sim(self):
         log.info('Closing sim')

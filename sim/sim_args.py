@@ -40,6 +40,7 @@ class SimArgs:
     randomize_shadow_level: bool = False
     randomize_month: bool = False
     is_botleague: bool = False
+    scenario_index: int = c.DEFAULT_SCENARIO_INDEX
 
     def __init__(self, **kwargs):
         for k in kwargs:

@@ -129,6 +129,10 @@ def add_standard_args(args:Args):
         '--update-sim', action='store_true', default=False,
         help='Update sim to the latest version', )
 
+    args.add(
+        '--scenario', type=int, default=c.DEFAULT_SCENARIO_INDEX,
+        help='Scenario index to run 0-5 are Kevindale scenarios')
+
 
 def add_agent_args(args):
     args.add_agent_arg(
@@ -351,6 +355,7 @@ def get_sim_args_from_command_args(args):
         randomize_shadow_level=args.randomize_shadow_level,
         randomize_month=args.randomize_month,
         image_resize_dims=tuple(json.loads(args.image_resize_dims)),
+        scenario_index=args.scenario
     )
     return sim_args
 
