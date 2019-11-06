@@ -15,7 +15,7 @@ def main():
     for pdir in problem_dirs + bot_dirs:
         exit_code = os.system(f'cd {pdir} && make && make push')
         if exit_code != 0:
-            raise RuntimeError('Error building problem container, check above')
+            raise RuntimeError(f'Error building {pdir} container, check above')
 
 
 if __name__ == '__main__':
