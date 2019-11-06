@@ -241,7 +241,14 @@ def main():
     else:
         camera_rigs = get_camera_rigs(args)
         driving_style = DrivingStyle.from_str(args.driving_style)
+        from install import check_tensorflow_gpu
+
         if args.path_follower:
+            run_path_follower(args, camera_rigs)
+        elif not check_tensorflow_gpu():
+            log.info('Tensorflow not installed, falling back to PID path '
+                     'follower agent as mnet2 baseline agent requires '
+                     'Tensorflow')
             run_path_follower(args, camera_rigs)
         else:
             run_tf_based_models(args, camera_rigs, driving_style)
