@@ -85,7 +85,7 @@ def get_latest_valid_bindings():
 
 
 def get_version_info():
-    version_str = open(os.path.join(DIR, 'VERSION')).read()
+    version_str = open(os.path.join(DIR, 'VERSION')).read().strip()
     major_minor_version = semvar(version_str).version[:2]
     major_minor_version_str = '.'.join(str(vx) for vx in major_minor_version)
     return version_str, major_minor_version, major_minor_version_str
