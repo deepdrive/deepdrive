@@ -675,8 +675,11 @@ class DeepDriveEnv(gym.Env):
             self.episode_return.max_kph = max(kph, self.episode_return.max_kph)
             self.episode_return.max_kph = max(kph, self.episode_return.max_kph)
             self.episode_return.prev_progress_pct = self.episode_return.progress_pct
-            self.episode_return.progress_pct = \
-                100 * self.distance_along_route / obz['route_length']
+            if obz['route_length']:
+                self.episode_return.progress_pct = \
+                    100 * self.distance_along_route / obz['route_length']
+            else:
+                self.episode_return.progress_pct = 0
             self.episode_return.cm_along_route = self.distance_along_route
             self.episode_return.route_length_cm = obz['route_length']
 
