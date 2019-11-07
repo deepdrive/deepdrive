@@ -227,10 +227,12 @@ def has_nvidia_docker():
 
 if __name__ == '__main__':
     if '--test-get-bindings-version' in sys.argv:
-        get_latest_valid_bindings()
+        print(get_latest_valid_bindings())
     else:
         try:
             main()
-        except:
-            print('Install failed, fix issues above and rerun install.py')
+        except Exception as e:
+            print('\n '
+                  '* Install failed, fix issues below and rerun install.py \n')
+            raise e
 
