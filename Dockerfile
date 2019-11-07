@@ -18,8 +18,7 @@ FROM adamrehn/ue4-runtime:tensorflow-virtualgl
 # For Ubuntu 16 also install
 # python-software-properties
 
-ARG version=3.0
-ARG update_sim=False
+ARG update_sim=True
 USER root
 
 # OS dependencies
