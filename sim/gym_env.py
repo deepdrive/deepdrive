@@ -956,8 +956,11 @@ class DeepDriveEnv(gym.Env):
             self.renderer.close()
         if self.is_sync:
             deepdrive_client.deactivate_synchronous_stepping(self.client_id)
+
+        if self.has_control:
+            deepdrive_client.release_agent_control(self.client_id)
+
         deepdrive_capture.close()
-        deepdrive_client.release_agent_control(self.client_id)
         deepdrive_client.close(self.client_id)
         deepdrive_simulation.disconnect()
         self.client_id = 0
