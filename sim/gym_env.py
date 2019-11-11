@@ -5,8 +5,6 @@ import shutil
 import traceback
 from typing import List
 
-from tensorflow.python.client.session import SessionInterface
-
 import config.check_bindings
 
 
@@ -76,7 +74,7 @@ class DeepDriveEnv(gym.Env):
 
         self.discrete_actions:DiscreteActions = None
         self.preprocess_with_tensorflow:bool = None
-        self.sess:SessionInterface = None
+        self.sess = None
         self.start_time:float = time.time()
         self.step_num:int = 0
         self.prev_step_time:float = None

@@ -8,7 +8,7 @@ import config as c
 class SimArgs:
     experiment: str = None
     env_id: str = 'Deepdrive-v0'
-    sess = None  # type: tensorflow.Session
+    sess = None  # tensorflow Session
     start_dashboard: bool = True
     cameras: List[dict] = None
     use_sim_start_command: bool = False
