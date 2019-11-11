@@ -105,7 +105,7 @@ def rpc(method_name, *args, **kwargs):
 
     start_call = time.time()
     ret = CLIENT.call(method_name, *args, **kwargs)
-    log.debug('call took %r' % (time.time() - start_call))
+    log.debug('rpc %s call took %r', method_name, (time.time() - start_call))
     return ret
 
 
