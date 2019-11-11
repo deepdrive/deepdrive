@@ -346,10 +346,12 @@ def get_driving_specific_results(episode_returns, sum_over_episodes,
     ret.trip_speed_kph = ts.trip_speed_kph
     score += ts.trip_speed_kph * 10
     ret.collided_with_vehicle = ts.collided_with_vehicle
-    if ts.collided_with_vehicle:
-        score -= 1e4
     ret.collided_with_non_actor = ts.collided_with_non_actor
-    if ts.collided_with_non_actor:
+    if ret.harmful_gforces:
+        score -= 1e4
+    elif ts.collided_with_vehicle:
+        score -= 1e4
+    elif ts.collided_with_non_actor:
         score -= 2.5e3
     ret.closest_vehicle_meters = ts.closest_vehicle_cm / 100
     ret.closest_vehicle_meters_while_at_least_4kph = \
