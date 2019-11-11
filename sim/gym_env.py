@@ -84,7 +84,7 @@ class DeepDriveEnv(gym.Env):
         self.should_exit:bool = False
         self.sim_process = None
         self.client_id:int = None
-        self.has_control:bool = None
+        self.has_control:bool = False
         self.cameras:List[dict] = None
         self.use_sim_start_command:bool = None
         self.connection_props:dict = None
