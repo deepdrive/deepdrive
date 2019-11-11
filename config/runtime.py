@@ -117,7 +117,8 @@ MAP_LOOKUP = {
     JAMESTOWN_MAP_NAME:JAMESTOWN_MAP_PARAM
 }
 
-# Sim
+EMPTY_UEPY_OBZ = dict(success=True, result=dict(vehicle_positions=[]))
+
 if 'DEEPDRIVE_SIM_START_COMMAND' in os.environ:
     # Can do something like
     # `<your-unreal-path>\Engine\Binaries\Win32\UE4Editor.exe <your-deepdrive-sim-path>\DeepDrive.uproject -game ResX=640 ResY=480`

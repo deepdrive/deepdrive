@@ -1065,11 +1065,16 @@ class DeepDriveEnv(gym.Env):
 
     def get_observation(self):
         start_get_obz = time.time()
+        disable_uepy_obz = True
         try:
             shared_mem_obz = deepdrive_capture.step()
-            uepy_obz = sim.world.get_observation()
-            end_get_obz = time.time()
-            log.debug('get obz took %fs', end_get_obz - start_get_obz)
+            log.debug('get shared mem took %fs', time.time() - start_get_obz)
+            if disable_uepy_obz:
+                # TODO: Find out why even no-op RPC's are so slow on larger maps
+                uepy_obz = c.EMPTY_UEPY_OBZ
+            else:
+                uepy_obz = sim.world.get_observation()
+            log.debug('get obz took %fs', time.time() - start_get_obz)
         except SystemError as e:
             log.error('caught error during step' + str(e))
             ret = None
