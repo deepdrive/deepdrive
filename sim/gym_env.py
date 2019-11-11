@@ -903,7 +903,6 @@ class DeepDriveEnv(gym.Env):
         self.episode_return = EpisodeReturn()
         self.start_time = time.time()
         self.started_driving_wrong_way_time = None
-        set_capture_graphics(shadow_level=0)
         self.view_mode_controller.reset()
 
         # Create domain randomization controller for these
