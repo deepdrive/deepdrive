@@ -333,9 +333,13 @@ def get_driving_specific_results(episode_returns, sum_over_episodes,
         sum_over_episodes('jarring_gforce_seconds')
     ret.harmful_gforces = \
         any(e.harmful_gforces for e in episode_returns)
-    ret.comfort_pct = 100 - ret.uncomfortable_gforce_seconds / total_time * 100
-    score -= ret.comfort_pct * 100
-    ret.jarring_pct = ret.jarring_gforce_seconds / total_time * 100
+    if total_time == 0:
+        ret.comfort_pct = 0
+        ret.jarring_pct = 0
+    else:
+        ret.comfort_pct = 100 - ret.uncomfortable_gforce_seconds / total_time * 100
+        ret.jarring_pct = ret.jarring_gforce_seconds / total_time * 100
+    score -= (100 - ret.comfort_pct) * 100
     score -= ret.jarring_pct * 500
     ret.max_gforce = ts.max_gforce
     ret.max_kph = ts.max_kph
