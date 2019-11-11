@@ -41,6 +41,7 @@ class SimArgs:
     randomize_month: bool = False
     is_botleague: bool = False
     scenario_index: int = c.DEFAULT_SCENARIO_INDEX
+    map: str = c.CANYONS_MAP_NAME
 
     def __init__(self, **kwargs):
         for k in kwargs:

@@ -104,7 +104,18 @@ SIM_URL = os.environ.get('SIM_URL')
 DEFAULT_SCENARIO_INDEX = -1
 KEVINDALE_BARE_MAP_PARAM = '/DeepDriveKevindalePlugin/DeepDrive/Maps/DeepDriveSim_Kevindale_Bare'
 KEVINDALE_FULL_MAP_PARAM = '/DeepDriveKevindalePlugin/DeepDrive/Maps/DeepDriveSim_Kevindale_Full'
+JAMESTOWN_MAP_PARAM = '/DeepDriveCityPlugin/DeepDrive/Maps/DeepDriveSim_CityMapTraffic_Demo'
+CANYONS_MAP_NAME = ''
+KEVINDALE_MAP_NAME = 'kevindale'
+KEVINDALE_BARE_MAP_NAME = 'kevindale_bare'
+JAMESTOWN_MAP_NAME = 'jamestown'
 
+MAP_LOOKUP = {
+    CANYONS_MAP_NAME:'',
+    KEVINDALE_MAP_NAME:KEVINDALE_FULL_MAP_PARAM,
+    KEVINDALE_BARE_MAP_NAME:KEVINDALE_BARE_MAP_PARAM,
+    JAMESTOWN_MAP_NAME:JAMESTOWN_MAP_PARAM
+}
 
 # Sim
 if 'DEEPDRIVE_SIM_START_COMMAND' in os.environ:

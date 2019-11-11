@@ -89,6 +89,7 @@ def start_local_env(args:SimArgs):
     _env.randomize_month = args.randomize_month
     _env.is_botleague = args.is_botleague
     _env.scenario_index = args.scenario_index
+    _env.unreal_map = c.MAP_LOOKUP[args.map]
 
     connect_to_unreal(_env, args)
     _env.set_step_mode()

@@ -124,6 +124,7 @@ class DeepDriveEnv(gym.Env):
         self.should_normalize_image:bool = False
         self.tried_to_close:bool = False
         self.scenario_index: int = c.DEFAULT_SCENARIO_INDEX
+        self.unreal_map: str = ''
 
         if not c.REUSE_OPEN_SIM and not self._try_connect():
             util.ensure_sim.ensure_sim()
@@ -203,22 +204,21 @@ class DeepDriveEnv(gym.Env):
                 raise RuntimeError(f'{sim_bin_path} is too old, please run '
                                    f'install.py to update your sim')
             sim_version = semvar(sim_version[0].split('-')[-1])
-            cmd = [sim_bin_path]
+            cmd = [sim_bin_path, self.unreal_map]
             if self.scenario_index != c.DEFAULT_SCENARIO_INDEX:
                 min_kevindale_version = semvar('3.0.20191103201659')
                 if sim_version < min_kevindale_version:
                     raise RuntimeError(
                         f'{sim_bin_path} is too old to run this map, please run '
                                    f'install.py to update your sim')
-                cmd += [c.KEVINDALE_FULL_MAP_PARAM,
-                        '-scenario_mode',
+                cmd += ['-scenario_mode',
                         f'-scenario_index={self.scenario_index}']
             cmd.append('-opengl4')
             if log.getEffectiveLevel() < 20:  # More verbose than info (i.e. debug)
                 cmd += ' -LogCmds="LogPython Verbose, LogSharedMemoryImpl_Linux VeryVerbose, LogDeepDriveAgent VeryVerbose"'
 
             self.sim_process = Popen(cmd)
-            log.info('Starting simulator at %s '
+            log.info('Starting simulator with %s '
                      '(takes a few seconds the first time).', cmd)
 
     def sim_start_cmd_windows(self):
@@ -321,7 +321,8 @@ class DeepDriveEnv(gym.Env):
             dd_action = self.get_dd_action(action)
             send_control_start = time.time()
             self.send_control(dd_action)
-            log.debug('send_control took %fs', time.time() - send_control_start)
+            log.debug('send_control took %fs',
+                      time.time() - send_control_start)
 
             obz = self.get_observation()
             if not obz:
@@ -1107,10 +1108,11 @@ class DeepDriveEnv(gym.Env):
             seq_number = deepdrive_client.advance_synchronous_stepping(
                 self.client_id, self.sim_step_time, action.steering,
                 action.throttle, action.brake, action.handbrake)
-            log.debug('sync step took %fs',  time.time() - sync_start)
+            log.debug('sync step took %fs - sim_step_time set to %fs',
+                      time.time() - sync_start, self.sim_step_time)
         else:
             if c.PPO_RESUME_PATH:
-                # OmegaHack to deal with sync vs async
+                # Hack to deal with sync vs async
                 action.throttle = action.throttle * 0.90
             deepdrive_client.set_control_values(
                 self.client_id, steering=action.steering,

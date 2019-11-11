@@ -133,6 +133,10 @@ def add_standard_args(args:Args):
         '--scenario', type=int, default=c.DEFAULT_SCENARIO_INDEX,
         help='Scenario index to run 0-5 are Kevindale scenarios')
 
+    args.add('--map', nargs='?', default='',
+        help='The Unreal Map to load - options: ' +
+             ', '.join(c.MAP_LOOKUP.keys()))
+
 
 def add_agent_args(args):
     args.add_agent_arg(
@@ -362,7 +366,8 @@ def get_sim_args_from_command_args(args):
         randomize_shadow_level=args.randomize_shadow_level,
         randomize_month=args.randomize_month,
         image_resize_dims=tuple(json.loads(args.image_resize_dims)),
-        scenario_index=args.scenario
+        scenario_index=args.scenario,
+        map=args.map,
     )
     return sim_args
 
@@ -372,6 +377,10 @@ def run_path_follower(args, camera_rigs):
     Runs the C++ PID-based path follower agent which uses a reference
     spline in the center of the lane, and speed annotations on tight turns
     to drive.
+
+    Or on new maps a behavior tree based agent is used with communication
+    between agents.
+
     Refer to https://github.com/deepdrive/deepdrive-sim/tree/b21e0a0bf8cec60538425fa41b5fc5ee28142556/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent
     """
     done = False
