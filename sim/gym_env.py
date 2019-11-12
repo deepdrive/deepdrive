@@ -1099,7 +1099,9 @@ class DeepDriveEnv(gym.Env):
         #     world.configure(scenario)
         # else:
 
-        world.reset(enable_traffic=self.enable_traffic)
+        if self.unreal_map == '':
+            # Not valid on new maps?
+            world.reset(enable_traffic=self.enable_traffic)
 
         if self.ego_mph is not None and self.unreal_map == '':
             # Not valid on new maps
