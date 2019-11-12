@@ -661,7 +661,10 @@ class DeepDriveEnv(gym.Env):
         progress_reward = speed_reward = 0
         if 'distance_along_route' in obz:
             if self.start_distance_along_route is None:
-                self.start_distance_along_route = obz['distance_along_route']
+                if self.unreal_map == '':
+                    self.start_distance_along_route = obz['distance_along_route']
+                else:
+                    self.start_distance_along_route = 0
             if obz['distance_along_route'] < self.start_distance_along_route:
                 dist = (obz['route_length'] - self.start_distance_along_route) +\
                        obz['distance_along_route']
