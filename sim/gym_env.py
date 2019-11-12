@@ -208,6 +208,8 @@ class DeepDriveEnv(gym.Env):
                                    f'install.py to update your sim')
                 cmd += ['-scenario_mode',
                         f'-scenario_index={self.scenario_index}']
+            if self.unreal_map != '' and self.has_control:
+                cmd.append('-remote_ai')
             cmd.append('-opengl4')
             if log.getEffectiveLevel() < 20:  # More verbose than info (i.e. debug)
                 cmd += ' -LogCmds="LogPython Verbose, LogSharedMemoryImpl_Linux VeryVerbose, LogDeepDriveAgent VeryVerbose"'
