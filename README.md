@@ -219,23 +219,22 @@ pytest tests/unit_tests/test_sanity.py
 ### Key binds 
 
 * <kbd>Esc</kbd> - Pause (Quit in Unreal Editor)
-* <kbd>Alt+Tab</kbd> - Control other windows
+* <kbd>Enter</kbd> - Pause with no menu
 * <kbd>P</kbd> - Pause in Unreal Editor
-* <kbd>;</kbd> - Toggle FPS
 * <kbd>1</kbd> - Chase cam
 * <kbd>2</kbd> - Orbit (side) cam
 * <kbd>3</kbd> - Hood cam
 * <kbd>4</kbd> - Free cam (use WASD to fly)
-* WASD or Up, Down, Left Right - steer / throttle
 * <kbd>Space</kbd> - Handbrake
-* <kbd>Shift</kbd> - Nitro
-* <kbd>H</kbd> - Horn
-* <kbd>L</kbd> - Light
-* <kbd>R</kbd> - Reset
-* <kbd>E</kbd> - Gear Up
-* <kbd>Q</kbd> - Gear down
-* <kbd>Z</kbd> - Show mouse
-* <kbd>`</kbd><kbd>`</kbd> - Unreal console (first press releases game input capture)
+* <kbd>Alt+Tab</kbd> - Control other windows / Show mouse
+* <kbd>`</kbd> - Unreal console - do things like `stat FPS` 
+* <kbd>M</kbd> - Drive the car with the keyboard WASD - be sure sync is off - Also known issue: Only works in path-follower mode right now
+* <kbd>Ctrl-number</kbd> - Change sun position - works for 1 => 7
+* <kbd>B</kbd> - Show vehicle bounding boxes
+* <kbd>N</kbd> - Show vehicle collision boxes
+* <kbd>Page Up</kbd> - Next vehicle
+* <kbd>Page Down</kbd> - Prev vehicle
+
 
 
 ## Benchmark
