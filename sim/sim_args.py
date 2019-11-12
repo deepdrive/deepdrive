@@ -42,6 +42,7 @@ class SimArgs:
     is_botleague: bool = False
     scenario_index: int = c.DEFAULT_SCENARIO_INDEX
     map: str = c.CANYONS_MAP_NAME
+    path_follower: bool = False
 
     def __init__(self, **kwargs):
         for k in kwargs:

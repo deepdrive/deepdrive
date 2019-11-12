@@ -367,6 +367,7 @@ def get_sim_args_from_command_args(args):
         randomize_month=args.randomize_month,
         image_resize_dims=tuple(json.loads(args.image_resize_dims)),
         scenario_index=args.scenario,
+        path_follower=args.path_follower,
         map=args.map,
     )
     return sim_args
