@@ -137,6 +137,15 @@ DEFAULT_CAM = dict(
     relative_position=[150, 1.0, 200],
     relative_rotation=[0.0, 0.0, 0.0])
 
+
+DEFAULT_CAM_1080p = dict(
+    name='forward cam 1920x1080 90 FOV',
+    field_of_view=90,
+    capture_width=1920,
+    capture_height=1080,
+    relative_position=[150, 1.0, 200],
+    relative_rotation=[0.0, 0.0, 0.0])
+
 DEFAULT_FPS = 8
 DEFAULT_SIM_STEP_TIME = 1 / DEFAULT_FPS
 

@@ -20,6 +20,7 @@ log = logs.get_log(__name__)
 # cameras in the second dimension create multiple simultaneously rendering views from the vehicle.
 rigs = {
     'default_rig': [[c.DEFAULT_CAM]],
+    'default_rig_1080p': [[c.DEFAULT_CAM_1080p]],
     'baseline_rigs': [
         [c.DEFAULT_CAM],
         [dict(name='forward cam 90 FOV', field_of_view=90, capture_width=340, capture_height=227,
