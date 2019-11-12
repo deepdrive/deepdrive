@@ -30,7 +30,7 @@ python install.py
 
 #### Cloud
 
-We've tested on Paperspace's ML-in-a-Box Linux public template which already has Tensorflow installed and just requires
+We've tested on Paperspace's ML-in-a-Box Linux public template with a P6000 which already has Tensorflow installed and just requires
 
 ```
 python install.py
