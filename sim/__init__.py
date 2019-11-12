@@ -90,6 +90,8 @@ def start_local_env(args:SimArgs):
     _env.is_botleague = args.is_botleague
     _env.scenario_index = args.scenario_index
     _env.unreal_map = c.MAP_LOOKUP[args.map]
+    if args.path_follower:
+        _env.has_control = False
 
     connect_to_unreal(_env, args)
     _env.set_step_mode()
