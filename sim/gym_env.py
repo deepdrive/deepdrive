@@ -473,7 +473,7 @@ class DeepDriveEnv(gym.Env):
             if lap_via_progress:
                 median_meters_per_sec = self.episode_return.cm_per_second_sampler.mean() / 100
                 est_travel_cm = median_meters_per_sec * self.episode_return.episode_time * 100  # cm travelled
-                took_shortcut = est_travel_cm < (obz['route_length'] * 0.9)
+                took_shortcut = self.get_took_shortcut(est_travel_cm, obz)
                 if took_shortcut:
                     log.warn('Shortcut detected, not scoring lap')
                 else:
@@ -487,6 +487,13 @@ class DeepDriveEnv(gym.Env):
                       time.time() - start_compute_lap_stats)
 
         return done, lap_bonus
+
+    def get_took_shortcut(self, est_travel_cm, obz):
+        if self.unreal_map == '':
+            # Route is one loop around track, so this is an easy cheat
+            return est_travel_cm < (obz['route_length'] * 0.9)
+        else:
+            return False
 
     def get_reward(self, obz, now):
         start_get_reward = time.time()
