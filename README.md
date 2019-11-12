@@ -5,8 +5,8 @@ The easiest way to experiment with self-driving AI
 ## Simulator requirements
 
 - Linux
-- Python 3.6+ (Recommend Miniconda for Windows)
-- 3GB disk space
+- Python 3.6+
+- 10GB disk space
 - 8GB RAM
 
 ## Optional - baseline agent requirements
@@ -23,15 +23,6 @@ cd deepdrive
 
 > Optional - Activate the Python / virtualenv where your Tensorflow is installed, then
 
-#### Linux
-```
-python install.py
-```
-
-#### Windows
-Make sure the Python you want to use is in your PATH, then
-
-> Tip: We highly recommend using [Conemu](https://conemu.github.io/) for your Windows terminal
 
 ```
 python install.py
@@ -55,8 +46,10 @@ A minimal agent can be run with
 import sim
 env = sim.start()
 forward = sim.action(throttle=1, steering=0, brake=0)
-while True:
+done = False
+while not done:
     observation, reward, done, info = env.step(forward)
+env.close()
 ```
 
 ### Observation data
@@ -162,7 +155,7 @@ All values returned in the observation keep Unreal conventions, specifically
 }
 ```
 
-Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API with [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). Simply modify [get_observation](https://github.com/deepdrive/deepdrive-sim/blob/c2d26a38692f1db61d48986263b20721ab136fe3/Content/Scripts/api_methods.py#L56) in `api_methods.py`. 
+Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API with [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). 
 
 ### Examples
 
@@ -247,7 +240,7 @@ pytest tests/unit_tests/test_sanity.py
 
 ## Benchmark
 
-Agents are automatically graded via [Botleague](https://botleague.io/problems/deepdrive/domain_randomization.html)
+Agents are automatically graded via [Botleague](https://deepdrive.voyage/leaderboard)
 
 ## Dataset
 
