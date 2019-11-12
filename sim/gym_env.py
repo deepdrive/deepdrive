@@ -1390,9 +1390,9 @@ class DeepDriveEnv(gym.Env):
 
     def change_has_control(self, has_control):
         if self.unreal_map != '':
-            # TODO: Fix request / release in new maps
+            self.has_control = has_control
             return
-        if has_control:
+        elif has_control:
             self.request_agent_control()
         else:
             self.release_agent_control()
