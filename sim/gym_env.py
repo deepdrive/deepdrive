@@ -1089,6 +1089,11 @@ class DeepDriveEnv(gym.Env):
             ret = None
         else:
             ret = self.preprocess_observation(shared_mem_obz)
+            if ret is not None and self.unreal_map != '':
+                # TODO: Fix route_length on new maps seems to be offset by 8m on
+                #   unprotected left
+                if ret['route_length'] and ret['route_length'] > (20 * 100):
+                    ret['route_length'] -= (8 * 100)
             if ret is not None and uepy_obz['success']:
                 ret['world'] = uepy_obz['result']
 
