@@ -18,6 +18,7 @@ bash Miniconda3-latest-Linux-x86_64.sh
 Next, create a conda env for deepdrive
 
 ```
+bash # to get conda in your shell
 conda create -n dd python=3.7
 conda activate dd
 ```
@@ -26,12 +27,12 @@ Now clone our repo
 
 ```
 git clone https://github.com/deepdrive/deepdrive
-python main.py --map=kevindale --path-follower
 ```
 
 And finish by running the install
 
 ```
+cd deepdrive
 python install.py
 ```
 
@@ -42,3 +43,5 @@ python example.py
 ```
 
 If you run into issues, try starting the sim directly as Unreal may need to install some prerequisetes (i.e. DirectX needs to be installed on the Paperspace Parsec Windows box). The default location of the Unreal sim binary is in your user directory under <kbd>Deepdrive/sim</kbd>.
+
+Checkout the rest of our examples [here](https://docs.deepdrive.io/#usage)

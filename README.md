@@ -55,7 +55,87 @@ while not done:
 env.close()
 ```
 
-### Observation data
+Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API with [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). 
+
+### Examples
+
+#### Synchronous forward-agent
+
+```
+python example_sync.py
+```
+
+* [Remote agent example](https://github.com/deepdrive/forward-agent) - operates over the network using the [deepdrive remote api](https://github.com/deepdrive/deepdrive-api)
+
+#### Mnet2 baseline agent
+```
+python main.py --mnet2-baseline --experiment my-baseline-test
+```
+
+#### Built-in C++ [FSM](https://github.com/deepdrive/deepdrive-sim/tree/c2d26a38692f1db61d48986263b20721ab136fe3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/LocalAI/States) / [PID](https://github.com/deepdrive/deepdrive-sim/blob/v3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/DeepDriveAgentSteeringController.cpp) agent that can overtake in the canyons map
+```
+python main.py --path-follower --experiment my-path-follower-test
+```
+
+#### Record training data for imitation learning / behavioral cloning
+```
+python main.py --record --jitter-actions --sync
+```
+
+Note that we recorded the baseline dataset in sync mode which is much slower than async mode. 
+Async mode _probably_ is fine to record in, we just haven't got around to trying it out for v3.
+
+Optional: Convert to HDF5 files to tfrecords (for training MNET2)
+```
+python main.py --hdf5-2-tfrecord
+```
+
+#### Train on recorded data
+```
+python main.py --train [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2] --recording-dir <your-hdf5-or-tfrecord-dir>
+```
+
+#### Train on our dataset
+
+Grab the [dataset](#dataset)
+```
+python main.py --train --recording-dir <the-directory-with-the-dataset> [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2]
+```
+
+#### Tensorboard
+
+```
+tensorboard --logdir="<your-deepdrive-home>/tensorflow"
+```
+
+Where `<your-deepdrive-home>` below is by default in `$HOME/Deepdrive` and can be configured in `$HOME/.deepdrive/deepdrive_dir`
+
+#### Running unit tests
+
+```
+pytest tests/unit_tests/test_sanity.py
+```
+
+### Key binds 
+
+* <kbd>Esc</kbd> - Pause (Quit in Unreal Editor)
+* <kbd>Enter</kbd> - Pause with no menu
+* <kbd>P</kbd> - Pause in Unreal Editor
+* <kbd>1</kbd> - Chase cam
+* <kbd>2</kbd> - Orbit (side) cam
+* <kbd>3</kbd> - Hood cam
+* <kbd>4</kbd> - Free cam (use WASD to fly)
+* <kbd>Space</kbd> - Handbrake
+* <kbd>Alt+Tab</kbd> - Control other windows / Show mouse
+* <kbd>`</kbd> - Unreal console - do things like `stat FPS` 
+* <kbd>M</kbd> - Drive the car with the keyboard WASD - be sure sync is off - Also known issue: Only works in path-follower mode right now
+* <kbd>Ctrl-number</kbd> - Change sun position - works for 1 => 7
+* <kbd>B</kbd> - Show vehicle bounding boxes
+* <kbd>N</kbd> - Show vehicle collision boxes
+* <kbd>Page Up</kbd> - Next vehicle
+* <kbd>Page Down</kbd> - Prev vehicle
+
+## Observation data
 
 All values returned in the observation keep Unreal conventions, specifically
 * All distances are in centimeters per Unreal's default data type
@@ -157,88 +237,6 @@ All values returned in the observation keep Unreal conventions, specifically
   'view_mode': 'normal',
 }
 ```
-
-Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API with [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). 
-
-### Examples
-
-#### Synchronous forward-agent
-
-```
-python example_sync.py
-```
-
-* [Remote agent example](https://github.com/deepdrive/forward-agent) - operates over the network using the [deepdrive remote api](https://github.com/deepdrive/deepdrive-api)
-
-#### Mnet2 baseline agent
-```
-python main.py --mnet2-baseline --experiment my-baseline-test
-```
-
-#### Built-in C++ [FSM](https://github.com/deepdrive/deepdrive-sim/tree/c2d26a38692f1db61d48986263b20721ab136fe3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/LocalAI/States) / [PID](https://github.com/deepdrive/deepdrive-sim/blob/v3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/DeepDriveAgentSteeringController.cpp) agent that can overtake in the canyons map
-```
-python main.py --path-follower --experiment my-path-follower-test
-```
-
-#### Record training data for imitation learning / behavioral cloning
-```
-python main.py --record --jitter-actions --sync
-```
-
-Note that we recorded the baseline dataset in sync mode which is much slower than async mode. 
-Async mode _probably_ is fine to record in, we just haven't got around to trying it out for v3.
-
-Optional: Convert to HDF5 files to tfrecords (for training MNET2)
-```
-python main.py --hdf5-2-tfrecord
-```
-
-#### Train on recorded data
-```
-python main.py --train [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2] --recording-dir <your-hdf5-or-tfrecord-dir>
-```
-
-#### Train on our dataset
-
-Grab the [dataset](#dataset)
-```
-python main.py --train --recording-dir <the-directory-with-the-dataset> [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2]
-```
-
-#### Tensorboard
-
-```
-tensorboard --logdir="<your-deepdrive-home>/tensorflow"
-```
-
-Where `<your-deepdrive-home>` below is by default in `$HOME/Deepdrive` and can be configured in `$HOME/.deepdrive/deepdrive_dir`
-
-#### Running unit tests
-
-```
-pytest tests/unit_tests/test_sanity.py
-```
-
-### Key binds 
-
-* <kbd>Esc</kbd> - Pause (Quit in Unreal Editor)
-* <kbd>Enter</kbd> - Pause with no menu
-* <kbd>P</kbd> - Pause in Unreal Editor
-* <kbd>1</kbd> - Chase cam
-* <kbd>2</kbd> - Orbit (side) cam
-* <kbd>3</kbd> - Hood cam
-* <kbd>4</kbd> - Free cam (use WASD to fly)
-* <kbd>Space</kbd> - Handbrake
-* <kbd>Alt+Tab</kbd> - Control other windows / Show mouse
-* <kbd>`</kbd> - Unreal console - do things like `stat FPS` 
-* <kbd>M</kbd> - Drive the car with the keyboard WASD - be sure sync is off - Also known issue: Only works in path-follower mode right now
-* <kbd>Ctrl-number</kbd> - Change sun position - works for 1 => 7
-* <kbd>B</kbd> - Show vehicle bounding boxes
-* <kbd>N</kbd> - Show vehicle collision boxes
-* <kbd>Page Up</kbd> - Next vehicle
-* <kbd>Page Down</kbd> - Prev vehicle
-
-
 
 ## Benchmark
 
