@@ -32,7 +32,7 @@ make && make push
 
 ### Step 4: Submit a pull request to Botleague
 
-* Login to your GitHub account and fork the [botleague](https://github.com/botleague/botleague) repo with the fork button on the top right. Botleague is not a repo you _need_ to have locally, it functions as way to submit to the leaderboard with pull requests.
+* Login to your GitHub account and fork the [botleague](https://github.com/botleague/botleague) repo with the fork button on the top right. Botleague is not a repo you _need_ to have locally, it merely functions as way to submit to the leaderboard with pull requests.
 
 <hr>
 
