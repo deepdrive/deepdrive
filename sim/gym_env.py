@@ -482,7 +482,7 @@ class DeepDriveEnv(gym.Env):
                     lap_bonus = 10
                 self.total_laps += 1
                 done = True  # One lap per episode
-                log.info('episode finished, lap complete')
+                log.info('episode finished, trip complete')
                 self.log_up_time()
             self.lap_number = lap_number
             log.debug('compute lap stats took %fs',

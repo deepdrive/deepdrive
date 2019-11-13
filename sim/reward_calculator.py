@@ -55,8 +55,8 @@ class RewardCalculator(object):
             #  in sync mode.
             meters_per_second = progress_cm / time_passed
             if meters_per_second < -400:
-                # Lap completed
-                log.debug('assuming lap complete, progress zero')
+                # Trip completed
+                log.debug('assuming trip complete, progress zero')
                 progress_cm = meters_per_second = 0
 
             # Square the speed to greatly outweigh the advantage

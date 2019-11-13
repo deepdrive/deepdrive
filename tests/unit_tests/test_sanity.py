@@ -87,7 +87,7 @@ def test_progress_reward():
     assert progress_reward == pytest.approx(100.) and speed_reward == pytest.approx(100.)  # Should clip
     progress_reward, speed_reward, _ = RewardCalculator.get_progress_and_speed_reward(
         progress_cm=-1e8, time_passed=0.1)
-    assert progress_reward == pytest.approx(0.) and speed_reward == pytest.approx(0.)  # lap complete, zero out
+    assert progress_reward == pytest.approx(0.) and speed_reward == pytest.approx(0.)  # trip complete, zero out
 
     # Test invariance of sampling frequency
     p1, r1 = episode_progress_reward(hz=1,   total_secs=10)
