@@ -48,4 +48,4 @@ If you run into issues, try starting the sim directly as Unreal may need to inst
 /home/YOURUSERNAME/Deepdrive/deepdrive-sim-linux-3.1.20191112232556/DeepDrive/Binaries/Linux/DeepDrive
 ```
 
-You can continue running the rest of our examples [here](https://docs.deepdrive.io/#examples)
+You can continue testing things out by running the rest of our examples [here](https://docs.deepdrive.io/#examples)
