@@ -29,14 +29,14 @@ Now clone our repo
 git clone https://github.com/deepdrive/deepdrive
 ```
 
-And finish by running the install
+And finally run the install
 
 ```
 cd deepdrive
 python install.py
 ```
 
-Validate everything is working by running
+You can validate everything is working by running
 
 ```
 python example.py
