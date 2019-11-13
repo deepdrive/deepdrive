@@ -45,8 +45,16 @@ A minimal agent can be run with
 
 ```python
 import sim
-env = sim.start()
-forward = sim.action(throttle=1, steering=0, brake=0)
+# map can be
+env = sim.start(
+
+    # map can be canyons, kevindale, kevindale_bare, or jamestown
+    map='kevindale_bare',
+
+    # scenario can be 0 => 5
+    scenario_index=1
+)
+forward = sim.action(throttle=0.75, steering=0, brake=0)
 done = False
 while not done:
     observation, reward, done, info = env.step(forward)
