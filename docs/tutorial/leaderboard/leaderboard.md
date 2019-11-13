@@ -32,7 +32,7 @@ make && make push
 
 ### Step 4: Submit a pull request to Botleague
 
-* Login to your GitHub account and fork the [botleague](https://github.com/botleague/botleague) repo with the fork button on the top right. Botleague is not a repo you _need_ to have locally - it just funcions as way to submit to the leaderboard with pull requests.
+* Login to your GitHub account and fork the [botleague](https://github.com/botleague/botleague) repo with the fork button on the top right. Botleague is not a repo you _need_ to have locally, it functions as way to submit to the leaderboard with pull requests.
 
 <hr>
 
@@ -56,7 +56,7 @@ Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitH
 
 <hr>
 
-Finally paste your bot.json below
+Now add the following JSON to the file and click <kbd>Commit new file</kdb>
 
 > Note: if did step 2 and 3, replace `crizcraig` with your DockerHub or other registry name in the JSON below
 
@@ -68,7 +68,14 @@ Finally paste your bot.json below
 }
 ```
 
-* Submit a pull request to the main botleague repo from your fork
+Submit a pull request to the main botleague repo from your fork
+
+<hr>
+
+![paste bot name with directories](https://i.imgur.com/DsFddJQ.jpgg)
+
+<hr>
+
 * The pull request will be automatically merged after about 10 minutes once the evaluation is complete
 * Click the View Details=>Details button on the pull request to see your bot's results
 * Finally, check the [leaderboards](https://deepdrive.voyage.auto/leaderboard) to see your bot's score and video ranked among the other bots!
