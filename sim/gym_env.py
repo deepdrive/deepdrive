@@ -208,7 +208,8 @@ class DeepDriveEnv(gym.Env):
                                    f'install.py to update your sim')
                 cmd += ['-scenario_mode',
                         f'-scenario_index={self.scenario_index}']
-            if self.unreal_map != '' and self.has_control:
+            if self.unreal_map != '' and self.has_control is None:
+                self.has_control = True
                 cmd.append('-remote_ai')
             if not c.IS_WINDOWS:
                 cmd.append('-opengl4')
