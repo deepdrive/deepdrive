@@ -55,7 +55,7 @@ ARTIFACTS_FILE=$(RESULTS_DIR)/latest-artifacts.json
 SERVER=python main.py --server
 PUBLIC=DEEPDRIVE_PUBLIC=true
 
-DOCKER_BUILD_ARGS=--build-arg version=$(VERSION) -t $(TAG) -f Dockerfile .
+DOCKER_BUILD_ARGS=--build-arg version=$(VERSION) --network=host -t $(TAG) -f Dockerfile .
 
 
 # Pass args to make command, i.e.
