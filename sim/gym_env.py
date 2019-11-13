@@ -210,7 +210,9 @@ class DeepDriveEnv(gym.Env):
                         f'-scenario_index={self.scenario_index}']
             if self.unreal_map != '' and self.has_control:
                 cmd.append('-remote_ai')
-            cmd.append('-opengl4')
+            if not c.IS_WINDOWS:
+                cmd.append('-opengl4')
+            cmd += ['-ResX=1280', '-ResY=720', '-WINDOWED', '-WinX=-1280']
             if log.getEffectiveLevel() < 20:  # More verbose than info (i.e. debug)
                 cmd += ' -LogCmds="LogPython Verbose, LogSharedMemoryImpl_Linux VeryVerbose, LogDeepDriveAgent VeryVerbose"'
 
