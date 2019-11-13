@@ -14,13 +14,13 @@ Est. time (5-15 minutes depending on your internet cxn)
 git clone https://github.com/deepdrive/forward-agent
 ```
 
-### Step 2: Point to your docker image (optional)
+### Step 2 (optional): Point to your docker image 
 
 > If you want to just use the default bot, you can skip this step and go straight to:  [Step 4: Submit a pull request to Botleague](#step-4-submit-a-pull-request-to-botleague)
 
 In the `Makefile` of the forward-agent repo, change the docker tag `TAG=deepdrive/forward-agent` to one that you have push access to, i.e. `TAG=yourdockerhubname/forward-agent`. 
 
-### Step 3: Build and push your bot (optional)
+### Step 3 (optional): If you performed step 2, build and push your bot 
 
 Now build and push the docker image containing your the forward-agent bot to tag
 you defined in the previous step with:
@@ -32,10 +32,33 @@ make && make push
 
 ### Step 4: Submit a pull request to Botleague
 
-* Login to your GitHub account and fork the [botleague](https://github.com/botleague/botleague) repo with the fork button on the top right
-* In your fork, create `bots/yourgithubname/forward-agent/bot.json` and paste the JSON below replacing `yourdockerhubname` with whatever you chose in step 2. You can create files directly in GitHub using the `Create new file` button): 
+* Login to your GitHub account and fork the [botleague](https://github.com/botleague/botleague) repo with the fork button on the top right. Botleague is not a repo you _need_ to have locally - it just funcions as way to submit to the leaderboard with pull requests.
 
-> Note: if did step 2 and 3, replace `crizcraig` with your DockerHub or other registry name.
+<hr>
+
+![fork botleague](https://i.imgur.com/tgesEjc.jpg)
+
+<hr>
+
+* In your fork, create a file directly in GitHub using the `Create new file` button): 
+
+<hr>
+
+![create bot](https://i.imgur.com/NW1v9yt.jpg)
+
+<hr>
+
+Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitHub will create the directories for you if you  paste `bots/<YOUR-GITHUB-NAME>/forward-agent/bot.json` replacing `YOUR-GITHUB-NAME` with your GitHub username.
+
+<hr>
+
+![paste bot name with directories](https://i.imgur.com/2ZRS6y3.png)
+
+<hr>
+
+Finally paste your bot.json below
+
+> Note: if did step 2 and 3, replace `crizcraig` with your DockerHub or other registry name in the JSON below
 
 #### JSON for bot
 ```
@@ -46,8 +69,8 @@ make && make push
 ```
 
 * Submit a pull request to the main botleague repo from your fork
-* The pull request will be automatically merged after about 2 minutes once the evaluation is complete
-* Click the View Details button on the pull request to see your bot's results
+* The pull request will be automatically merged after about 10 minutes once the evaluation is complete
+* Click the View Details=>Details button on the pull request to see your bot's results
 * Finally, check the [leaderboards](https://deepdrive.voyage.auto/leaderboard) to see your bot's score and video ranked among the other bots!
 
 TODO: Testing your agent locally by running deepdrive main.py --server ...  
