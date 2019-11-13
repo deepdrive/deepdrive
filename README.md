@@ -33,31 +33,13 @@ python install.py
 
 [Cloud setup instructions](/docs/tutorial/cloud/cloud.md)
 
-## Usage
-
-A minimal agent can be run with
-
-```python
-import sim
-# map can be
-env = sim.start(
-
-    # map can be canyons, kevindale, kevindale_bare, or jamestown
-    map='kevindale_bare',
-
-    # scenario can be 0 => 5
-    scenario_index=1
-)
-forward = sim.action(throttle=0.75, steering=0, brake=0)
-done = False
-while not done:
-    observation, reward, done, info = env.step(forward)
-env.close()
-```
-
-Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API with [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). 
-
 ### Examples
+
+#### Forward-agent
+
+```
+python example.py
+```
 
 #### Synchronous forward-agent
 
@@ -237,6 +219,8 @@ All values returned in the observation keep Unreal conventions, specifically
   'view_mode': 'normal',
 }
 ```
+
+Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API with [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). 
 
 ## Benchmark
 

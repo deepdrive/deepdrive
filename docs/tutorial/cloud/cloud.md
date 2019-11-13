@@ -42,6 +42,10 @@ Validate everything is working by running
 python example.py
 ```
 
-If you run into issues, try starting the sim directly as Unreal may need to install some prerequisetes (i.e. DirectX needs to be installed on the Paperspace Parsec Windows box). The default location of the Unreal sim binary is in your user directory under <kbd>Deepdrive/sim</kbd>.
+If you run into issues, try starting the sim directly as Unreal may need to install some prerequisetes (i.e. DirectX needs to be installed on the Paperspace Parsec Windows box). The default location of the Unreal sim binary is in your user directory under `Deepdrive/deepdrive-sim*/DeepDrive/Binaries/Linux/DeepDrive`, i.e.
 
-Checkout the rest of our examples [here](https://docs.deepdrive.io/#usage)
+```
+/home/YOURUSERNAME/Deepdrive/deepdrive-sim-linux-3.1.20191112232556/DeepDrive/Binaries/Linux/DeepDrive
+```
+
+You can continue running the rest of our examples [here](https://docs.deepdrive.io/#examples)
