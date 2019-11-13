@@ -224,7 +224,7 @@ Additional observation data can be exposed without compiling C++ or Blueprints b
 
 ## Benchmark
 
-Agents are automatically graded via [Botleague](https://deepdrive.voyage/leaderboard)
+Agents are automatically graded via [Botleague](https://deepdrive.voyage.auto/leaderboard)
 
 ## Dataset
 
