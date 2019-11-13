@@ -88,11 +88,11 @@ To test your bot locally, it's ideal to run the sim and agent on your local mach
 
 Next you can run the sim in server mode locally with those [same parameters](https://github.com/deepdrive/deepdrive/blob/f93e1091cdd9e393fd5516eedbf85e19e380773c/botleague/problems/unprotected_left/run.sh#L10) again, but this time, keeping `--server` in the params passed to `main.py`.
 
-Finally, make sure your bot runs as a docker container against the official scenario container. For the case of `unprotected_left`, for example, the docker image would be `deepdriveio/deepdrive:problem_unprotected_left`. You can see how our scenario problem images are built [here](https://github.com/deepdrive/deepdrive/tree/e565f52794c1d18904f1b2fc7c79a05e8629ed46/botleague/problems).
+Now make sure your bot runs as a docker container against the official scenario container. For the case of `unprotected_left`, for example, the docker image would be `deepdriveio/deepdrive:problem_unprotected_left`. You can see how our scenario problem images are built and run [here](https://github.com/deepdrive/deepdrive/tree/e565f52794c1d18904f1b2fc7c79a05e8629ed46/botleague/problems).
 
-Then to build your bot container, checkout how our baseline agent bot containers are built [here](https://github.com/deepdrive/deepdrive/tree/e565f52794c1d18904f1b2fc7c79a05e8629ed46/botleague/bots).
+Then to build your bot container, refer to how our baseline agent bot containers are built [here](https://github.com/deepdrive/deepdrive/tree/e565f52794c1d18904f1b2fc7c79a05e8629ed46/botleague/bots).
 
-:shipit: Then to submit your bot, create a pull request as we did above, pointing to your bot's docker image. If the image is the same, you can just add whitespace, or change some comment text to trigger the pull request.
+:shipit: Finally, to submit your bot, create a pull request as we did above, pointing to your bot's docker image. If the image is the same, you can just add whitespace, or change some comment text to allow for the pull request.
 
 
 
