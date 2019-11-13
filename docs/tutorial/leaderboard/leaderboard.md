@@ -35,12 +35,12 @@ make && make push
 * Login to your GitHub account and fork the [botleague](https://github.com/botleague/botleague) repo with the fork button on the top right
 * In your fork, create `bots/yourgithubname/forward-agent/bot.json` and paste the JSON below replacing `yourdockerhubname` with whatever you chose in step 2. You can create files directly in GitHub using the `Create new file` button): 
 
-> Note: if you skipped step 2 and 3, use `crizcraig` in place of `yourdockerhubname` to use the default bot for your submission.
+> Note: if did step 2 and 3, replace `crizcraig` with your DockerHub or other registry name.
 
 #### JSON for bot
 ```
 { 
-  "docker_tag": "yourdockerhubname/forward-agent",
+  "docker_tag": "crizcraig/forward-agent",
   "problems": ["deepdrive/unprotected_left"] 
 }
 ```
