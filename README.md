@@ -31,7 +31,7 @@ python install.py
 
 #### Cloud
 
-[Cloud setup instructions](/docs/tutorial/cloud)
+[Cloud setup instructions](/docs/tutorial/cloud/cloud.md)
 
 ## Usage
 
