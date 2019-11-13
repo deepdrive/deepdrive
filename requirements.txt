@@ -7,7 +7,7 @@ matplotlib==3.0.3
 pytest-xdist
 requests
 clint
-Pillow==5.4.1
+Pillow==6.2.0
 boto
 future==0.16.0  # For conan
 pyzmq
