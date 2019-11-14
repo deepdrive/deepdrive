@@ -2,7 +2,7 @@
 
 ## Overview 
 
-The Deepdrive leaderboard uses [Botleague](https://github.com/botleague/botleague) to evaluate submissions. To place an agent on the leaderboards, you just need to submit a bot.json file via pull request which points to the docker tag for your bot.
+The Deepdrive leaderboard uses [Botleague](https://github.com/botleague/botleague) to evaluate submissions. To place an agent on the leaderboards, you just need to submit a bot.json file via pull request which points to the docker tag for your bot. Don't want to create a docker container? Don't worry! You can use our default image to get ranked on the leaderboard and go from there. In fact, that's what we'd recommend as way to ease into things.
 
 We've provided an example project called [forward-agent](https://github.com/deepdrive/forward-agent/) that contains necessary code to get started.
 
