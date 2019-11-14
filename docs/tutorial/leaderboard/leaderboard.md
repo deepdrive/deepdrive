@@ -48,7 +48,7 @@ make && make push
 
 <hr>
 
-Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitHub will create the directories for you if you  paste `bots/<YOUR-GITHUB-NAME>/forward-agent/bot.json` replacing `YOUR-GITHUB-NAME` with your GitHub username.
+Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitHub will create the directories for you if you  paste `bots/<YOUR-GITHUB-NAME>/forward-agent/bot.json` replacing `YOUR-GITHUB-NAME` with your GitHub username *before* you paste into the input box.
 
 <hr>
 
