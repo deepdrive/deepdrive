@@ -6,7 +6,7 @@ The Deepdrive leaderboard uses [Botleague](https://github.com/botleague/botleagu
 
 We've provided an example project called [forward-agent](https://github.com/deepdrive/forward-agent/) that contains necessary code to get started.
 
-Est. time (5-15 minutes depending on your internet cxn)
+Est. time (5-15 minutes depending on your internet connection)
 
 ## Step 1: Clone the example repo
 
