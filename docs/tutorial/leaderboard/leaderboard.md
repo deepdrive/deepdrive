@@ -48,7 +48,7 @@ make && make push
 
 <hr>
 
-Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitHub will create the directories for you if you  paste `bots/<YOUR-GITHUB-NAME>/forward-agent/bot.json` replacing `YOUR-GITHUB-NAME` with your GitHub username *before* you paste into the input box.
+Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitHub will create the directories for you if you  paste `bots/<YOUR-GITHUB-NAME>/forward-agent/bot.json` replacing `YOUR-GITHUB-NAME` with your GitHub username *before* you paste into the input box or hit back space to change the directories you pasted.
 
 <hr>
 
@@ -56,7 +56,7 @@ Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitH
 
 <hr>
 
-Now add the following JSON to the file and click <kbd>Commit new file</kbd>
+Now add the following JSON to the file
 
 > Note: if did step 2 and 3, replace `crizcraig` with your DockerHub or other registry name in the JSON below
 
@@ -68,11 +68,27 @@ Now add the following JSON to the file and click <kbd>Commit new file</kbd>
 }
 ```
 
+Click <kbd>Commit new file</kbd>
+
+<hr>
+
+![commit new file](https://i.imgur.com/BsJsHVK.jpg)
+
+<hr>
+
 Submit a pull request to the main botleague repo from your fork
 
 <hr>
 
-![paste bot name with directories](https://i.imgur.com/DsFddJQ.jpgg)
+![click pull request](https://i.imgur.com/DsFddJQ.jpg)
+
+<hr>
+
+Click <kbd>Create pull request</kbd>
+
+<hr>
+
+![click ](https://i.imgur.com/CW77bha.jpg)
 
 <hr>
 
