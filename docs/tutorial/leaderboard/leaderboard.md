@@ -56,7 +56,7 @@ Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitH
 
 <hr>
 
-Now add the following JSON to the file and click <kbd>Commit new file</kdb>
+Now add the following JSON to the file and click <kbd>Commit new file</kbd>
 
 > Note: if did step 2 and 3, replace `crizcraig` with your DockerHub or other registry name in the JSON below
 
