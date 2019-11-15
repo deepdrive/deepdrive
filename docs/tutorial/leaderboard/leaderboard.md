@@ -84,15 +84,15 @@ Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitH
 
 <hr>
 
-**Click <kbd>Create pull request</kbd>**
+**Click "Create pull request"**
 
 <hr>
 
-![create the pull request, yay](https://i.imgur.com/CW77bha.jpg)
+![create the pull request yay](https://i.imgur.com/CW77bha.jpg)
 
 <hr>
 
-**Now you should see the status on your pull request update similar to the following. **
+**Now you should see the status on your pull request update similar to the following.**
 
 <hr>
 
@@ -103,13 +103,17 @@ Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitH
 Congratulations :tada: you're bot is now running. The pull request will be automatically merged after a couple of minutes once the evaluation is complete. Once it is done, click to view your results
 
 <hr>
+
 ![click ](https://i.imgur.com/fjsWeNX.jpg)
+
 <hr>
 
 **Click the View Details=>Details button on the pull request to see your bot's results**
 
 <hr>
+
 ![click ](https://i.imgur.com/6nffqfl.jpg)
+
 <hr>
 
 Finally, check the [leaderboards](https://deepdrive.voyage.auto/leaderboard) to see your bot's score and video ranked among the other bots!
