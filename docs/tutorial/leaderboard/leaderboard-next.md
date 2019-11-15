@@ -18,7 +18,7 @@ Login to your GitHub account and fork the [botleague](https://github.com/botleag
 ## Step 2: Clone your fork
 
 ```
-git clone https://github.com/YOUR-GITHUB-NAME/botleague
+git clone https://github.com/<YOUR-GITHUB-NAME>/botleague
 cd botleague
 ```
 
@@ -33,7 +33,7 @@ Create a `bots/<YOUR-GITHUB-NAME>/forward-agent/bot.json` in your fork with the 
 }
 ```
 
->NOTE: Here `crizcraig/forward-agent` is the default docker image for the forward-agent bot. Later on, when you modify your bot, you will replace the docker tag with a repo you have push access to.
+>NOTE: Here `crizcraig/forward-agent` is the default docker image for the forward-agent bot. Later on, when you modify your bot, you will replace this docker tag with a repo you have push access to.
 
 ## Step 3: Commit and push your bot.json
 
@@ -42,105 +42,35 @@ git commit -am 'forward-agent'
 git push origin master
 ```
 
-## Step 4: Make a pull request
-
-```
-git clone https://github.com/deepdrive/forward-agent
-```
-
-## Step 2 (optional): Point to your docker image 
-
-> If you want to just use the default bot, you can skip this step and go straight to:  [Step 4: Submit a pull request to Botleague](#step-4-submit-a-pull-request-to-botleague)
-
-In the `Makefile` of the forward-agent repo, change the docker tag `TAG=deepdrive/forward-agent` to one that you have push access to, i.e. `TAG=yourdockerhubname/forward-agent`. 
-
-## Step 3 (optional): If you performed step 2, build and push your bot 
-
-Now build and push the docker image containing your the forward-agent bot to tag
-you defined in the previous step with:
-
-```
-cd forward-agent
-make && make push
-```
-
-## Step 4: Submit a pull request to Botleague
-
-Open your fork on GitHub and click Create Pull Request
+## Step 4: Click Pull Request on your repo's page
 
 ![click pull request](https://i.imgur.com/DsFddJQ.jpg)
 
-In your fork, create a file directly in GitHub using the `Create new file` button): 
 
-<hr>
-
-![create bot](https://i.imgur.com/NW1v9yt.jpg)
-
-<hr>
-
-Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitHub will create the directories for you if you  paste `bots/<YOUR-GITHUB-NAME>/forward-agent/bot.json` replacing `YOUR-GITHUB-NAME` with your GitHub username *before* you paste into the input box or hit back space to change the directories you pasted.
-
-<hr>
-
-![paste bot name with directories](https://i.imgur.com/2ZRS6y3.png)
-
-<hr>
-
-**Now add the following JSON to the file**
-
-> Note: if did step 2 and 3, replace `crizcraig` with your DockerHub or other registry name in the JSON below
-
-### JSON for bot
-
-
-**Click <kbd>Commit new file</kbd>**
-
-<hr>
-
-![commit new file](https://i.imgur.com/BsJsHVK.jpg)
-
-<hr>
-
-**Now, submit a pull request to the main botleague repo from your fork!**
-
-<hr>
-
-
-<hr>
-
-**Click "Create pull request"**
-
-<hr>
+## Step 4: Create your pull request
 
 ![create the pull request yay](https://i.imgur.com/CW77bha.jpg)
 
-<hr>
 
-**Now you should see the status on your pull request update similar to the following.**
+## Step 4: Confirm that botleague has started your evaluation
 
-<hr>
+Your pull request status should update to something similar to the following
 
 ![pull request status update](https://i.imgur.com/bimSaQW.png)
 
-<hr>
+## Step 5: Wait for your bots evaluation to complete
 
-Congratulations, you're bot is now running. The pull request will be automatically merged after a couple of minutes once the evaluation is complete. Once it is done, click to view your results.
+Grab a coffee! This will take a 5-10 minutes.
 
-<hr>
+## Step 6: Verify your pull request is merged
 
-![click ](https://i.imgur.com/fjsWeNX.jpg)
-
-<hr>
-
-**Click the View Details=>Details button on the pull request to see your bot's results**
-
-<hr>
+Once your evaluation is complete, it will be automatically merged as displayed in the image below. You may need to refresh the page if you don't see this after 10 minutes.
 
 ![click ](https://i.imgur.com/6nffqfl.jpg)
 
-<hr>
+## Step 7: Go to the leaderbaord!
 
-Finally, check the [leaderboards](https://deepdrive.voyage.auto/leaderboard) to see your bot's score and video ranked among the other bots!
+Finally, check the [leaderboards](https://deepdrive.voyage.auto/leaderboard) to see your bot's score and video ranked among the others.
 
 ## Next steps
 
