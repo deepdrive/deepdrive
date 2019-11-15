@@ -100,7 +100,7 @@ Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitH
 
 <hr>
 
-Congratulations, you're bot is now running. The pull request will be automatically merged after a couple of minutes once the evaluation is complete. Once it is done, click to view your results
+Congratulations, you're bot is now running. The pull request will be automatically merged after a couple of minutes once the evaluation is complete. Once it is done, click to view your results.
 
 <hr>
 
