@@ -64,7 +64,7 @@ Grab a coffee! This will take 5-10 minutes.
 
 ## Step 9: Verify your pull request is merged
 
-Once your evaluation is complete, it will be automatically merged as displayed in the image below. You may need to refresh the page if you don't see this after 10 minutes.
+Once your evaluation is complete, it will be automatically merged as displayed in the image below. You may need to refresh the page.
 
 ![click ](https://i.imgur.com/6nffqfl.jpg)
 
