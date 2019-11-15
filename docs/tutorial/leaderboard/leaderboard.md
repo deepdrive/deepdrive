@@ -35,40 +35,40 @@ Create a `bots/<YOUR-GITHUB-NAME>/forward-agent/bot.json` in your fork with the 
 
 >NOTE: Here `crizcraig/forward-agent` is the default docker image for the forward-agent bot. Later on, when you modify your bot, you will replace this docker tag with a repo you have push access to.
 
-## Step 3: Commit and push your bot.json
+## Step 4: Commit and push your bot.json
 
 ```
 git commit -am 'forward-agent'
 git push origin master
 ```
 
-## Step 4: Click Pull Request on your repo's page
+## Step 5: Click Pull Request on your repo's page
 
 ![click pull request](https://i.imgur.com/DsFddJQ.jpg)
 
 
-## Step 4: Create your pull request
+## Step 6: Create your pull request
 
 ![create the pull request yay](https://i.imgur.com/C6o2r4V.jpg)
 
 
-## Step 4: Confirm that botleague has started your evaluation
+## Step 7: Confirm that botleague has started your evaluation
 
 Your pull request status should update to something similar to the following
 
 ![pull request status update](https://i.imgur.com/bimSaQW.png)
 
-## Step 5: Wait for your bots evaluation to complete
+## Step 8: Wait for your bots evaluation to complete
 
 Grab a coffee! This will take 5-10 minutes.
 
-## Step 6: Verify your pull request is merged
+## Step 9: Verify your pull request is merged
 
 Once your evaluation is complete, it will be automatically merged as displayed in the image below. You may need to refresh the page if you don't see this after 10 minutes.
 
 ![click ](https://i.imgur.com/6nffqfl.jpg)
 
-## Step 7: Go to the leaderbaord!
+## Step 10: Go to the leaderbaord!
 
 Finally, check the [leaderboards](https://deepdrive.voyage.auto/leaderboard) to see your bot's score and video ranked among the others.
 
