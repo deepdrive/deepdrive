@@ -62,9 +62,10 @@ Your pull request status should update to something similar to the following
 
 Grab a coffee! This will take 5-10 minutes.
 
-## Step 9: Verify your pull request is merged
+## Step 9: Check that your pull request is merged
 
 Once your evaluation is complete, it will be automatically merged as displayed in the image below. You may need to refresh the page.
+If you see an error, contact craig@voyage.auto, or file a GitHub issue. We are automatically notified of these errors as well.
 
 ![click ](https://i.imgur.com/6nffqfl.jpg)
 
