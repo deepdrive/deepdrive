@@ -32,7 +32,7 @@ make && make push
 
 ## Step 4: Submit a pull request to Botleague
 
-* Login to your GitHub account and fork the [botleague](https://github.com/botleague/botleague) repo with the fork button on the top right. Botleague is not a repo you _need_ to have locally, it merely functions as way to submit to the leaderboard with pull requests.
+Login to your GitHub account and fork the [botleague](https://github.com/botleague/botleague) repo with the fork button on the top right. Botleague is not a repo you _need_ to have locally, it merely functions as way to submit to the leaderboard with pull requests.
 
 <hr>
 
@@ -40,7 +40,7 @@ make && make push
 
 <hr>
 
-* In your fork, create a file directly in GitHub using the `Create new file` button): 
+In your fork, create a file directly in GitHub using the `Create new file` button): 
 
 <hr>
 
@@ -56,7 +56,7 @@ Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitH
 
 <hr>
 
-Now add the following JSON to the file
+**Now add the following JSON to the file**
 
 > Note: if did step 2 and 3, replace `crizcraig` with your DockerHub or other registry name in the JSON below
 
@@ -68,7 +68,7 @@ Now add the following JSON to the file
 }
 ```
 
-Click <kbd>Commit new file</kbd>
+**Click <kbd>Commit new file</kbd>**
 
 <hr>
 
@@ -76,7 +76,7 @@ Click <kbd>Commit new file</kbd>
 
 <hr>
 
-Submit a pull request to the main botleague repo from your fork
+**Now, submit a pull request to the main botleague repo from your fork!**
 
 <hr>
 
@@ -84,17 +84,35 @@ Submit a pull request to the main botleague repo from your fork
 
 <hr>
 
-Click <kbd>Create pull request</kbd>
+**Click <kbd>Create pull request</kbd>**
 
 <hr>
 
-![click ](https://i.imgur.com/CW77bha.jpg)
+![create the pull request, yay](https://i.imgur.com/CW77bha.jpg)
 
 <hr>
 
-* The pull request will be automatically merged after about 10 minutes once the evaluation is complete
-* Click the View Details=>Details button on the pull request to see your bot's results
-* Finally, check the [leaderboards](https://deepdrive.voyage.auto/leaderboard) to see your bot's score and video ranked among the other bots!
+Now you should see the status on your pull request update similar to the following. 
+
+<hr>
+
+![pull request status update](https://i.imgur.com/bimSaQW.png)
+
+<hr>
+
+Congratulations :tada: you're bot is now running. The pull request will be automatically merged after a couple of minutes once the evaluation is complete. Once it is done, click to view your results
+
+<hr>
+![click ](https://i.imgur.com/fjsWeNX.jpg)
+<hr>
+
+Click the View Details=>Details button on the pull request to see your bot's results
+
+<hr>
+![click ](https://i.imgur.com/6nffqfl.jpg)
+<hr>
+
+Finally, check the [leaderboards](https://deepdrive.voyage.auto/leaderboard) to see your bot's score and video ranked among the other bots!
 
 ## Next steps
 
