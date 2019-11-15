@@ -92,7 +92,7 @@ Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitH
 
 <hr>
 
-Now you should see the status on your pull request update similar to the following. 
+**Now you should see the status on your pull request update similar to the following. **
 
 <hr>
 
@@ -106,7 +106,7 @@ Congratulations :tada: you're bot is now running. The pull request will be autom
 ![click ](https://i.imgur.com/fjsWeNX.jpg)
 <hr>
 
-Click the View Details=>Details button on the pull request to see your bot's results
+**Click the View Details=>Details button on the pull request to see your bot's results**
 
 <hr>
 ![click ](https://i.imgur.com/6nffqfl.jpg)
