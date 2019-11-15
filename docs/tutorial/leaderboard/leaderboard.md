@@ -49,7 +49,7 @@ git push origin master
 
 ## Step 4: Create your pull request
 
-![create the pull request yay](https://i.imgur.com/CW77bha.jpg)
+![create the pull request yay](https://i.imgur.com/C6o2r4V.jpg)
 
 
 ## Step 4: Confirm that botleague has started your evaluation
