@@ -60,7 +60,7 @@ Your pull request status should update to something similar to the following
 
 ## Step 5: Wait for your bots evaluation to complete
 
-Grab a coffee! This will take a 5-10 minutes.
+Grab a coffee! This will take 5-10 minutes.
 
 ## Step 6: Verify your pull request is merged
 
