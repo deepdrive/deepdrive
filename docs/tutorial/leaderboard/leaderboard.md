@@ -100,7 +100,7 @@ Now we'll add a `bot.json` under `bots/YOUR-GITHUB-USERNAME/forward-agent`. GitH
 
 <hr>
 
-Congratulations :tada: you're bot is now running. The pull request will be automatically merged after a couple of minutes once the evaluation is complete. Once it is done, click to view your results
+Congratulations, you're bot is now running. The pull request will be automatically merged after a couple of minutes once the evaluation is complete. Once it is done, click to view your results
 
 <hr>
 
@@ -130,4 +130,4 @@ Now make sure your bot runs as a docker container against the official scenario 
 
 Then to build your bot container, refer to how our baseline agent bot containers are built [here](https://github.com/deepdrive/deepdrive/tree/e565f52794c1d18904f1b2fc7c79a05e8629ed46/botleague/bots).
 
-:shipit: Finally, to submit your bot, create a pull request as we did above, pointing to your bot's docker image. If the image is the same, you can just add whitespace, or change some comment text to allow for the pull request.
+Finally, to submit your bot, create a pull request as we did above, pointing to your bot's docker image. If the image is the same, you can just add whitespace, or change some comment text to allow for the pull request.
