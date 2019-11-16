@@ -1,50 +1,50 @@
 # UnrealEnginePython Tutorial
 
-The following tutorial demonstrates the power of UnrealEnginePython to manipulate objects in the running game with Python, i.e. `import unreal_engine`. For more tutorials on how to use UnrealEnginePython \(UEPy\) see [their docs](https://github.com/deepdrive/UnrealEnginePython/blob/master/README.md).
+The following tutorial demonstrates the power of UnrealEnginePython to manipulate objects in the running game with Python, i.e. `import unreal_engine`. For more tutorials on how to use UnrealEnginePython (UEPy) see [their docs](https://github.com/deepdrive/UnrealEnginePython/blob/master/README.md).
 
 ## Hello world
+Here, we'll show how to print to the Unreal Logs, get the ego vehicle (your car), and move the ego vehicle around.
 
-Here, we'll show how to print to the Unreal Logs, get the ego vehicle \(your car\), and move the ego vehicle around.
+Find your sim binaries by opening up `~/Deepdrive` and sorting by date 
 
-Find your sim binaries by opening up `~/Deepdrive` and sorting by date
-
-![Find sim bin](../../../.gitbook/assets/find-sim-bin.png)
+![Find sim bin](/docs/tutorial/uepy/find-sim-bin.png)
 
 Drill down to the Deepdrive binary
 
-![Drill down](../../../.gitbook/assets/sim-bin-drill-down.png)
+![Drill down](/docs/tutorial/uepy/sim-bin-drill-down.png)
 
 Open a terminal, drag the file into the terminal, and press enter to open the sim in the terminal and see the logs.
 
-![Terminal open sim](../../../.gitbook/assets/terminal-open-sim.png)
+![Terminal open sim](/docs/tutorial/uepy/terminal-open-sim.png)
 
 Once the sim is open and you see the, press `M` to drive the car manually.
 
-Within your binary folder, i.e. something like `deepdrive-sim-linux-3.0.20190528000032` open your `DeepDrive/Content/Scripts` in your favorite editor and create a new Python file named `move_car_tutorial.py` and enter:
+Within your binary folder, i.e. something like `deepdrive-sim-linux-3.0.20190528000032` open your `DeepDrive/Content/Scripts` in your favorite editor and create a new Python file named `move_car_tutorial.py` and enter:  
 
 ```python
 print('hello world')
 ```
 
-![Editor open](../../../.gitbook/assets/editor-open.png)
+![Editor open](/docs/tutorial/uepy/editor-open.png)
 
-Now hit the backtick `````  key to open the Unreal Console and enter
+Now hit the backtick `` ` `` key to open the Unreal Console and enter
 
-```text
+```
 py.exec move_car_tutorial.py
 ```
 
-![Unreal Console Hello World](../../../.gitbook/assets/unreal-console-hello-world.png)
+![Unreal Console Hello World](/docs/tutorial/uepy/unreal-console-hello-world.png)
 
 You should then see "hello world" printed to the logs in the terminal:
 
-![Terminal Hello World](../../../.gitbook/assets/terminal-hello-world.png)
+![Terminal Hello World](/docs/tutorial/uepy/terminal-hello-world.png)
 
 ## Get and set the ego's position
 
 Now you know how to run Python within Unreal Engine. Let's do something more interesting!
 
 Paste the following into `move_car_tutorial.py`
+
 
 ```python
 import json
@@ -57,9 +57,9 @@ location = ego.get_actor_location()
 ego.set_actor_location(location.x, location.y, location.z + 1e4)  # +100m
 ```
 
-Now open the Unreal Console again in the simulator with `````  and hit the up arrow to rerun the previous command which should be
+Now open the Unreal Console again in the simulator with `` ` `` and hit the up arrow to rerun the previous command which should be 
 
-```text
+```
 py.exec move_car_tutorial.py
 ```
 
@@ -83,9 +83,9 @@ for m in dir(ego):
 
 print('Properties --------------------------- ')
 print(json.dumps(best_effort_serialize(ego, levels=5), indent=2))
+
 ```
 
-[Example output](https://gist.githubusercontent.com/crizCraig/b9f9f86dc404a5658a85328e490d585e/raw/111e2e717d06ccd928683a782d7a70009a785a62/gistfile1.txt)
+[Example output](https://gist.githubusercontent.com/crizCraig/b9f9f86dc404a5658a85328e490d585e/raw/111e2e717d06ccd928683a782d7a70009a785a62/gistfile1.txt) 
 
-Here you can see the wealth of functionality and information UnrealEnginePython provides, including the `get_actor_location` and `set_actor_location` methods we've just demonstrated. Imagine learning the game's state information with the [input remapping trick](https://arxiv.org/abs/1504.00702)!
-
+Here you can see the wealth of functionality and information UnrealEnginePython provides, including the `get_actor_location` and `set_actor_location` methods we've just demonstrated. Imagine learning the game's state information with the [input remapping trick](https://arxiv.org/abs/1504.00702)! 
