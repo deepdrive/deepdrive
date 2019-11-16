@@ -16,6 +16,10 @@ The easiest way to experiment with self-driving AI
 
 ## Install
 
+1. [Create a Miniconda env](/docs/miniconda.md)
+
+2. Clone
+
 ```
 git clone https://github.com/deepdrive/deepdrive
 cd deepdrive
@@ -24,6 +28,8 @@ cd deepdrive
 > Optional - Activate the Python conda env or virtualenv with Tensorflow is installed, then
 
 > Note: If you use Anaconda (we recommend Miniconda) - only use `pip install` in your deepdrive conda environment, never `conda install`
+
+3. Install
 
 ```
 python install.py  # Do not run as sudo! Use Miniconda or virtualenv to install without sudo.
