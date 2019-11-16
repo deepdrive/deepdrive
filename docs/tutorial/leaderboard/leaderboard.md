@@ -69,7 +69,7 @@ If you see an error, contact craig@voyage.auto, or file a GitHub issue. We are a
 
 ![click ](https://i.imgur.com/6nffqfl.jpg)
 
-## Step 10: Go to the leaderbaord!
+## Step 10: Go to the leaderboard!
 
 Finally, check the [leaderboards](https://deepdrive.voyage.auto/leaderboard) to see your bot's score and video ranked among the others.
 
