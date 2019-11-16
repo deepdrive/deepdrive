@@ -1,98 +1,102 @@
-# Voyage Deepdrive [![Build Status](https://travis-ci.org/deepdrive/deepdrive.svg?branch=master)](https://travis-ci.org/deepdrive/deepdrive)
+# Voyage Deepdrive
 
 The easiest way to experiment with self-driving AI
 
 ## Simulator requirements
 
-- Linux
-- Python 3.6+
-- 10GB disk space
-- 8GB RAM
+* Linux
+* Python 3.6+
+* 10GB disk space
+* 8GB RAM
 
 ## Optional - baseline agent requirements
 
-- CUDA capable GPU (tested and developed on 970, 1070, and 1060's)
-- 1.7 <= Tensorflow < 2.0 [See Tensorflow install tips](#tensorflow-install-tips)
+* CUDA capable GPU \(tested and developed on 970, 1070, and 1060's\)
+* 1.7 &lt;= Tensorflow &lt; 2.0 [See Tensorflow install tips](./#tensorflow-install-tips)
 
 ## Install
 
-1. [Create a Miniconda env](/docs/miniconda.md)
-
+1. [Create a Miniconda env](docs/miniconda.md)
 2. Clone
 
-```
+```text
 git clone https://github.com/deepdrive/deepdrive
 cd deepdrive
 ```
 
 > Optional - Activate the Python conda env or virtualenv with Tensorflow is installed, then
+>
+> Note: If you use Anaconda \(we recommend Miniconda\) - only use `pip install` in your deepdrive conda environment, never `conda install`
 
-> Note: If you use Anaconda (we recommend Miniconda) - only use `pip install` in your deepdrive conda environment, never `conda install`
+1. Install
 
-3. Install
-
-```
+```text
 python install.py  # Do not run as sudo! Use Miniconda or virtualenv to install without sudo.
 ```
 
 #### Cloud
 
-[Cloud setup instructions](/docs/tutorial/cloud/cloud.md)
+[Cloud setup instructions](docs/tutorial/cloud/cloud.md)
 
 ### Examples
 
 #### Forward-agent
 
-```
+```text
 python example.py
 ```
 
 #### Synchronous forward-agent
 
-```
+```text
 python example_sync.py
 ```
 
 * [Remote agent example](https://github.com/deepdrive/forward-agent) - operates over the network using the [deepdrive remote api](https://github.com/deepdrive/deepdrive-api)
 
 #### Mnet2 baseline agent
-```
+
+```text
 python main.py --mnet2-baseline --experiment my-baseline-test
 ```
 
 #### Built-in C++ [FSM](https://github.com/deepdrive/deepdrive-sim/tree/c2d26a38692f1db61d48986263b20721ab136fe3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/LocalAI/States) / [PID](https://github.com/deepdrive/deepdrive-sim/blob/v3/Plugins/DeepDrivePlugin/Source/DeepDrivePlugin/Private/Simulation/Agent/Controllers/DeepDriveAgentSteeringController.cpp) agent that can overtake in the canyons map
-```
+
+```text
 python main.py --path-follower --experiment my-path-follower-test
 ```
 
 #### Record training data for imitation learning / behavioral cloning
-```
+
+```text
 python main.py --record --jitter-actions --sync
 ```
 
-Note that we recorded the baseline dataset in sync mode which is much slower than async mode. 
-Async mode _probably_ is fine to record in, we just haven't got around to trying it out for v3.
+Note that we recorded the baseline dataset in sync mode which is much slower than async mode. Async mode _probably_ is fine to record in, we just haven't got around to trying it out for v3.
 
-Optional: Convert to HDF5 files to tfrecords (for training MNET2)
-```
+Optional: Convert to HDF5 files to tfrecords \(for training MNET2\)
+
+```text
 python main.py --hdf5-2-tfrecord
 ```
 
 #### Train on recorded data
-```
+
+```text
 python main.py --train [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2] --recording-dir <your-hdf5-or-tfrecord-dir>
 ```
 
 #### Train on our dataset
 
-Grab the [dataset](#dataset)
-```
+Grab the [dataset](./#dataset)
+
+```text
 python main.py --train --recording-dir <the-directory-with-the-dataset> [--agent dagger|dagger_mobilenet_v2|bootstrapped_ppo2]
 ```
 
 #### Tensorboard
 
-```
+```text
 tensorboard --logdir="<your-deepdrive-home>/tensorflow"
 ```
 
@@ -100,40 +104,40 @@ Where `<your-deepdrive-home>` below is by default in `$HOME/Deepdrive` and can b
 
 #### Running unit tests
 
-```
+```text
 pytest tests/unit_tests/test_sanity.py
 ```
 
-### Key binds 
+### Key binds
 
-* <kbd>Esc</kbd> - Pause (Quit in Unreal Editor)
-* <kbd>Enter</kbd> - Pause with no menu
-* <kbd>P</kbd> - Pause in Unreal Editor
-* <kbd>1</kbd> - Chase cam
-* <kbd>2</kbd> - Orbit (side) cam
-* <kbd>3</kbd> - Hood cam
-* <kbd>4</kbd> - Free cam (use WASD to fly)
-* <kbd>Space</kbd> - Handbrake
-* <kbd>Alt+Tab</kbd> - Control other windows / Show mouse
-* <kbd>`</kbd> - Unreal console - do things like `stat FPS` 
-* <kbd>M</kbd> - Drive the car with the keyboard WASD - be sure sync is off - Also known issue: Only works in path-follower mode right now
-* <kbd>Ctrl-number</kbd> - Change sun position - works for 1 => 7
-* <kbd>B</kbd> - Show vehicle bounding boxes
-* <kbd>N</kbd> - Show vehicle collision boxes
-* <kbd>Page Up</kbd> - Next vehicle
-* <kbd>Page Down</kbd> - Prev vehicle
+* Esc - Pause \(Quit in Unreal Editor\)
+* Enter - Pause with no menu
+* P - Pause in Unreal Editor
+* 1 - Chase cam
+* 2 - Orbit \(side\) cam
+* 3 - Hood cam
+* 4 - Free cam \(use WASD to fly\)
+* Space - Handbrake
+* Alt+Tab - Control other windows / Show mouse
+* \` - Unreal console - do things like `stat FPS` 
+* M - Drive the car with the keyboard WASD - be sure sync is off - Also known issue: Only works in path-follower mode right now
+* Ctrl-number - Change sun position - works for 1 =&gt; 7
+* B - Show vehicle bounding boxes
+* N - Show vehicle collision boxes
+* Page Up - Next vehicle
+* Page Down - Prev vehicle
 
 ## Observation data
 
 All values returned in the observation keep Unreal conventions, specifically
+
 * All distances are in centimeters per Unreal's default data type
 * All rotations / angular values are in the order of roll, pitch, yaw in degrees
 * x,y,z is forward, right, up
 
-```
-
+```text
 { 
-  
+
   'acceleration': array([-264.26913452, -227.578125  ,  105.16122437]),
   'angular_acceleration': array([210980.234375, 105423.765625,  38187.28125 ]),
   'angular_velocity': array([2.59908962, 3.8214705 , 1.87282801]),
@@ -226,7 +230,7 @@ All values returned in the observation keep Unreal conventions, specifically
 }
 ```
 
-Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API with [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy). 
+Additional observation data can be exposed without compiling C++ or Blueprints by accessing the Unreal API with [UnrealEnginePython](https://docs.deepdrive.io/v/v3/docs/tutorial/uepy/uepy).
 
 ## Benchmark
 
@@ -234,51 +238,53 @@ Agents are automatically graded via [Botleague](https://deepdrive.voyage.auto/le
 
 ## Dataset
 
-100GB (8.2 hours of driving) of camera, depth, steering, throttle, and brake of an 'oracle' path following agent. We rotate between three different cameras: normal, wide, and semi-truck - with random camera intrisic/extrinsic perturbations at the beginning of each episode (lap). This boosted performance on the benchmark by 3x. We also use DAgger to collect course correction data as in previous versions of Deepdrive.
+100GB \(8.2 hours of driving\) of camera, depth, steering, throttle, and brake of an 'oracle' path following agent. We rotate between three different cameras: normal, wide, and semi-truck - with random camera intrisic/extrinsic perturbations at the beginning of each episode \(lap\). This boosted performance on the benchmark by 3x. We also use DAgger to collect course correction data as in previous versions of Deepdrive.
 
 1. Get the [AWS CLI](https://github.com/aws/aws-cli)
 2. Ensure you have 104GB of free space
-3. Download our dataset of mixed Windows (Unreal PIE + Unreal packaged) and Linux + variable camera and corrective action recordings 
-(generated with `--record`)
-```
-cd <the-directory-you-want>
-aws s3 sync s3://deepdrive/data/baseline_tfrecords .
-```
-or for the legacy HDF5 files for training AlexNet
-```
-aws s3 sync s3://deepdrive/data/baseline .
-```
+3. Download our dataset of mixed Windows \(Unreal PIE + Unreal packaged\) and Linux + variable camera and corrective action recordings 
 
-If you'd like to check out our Tensorboard training session, you can download the 1GB
-[tfevents files here](https://d1y4edi1yk5yok.cloudfront.net/tensorflow/mnet2_baseline_training_and_eval.zip),
-unzip, and run
+   \(generated with `--record`\)
 
-```
+   ```text
+   cd <the-directory-you-want>
+   aws s3 sync s3://deepdrive/data/baseline_tfrecords .
+   ```
+
+   or for the legacy HDF5 files for training AlexNet
+
+   ```text
+   aws s3 sync s3://deepdrive/data/baseline .
+   ```
+
+If you'd like to check out our Tensorboard training session, you can download the 1GB [tfevents files here](https://d1y4edi1yk5yok.cloudfront.net/tensorflow/mnet2_baseline_training_and_eval.zip), unzip, and run
+
+```text
 tensorboard --logdir <your-unzipped-dir>
 ```
 
-and checkout [this view](http://localhost:6006/#scalars&_smoothingWeight=0.935&runSelectionState=eyIyMDE4LTA3LTE5X18wNS01My0yN1BNIjp0cnVlLCIyMDE4LTA3LTE5X18wNS01MC01NFBNIjp0cnVlfQ%3D%3D&_ignoreYOutliers=false&tagFilter=error)
-, which graphs wall time.
+and checkout [this view](http://localhost:6006/#scalars&_smoothingWeight=0.935&runSelectionState=eyIyMDE4LTA3LTE5X18wNS01My0yN1BNIjp0cnVlLCIyMDE4LTA3LTE5X18wNS01MC01NFBNIjp0cnVlfQ%3D%3D&_ignoreYOutliers=false&tagFilter=error) , which graphs wall time.
 
 ## Architecture
 
-![Deepdrive Architecture](./docs/images/deepdrive-arch.png)
+![Deepdrive Architecture](.gitbook/assets/deepdrive-arch.png)
 
 ## Frame rate issues on Linux
 
-If you experience low frame rates on Linux, you may need to install NVIDIA’s display drivers including their OpenGL drivers. We recommend installing these with CUDA which bundles the version you will need to run the baseline agent. Also, make sure to [plugin your laptop](https://help.ubuntu.com/community/PowerManagement/ReducedPower). If CUDA is installed, skip to testing [OpenGL](#opengl).
+If you experience low frame rates on Linux, you may need to install NVIDIA’s display drivers including their OpenGL drivers. We recommend installing these with CUDA which bundles the version you will need to run the baseline agent. Also, make sure to [plugin your laptop](https://help.ubuntu.com/community/PowerManagement/ReducedPower). If CUDA is installed, skip to testing [OpenGL](./#opengl).
 
 ## Tensorflow install tips
 
-- Make sure to install the CUDA / cuDNN major and minor version the Tensorflow instructions specify.  i.e. CUDA 9.0 / cuDNN 7.3 for Tensorflow 1.12.0. These will likely be older than the latest version NVIDIA offers. You can see all [CUDA  releases here](https://developer.nvidia.com/cuda-toolkit-archive).
-- Use the packaged install, i.e. deb[local] on Ubuntu, referred to in [this guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
-- If you are feeling dangerous and use the runfile method, be sure to follow [NVIDIA’s instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) on how to disable the Nouveau drivers if you're on Ubuntu.
-- On Windows, use standard (non-CUDA packaged) display drivers which meet the min required. When installing CUDA, do a custom install and uncheck the display driver install.
+* Make sure to install the CUDA / cuDNN major and minor version the Tensorflow instructions specify.  i.e. CUDA 9.0 / cuDNN 7.3 for Tensorflow 1.12.0. These will likely be older than the latest version NVIDIA offers. You can see all [CUDA  releases here](https://developer.nvidia.com/cuda-toolkit-archive).
+* Use the packaged install, i.e. deb\[local\] on Ubuntu, referred to in [this guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
+* If you are feeling dangerous and use the runfile method, be sure to follow [NVIDIA’s instructions](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) on how to disable the Nouveau drivers if you're on Ubuntu.
+* On Windows, use standard \(non-CUDA packaged\) display drivers which meet the min required. When installing CUDA, do a custom install and uncheck the display driver install.
 
 ## OpenGL
 
 `glxinfo | grep OpenGL` should return something like:
-```
+
+```text
 OpenGL vendor string: NVIDIA Corporation
 OpenGL renderer string: GeForce GTX 980/PCIe/SSE2
 OpenGL core profile version string: 4.5.0 NVIDIA 384.90
@@ -295,12 +301,12 @@ OpenGL ES profile version string: OpenGL ES 3.2 NVIDIA 384.90
 OpenGL ES profile shading language version string: OpenGL ES GLSL ES 3.20
 OpenGL ES profile extensions:
 ```
-You may need to disable secure boot in your BIOS in order for NVIDIA’s OpenGL and tools like nvidia-smi to work. This is not Deepdrive specific, but rather a general requirement of Ubuntu’s NVIDIA drivers.
 
+You may need to disable secure boot in your BIOS in order for NVIDIA’s OpenGL and tools like nvidia-smi to work. This is not Deepdrive specific, but rather a general requirement of Ubuntu’s NVIDIA drivers.
 
 ## Development
 
-To run tests in PyCharm, go to File | Settings | Tools | Python Integrated Tools and change the default test runner 
-to `pytest`.
+To run tests in PyCharm, go to File \| Settings \| Tools \| Python Integrated Tools and change the default test runner to `pytest`.
 
 Also, disable SciView per [this answer](https://stackoverflow.com/a/48421532/134077).
+

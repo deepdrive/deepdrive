@@ -1,23 +1,20 @@
 # Submitting to the Deepdrive leaderboard
 
-## Overview 
+## Overview
 
-First-off we'll get you on the leaderboard with the default bot, so you can get familiar with the submission process. 
-The Deepdrive leaderboard uses [Botleague](https://github.com/botleague/botleague) to evaluate submissions.
-To place an agent on the leaderboards, you just need to submit a bot.json file to the league repo via pull request.
+First-off we'll get you on the leaderboard with the default bot, so you can get familiar with the submission process. The Deepdrive leaderboard uses [Botleague](https://github.com/botleague/botleague) to evaluate submissions. To place an agent on the leaderboards, you just need to submit a bot.json file to the league repo via pull request.
 
-Est. time (5-15 minutes depending on your internet connection)
+Est. time \(5-15 minutes depending on your internet connection\)
 
 ## Step 1: Fork botleague
 
 Login to your GitHub account and fork the [botleague](https://github.com/botleague/botleague) repo with the fork button on the top right.
 
-
 ![fork botleague](https://i.imgur.com/tgesEjc.jpg)
 
 ## Step 2: Clone your fork
 
-```
+```text
 git clone https://github.com/<YOUR-GITHUB-NAME>/botleague
 cd botleague
 ```
@@ -26,18 +23,18 @@ cd botleague
 
 Create a `bots/<YOUR-GITHUB-NAME>/forward-agent/bot.json` in your fork with the following JSON.
 
-```
+```text
 { 
   "docker_tag": "crizcraig/forward-agent",
   "problems": ["deepdrive/unprotected_left"] 
 }
 ```
 
->NOTE: Here `crizcraig/forward-agent` is the default docker image for the forward-agent bot. Later on, when you modify your bot, you will replace this docker tag with a repo you have push access to.
+> NOTE: Here `crizcraig/forward-agent` is the default docker image for the forward-agent bot. Later on, when you modify your bot, you will replace this docker tag with a repo you have push access to.
 
 ## Step 4: Commit and push your bot.json
 
-```
+```text
 git commit -am 'forward-agent'
 git push origin master
 ```
@@ -46,11 +43,9 @@ git push origin master
 
 ![click pull request](https://i.imgur.com/DsFddJQ.jpg)
 
-
 ## Step 6: Create your pull request
 
 ![create the pull request yay](https://i.imgur.com/C6o2r4V.jpg)
-
 
 ## Step 7: Confirm that botleague has started your evaluation
 
@@ -64,8 +59,7 @@ Grab a coffee! This will take 5-10 minutes.
 
 ## Step 9: Check that your pull request is merged
 
-Once your evaluation is complete, it will be automatically merged as displayed in the image below. You may need to refresh the page.
-If you see an error, contact craig@voyage.auto, or file a GitHub issue. We are automatically notified of these errors as well.
+Once your evaluation is complete, it will be automatically merged as displayed in the image below. You may need to refresh the page. If you see an error, contact craig@voyage.auto, or file a GitHub issue. We are automatically notified of these errors as well.
 
 ![click ](https://i.imgur.com/6nffqfl.jpg)
 
@@ -86,3 +80,4 @@ Now make sure your bot runs as a docker container against the official scenario 
 Then to build your bot container, refer to how our baseline agent bot containers are built [here](https://github.com/deepdrive/deepdrive/tree/e565f52794c1d18904f1b2fc7c79a05e8629ed46/botleague/bots).
 
 Finally, to submit your bot, create a pull request as we did above, pointing to your bot's docker image. If the image is the same, you can just add whitespace, or change some comment text to allow for the pull request.
+
