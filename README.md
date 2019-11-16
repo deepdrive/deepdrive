@@ -26,7 +26,7 @@ cd deepdrive
 > Note: If you use Anaconda (we recommend Miniconda) - only use `pip install` in your deepdrive conda environment, never `conda install`
 
 ```
-python install.py
+python install.py  # Do not run as sudo! Use Miniconda or virtualenv to install without sudo.
 ```
 
 #### Cloud
