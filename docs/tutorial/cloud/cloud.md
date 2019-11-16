@@ -7,6 +7,8 @@ To set it up choose your region, then go to Public Templates, and choose the ML-
 
 ![Paperspace](https://i.imgur.com/ZyltYsM.png)
 
+## Miniconda 
+
 Then download the 64-bit Linux installer from [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or click [here](https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh)
 
 Now run the Miniconda installer
@@ -23,11 +25,15 @@ conda create -n dd python=3.7
 conda activate dd
 ```
 
+## Clone
+
 Now clone our repo
 
 ```
 git clone https://github.com/deepdrive/deepdrive
 ```
+
+## Run
 
 And finally run the install
 
