@@ -183,10 +183,10 @@ def get_train_ops(agent_net, global_step, opt, sess_train_dir, targets_tensor, t
 
 def setup_loss(agent_net, targets_tensor):
     l2_norm = tf.global_norm(tf.trainable_variables())
-    steering_error = tf.reduce_mean(tf.abs(agent_net.out[:, 4] - y[:, 4]))
-    throttle_error = tf.reduce_mean(tf.abs(agent_net.out[:, 5] - y[:, 5]))
-    tf.summary.scalar("steering_error/train", steering_error)
-    tf.summary.scalar("throttle_error/train", throttle_error)
+    # steering_error = tf.reduce_mean(tf.abs(agent_net.out[:, 4] - targets_tensor[:, 4]))
+    # throttle_error = tf.reduce_mean(tf.abs(agent_net.out[:, 5] - targets_tensor[:, 5]))
+    # tf.summary.scalar("steering_error/train", steering_error)
+    # tf.summary.scalar("throttle_error/train", throttle_error)
     # l2_norm = tf.Print(l2_norm, [steering_error], 'TRAIN STEERING ERROR IS!!!!!!!!! ', summarize=100)
     loss = 0.5 * tf.reduce_sum(tf.square(agent_net.out - targets_tensor)) / tf.to_float(tf.shape(agent_net.input)[0])
     tf.summary.scalar("model/loss", loss)
