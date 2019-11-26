@@ -9,7 +9,9 @@ def main():
 
         # scenario can be 0 => 5 - Scenario descriptions:
         # https://gist.github.com/crizCraig/855a5cc4bc96fc2765cb9bf5d6f953b4
-        scenario_index=1
+        scenario_index=1,
+        
+        client_main_args = {'opengl', 3}
     )
     forward = sim.action(throttle=0.75, steering=0, brake=0)
     done = False
