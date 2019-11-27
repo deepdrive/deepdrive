@@ -1,0 +1,111 @@
+Commands:
+
+1) Train mobilenet v2 on Grimnir
+--> runs successfully; took 86 minutes, loss down from 12.97 to 4.77 at end (clone_loss)
+$ python main.py --train --agent dagger_mobilenet_v2 --recording-dir ~/Deepdrive/data/tfrecords
+
+2) Evaluate model (default?) on PaperSpace, with GUI attached
+--> runs, but GUI window just sits there doing nothing
+$ python main.py --max-steps=1440 --max-episodes=1 --record --eval-only --upload-gist --max-episodes=1 --record --eval-only --upload-gist --scenario=2 --map=kevindale_bare --sync --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+
+3) Evaluate mobilenet on Grimnir in server mode
+does not seem to crash.  but just sits there for a while 
+# python main.py --agent dagger_mobilenet_v2 --server --max-steps=1440 --max-episodes=1 --record --eval-only --upload-gist --max-episodes=1 --record --eval-only --upload-gist --scenario=2 --map=kevindale_bare --sync --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+
+4) Evaluate mobilenet on Paperspace; cut max steps way down to 10; use faster async mode
+$ python main.py --agent dagger_mobilenet_v2 --max-steps=10 --max-episodes=1 --record --eval-only --upload-gist --max-episodes=1 --record --eval-only --upload-gist --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+
+5) Run the script run.sh in the botleague directory
+$ cd ~/deepdrive
+$ ~/botleague/problems/deepdrive/unprotected_left/run.sh
+
+6) Resume training on Grimnir
+$ python main.py --train --agent dagger_mobilenet_v2 --use-latest-model --recording-dir /ssd1/Deepdrive/data/tfrecords
+
+also tried below; didn't work
+python main.py --train --agent dagger_mobilenet_v2 --resume-train 2019-11-24__11-07-29AM --recording-dir /ssd1/Deepdrive/data/tfrecords
+
+7) train on V100 instance
+~/deepdrive$ python main.py --train --agent dagger_mobilenet_v2 --use-latest-model --recording-dir ~/Deepdrive/data/tfrecords
+
+8) Evaluate on V100 instance
+python main.py --agent dagger_mobilenet_v2 --use-latest-model --max-steps=100 --max-episodes=1 --record --eval-only --upload-gist --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+--> runs successfully.  results poor though (mean reward 116)
+
+
+2019-11-26
+1) Run the baseline agents
+$ python main.py --mnet2-baseline
+--> runs; does laps
+
+$ python main.py --ppo-baseline
+--> runs; does laps
+
+$ python main.py --baseline
+--> fails; $ python main.py --ppo-baseline
+
+2) Experiment with running agents with the settings in 
+$ python main.py --agent dagger_mobilenet_v2 --max-steps=100 --max-episodes=1 --eval-only --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+
+$ python main.py --agent dagger --max-steps=100 --max-episodes=1 --eval-only --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+--> doesn't work; tf error, array size mismatch
+
+$ python main.py --agent dagger --max-steps=100 --max-episodes 1 --eval-only --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[1440,1440,3]"
+blows up; can't find a checkpoint (?)
+
+$ python main.py --mnet2-baseline --max-steps=100 --max-episodes 1 --eval-only --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+--> runs; does laps
+
+$ python main.py --agent bootstrapped_ppo2 --max-steps=100 --max-episodes=1 --eval-only --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[1440,1440,3]"
+--> this actually runs
+
+$ python main.py --train --agent bootstrapped_ppo2 --recording-dir ~/Deepdrive/data/tfrecords --image-resize-dims="[1440,1440,3]"
+I1126 13:20:45.372489 139898592663360 evaluation.py:275] Finished evaluation at 2019-11-26-13:20:45
+2019-11-26 13:20:45,819 - agents.dagger.train.train_mobilenet_v2 - INFO - Finished training
+
+Run in server mode
+1) start the server
+$ python main.py --server --max-steps=1440 --max-episodes=1 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+2) run the client
+$ python ~/deepdrive/agents/forward_agent.py
+
+2019-11-27
+1) Configure docker so this command runs
+$ docker run hello-world
+this requires adding user paperspace to the docker group, etc.
+https://www.digitalocean.com/community/questions/how-to-fix-docker-got-permission-denied-while-trying-to-connect-to-the-docker-daemon-socket
+
+2) Edit ~/deepdrive/agents/forward_agent/Dockerfile
+change line
+old: FROM python:3
+new: FROM python:3.7
+(this is already done, and file is in the repo memanuel/deepdrive)
+
+3) Build the docker image locally
+$ cd ~/deepdrive/agents/forward_agent
+$ docker built -t forward_agent .
+this step failed previously on an error related to building pyarrow from source.
+it succeeds after changing to Python 3.7
+
+4) Run the simulation environment locally (not in a docker container).
+Do this in terminal window 1.
+$ cd ~/deepdrive
+$ ~/botleague/problems/deepdrive/unprotected_left/run.sh
+[note: this is wrapping up a call to
+python main.py \
+      --server \
+      --max-steps=1440 \
+      --max-episodes=1 \
+      --record \
+      --eval-only \
+      --upload-gist \
+      --scenario=2 \
+      --map=kevindale_bare \
+      --sync \
+      --camera-rigs=default_rig_1080p \
+      --image-resize-dims="[224,224,3]" \
+
+5) Once the simulation is running, run the agent in a docker container.
+Do this in terminal window 2, so you can see the separate log outputs from the server and client.
+$ cd ~/deepdrive/agents/forward_agent
+$ docker run -it --net=host forward-agent
