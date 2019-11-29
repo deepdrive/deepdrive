@@ -138,7 +138,8 @@ class BootstrapRLGymEnv(gym.Wrapper):
 def run(env_id, bootstrap_net_path,
         resume_dir=None, experiment=None, camera_rigs=None, render=False, fps=c.DEFAULT_FPS,
         should_record=False, is_discrete=False, agent_name=MOBILENET_V2_NAME, is_sync=True,
-        driving_style=DrivingStyle.NORMAL, is_remote_client=False, eval_only=False):
+        driving_style=DrivingStyle.NORMAL, is_remote_client=False, eval_only=False,
+        sim_args=None):
     tf_config = tf.ConfigProto(
         allow_soft_placement=True,
         intra_op_parallelism_threads=1,
@@ -156,7 +157,7 @@ def run(env_id, bootstrap_net_path,
         sess_1 = tf.Session(config=tf_config)
 
         with sess_1.as_default():
-            dagger_gym_env = sim.start(
+            sim_args_for_rl = dict(
                 experiment=experiment, env_id=env_id, cameras=camera_rigs,
                 render=render, fps=fps,
                 is_sync=is_sync, driving_style=driving_style,
@@ -164,6 +165,10 @@ def run(env_id, bootstrap_net_path,
                 image_resize_dims=MOBILENET_V2_IMAGE_SHAPE,
                 should_normalize_image=True)
 
+            sim_args_dict = sim_args.to_dict()
+            sim_args_dict.update(sim_args_for_rl)
+
+            dagger_gym_env = sim.start(**sim_args_dict)
             dagger_agent = Agent(
                 sess_1, should_jitter_actions=False,
                 net_path=bootstrap_net_path, output_last_hidden=True,

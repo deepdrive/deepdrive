@@ -310,11 +310,12 @@ def configure_net_args(args):
     if args.mnet2_baseline:
         args.net_type = c.MOBILENET_V2_NAME
 
-    if args.ppo_baseline and not args.agent:
+    if args.ppo_baseline:
         # args.agent / agent_name are use in training, but
         # training and running are more tightly linked in RL, so we
         # want to make sure agent is set here even for just running a baseline.
         args.agent = c.BOOTSTRAPPED_PPO2
+        args.eval_only = True
 
 
 def run_agent(args, camera_rigs):
@@ -444,12 +445,13 @@ def train_agent(args, driving_style):
                         'can cause unequal time deltas. '
                         'Switching to synchronous mode. '
                         'Use --sync to avoid this.')
-
+        sim_args = get_sim_args_from_command_args(args)
         train.run(args.env_id, resume_dir=args.resume_train,
                   bootstrap_net_path=net_path, agent_name=args.agent,
                   render=args.render, camera_rigs=[c.DEFAULT_CAM],
                   is_sync=args.sync, driving_style=driving_style,
-                  is_remote_client=args.remote, eval_only=args.eval_only)
+                  is_remote_client=args.remote, eval_only=args.eval_only,
+                  sim_args=sim_args)
     else:
         raise Exception('Agent type not recognized')
 

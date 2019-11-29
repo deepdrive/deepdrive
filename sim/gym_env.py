@@ -200,6 +200,13 @@ class DeepDriveEnv(gym.Env):
                                    f'install.py to update your sim')
             sim_version = semvar(sim_version[0].split('-')[-1])
             cmd = [sim_bin_path, self.unreal_map]
+            if self.unreal_map != '' and self.has_control is None:
+                self.has_control = True
+                if self.scenario_index == -1:
+                    # Hack to work around issue where scenario needs to be set
+                    # for manual  mode
+                    self.scenario_index = 2
+                cmd.append('-remote_ai')
             if self.scenario_index != c.DEFAULT_SCENARIO_INDEX:
                 min_kevindale_version = semvar('3.0.20191103201659')
                 if sim_version < min_kevindale_version:
@@ -208,9 +215,6 @@ class DeepDriveEnv(gym.Env):
                                    f'install.py to update your sim')
                 cmd += ['-scenario_mode',
                         f'-scenario_index={self.scenario_index}']
-            if self.unreal_map != '' and self.has_control is None:
-                self.has_control = True
-                cmd.append('-remote_ai')
             if not c.IS_WINDOWS:
                 cmd.append('-opengl4')
             cmd += ['-ResX=1280', '-ResY=720', '-WINDOWED', '-WinX=-1280']
