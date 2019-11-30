@@ -1,0 +1,75 @@
+Notes:
+- Synchronous: 
+- Eval-only: whether to run evaluation or run gradient updates
+- Agent vs Baseline: 
+- Image Resize: argument needed for mnet (224x224) (I tried with many dimensions and it still ran)
+
+Log:
+
+11-28/11-29
+1) Activate the deepdrive conda environment
+source activate dd 
+
+2) Catch up on Michael's work
+a) Run the agents from the tutorial
+$ python example.py
+- drives forward; stops on crash or after ~5 seconds (because it goes through one env step); failed once with an "unknown network error"
+
+$ python example_sync.py
+--> drives forward; doesn't stop on crash; 
+
+b) Run the baseline agents
+
+$ python main.py --mnet2-baseline 
+--> Runs around the track
+
+$ python main.py --ppo-baseline
+--> Runs around the track
+
+c) Experiment with arguments
+$ python main.py --agent dagger_mobilenet_v2 --max-steps=100 --max-episodes=1 --eval-only --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+
+$ python main.py --agent dagger_mobilenet_v2 --max-steps=100 --max-episodes=1 --eval-only --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[224,1000,3]"
+
+$ python main.py --agent dagger_mobilenet_v2 --max-steps=100 --max-episodes=1 --eval-only --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p 
+--> All of these run fine, despite image resize dim changes
+
+$ python main.py --agent dagger --max-steps=100 --max-episodes=1 --eval-only --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+--> checkpoint error; a key not found in dagger/agent.py
+
+$ python main.py --agent bootstrapped_ppo2 --max-steps=100 --max-episodes=1 --eval-only --scenario=2 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[1440,1440,3]"
+--> This runs
+
+d) Training the agent
+$ python main.py --train --agent bootstrapped_ppo2 --recording-dir ~/Deepdrive/data/tfrecords --image-resize-dims="[1440,1440,3]"
+--> Successfully runs
+
+e) Running the code on a server
+$ python main.py --server --max-steps=1440 --max-episodes=1 --map=kevindale_bare --camera-rigs=default_rig_1080p --image-resize-dims="[224,224,3]"
+$ python ~/deepdrive/agents/forward_agent.py
+--> Same code as Michael's. The first in one terminal and the second in another. This works well. (The former uses deepdriver_api/server.py
+--> and the latter uses deepdriver_api/client.py)
+
+3) Docker 
+a) Installed Docker 
+-->Instructions for installing Docker, adding groups, etc: https://www.linux.com/tutorials/how-install-and-use-docker-linux/
+Obtained error: "Failed to start docker.service: Unit docker.service is masked."
+-->Solved with this: https://www.artificialworlds.net/blog/2015/07/17/docker-fails-to-start-on-ubuntu-15-04/
+-->Used these commands: systemctl unmask docker.service; systemctl unmask docker.socket; systemctl start docker.service
+$ docker run hello-world
+--> success; Outputs "Hello from Docker!"
+
+b) Build a docker image of forward agent
+$ cd ~/deepdrive/agents/forward_agent
+$ docker built -t forward_agent .
+--> Michael's second command didn't work for me. Instead I used the build command from the docs: https://docs.docker.com/get-started/part2/
+$ docker build image -t forward_agent .
+--> Successfully built container
+
+c) 
+$ cd ~/deepdrive; $ make build
+--> Uses makefile to build deepdrive image
+$ docker images
+--> Successfully shows deepdrive image 
+$ cd ~/deepdrive/botleague/problems/unprotected_left; $ make build
+--> 
