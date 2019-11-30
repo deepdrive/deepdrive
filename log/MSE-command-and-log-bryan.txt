@@ -66,18 +66,20 @@ $ docker built -t forward_agent .
 $ docker image build -t forward_agent .
 --> Successfully built container
 
-c) 
+c) Run Michael's Docker code 
 $ cd ~/deepdrive; $ make build; $ docker images
 --> Uses makefile to build deepdrive image; successfully shows deepdrive image 
 $ cd ~/deepdrive/botleague/problems/unprotected_left; $ make build; $ docker images
 --> Builds unprotected left; docker lists the newly created image
 
-4) Leaderboard submission, creating Docker Hub
-Tried leaderboard submission with deepdrive instructions (https://docs.deepdrive.io/docs/tutorial/leaderboard/leaderboard) but failed 
-Cut the additional files from the "botleague/problems/deepdrive/unprotected_left" folder. Files moved to 
+4) Leaderboard submission and creating a Docker Hub
+a) Fixed leaderboard submission (for submissions in general; none worked previously)
+Tried leaderboard submission with deepdrive instructions (https://docs.deepdrive.io/docs/tutorial/leaderboard/leaderboard) but failed. 
+Even default deepdrive tutorial code failed. Cut the additional files from the "botleague/problems/deepdrive/unprotected_left" folder. Files moved to 
 "/home/paperspace/deepdrive/botleague/problems/unprotected_left".
 --> Fixed the submission issue
 
+b) Completed leaderboard submissions for our code (i.e. not Craig's default code from his repo)
 Craig from Deepdrive mentioned submissions are obtained via docker pull. This requires a Docker Hub. Account created via 
 (https://ropenscilabs.github.io/r-docker-tutorial/04-Dockerhub.html). Login is bryanlee99, y5EH5S6dms, bryanlee@college.harvard.edu. 
 Repo for deepdrive project is bryanlee99/deepdrive 
@@ -86,7 +88,33 @@ $ docker login -u=bryanlee99 -p=y5EH5S6dms
 
 $ cd ~/deepdrive/agents/forward_agent 
 $ docker build -t bryanlee99/deepdrive:left-agent .
---> Successfully tagged the forward_agent
+--> Successfully tagged the forward_agent and saved it into the bryanlee99/deepdrive Docker repo
 
 $ docker images 
---> The first image has bryanlee99/deepdrive as the repo and left-agent as the tag, as desired 
+--> Shows created images. The first image has bryanlee99/deepdrive as the repo and left-agent as the tag, as desired 
+
+Modified bot.json (/home/paperspace/botleague/bots/memanuel/forward-agent/bot.json) to use docker_tag "bryanlee99/deepdrive:left-agent"
+Submitted this to the deepdrive server. (git push and submit a pull request, as the tutorial suggests https://docs.deepdrive.io/docs/tutorial/leaderboard/leaderboard)
+--> Submission successful; scored -20k
+
+Modified the forward agent's agent.py to be identical to lazydriver's GitHub code (who's best score is -10k) from https://github.com/lazydriver/deepdrive-challenge/blob/master/unprotected_left/agent.py.
+--> Submission successful; scored -18.5k
+
+c) Consolidated code to build and submit general agents. Steps for the 'forward_agent' folder are below, but this is generalizable:
+Note: I created a build.sh file which builds the Dockerfile, and pushes the built image to the 'bryanlee99/deepdrive' repo wit tag "left-agent"
+
+$ cd ~/deepdrive/agents/forward_agent
+--> Navigate to the forward_agent directory
+- Modify the agent.py code to custom navigation
+
+$ bash build.sh 
+--> Runs the build shell command; builds the docker image (with the new agent.py), and pushes the image to the 'bryanlee99/deepdrive' repo
+
+$ cd ~/botleague/bots/memanuel/forward-agent
+--> Navigates to 'bot.json' file. Add or delete a new line to the file so github will allow a recommit. 
+--> Do a pull request as normal to score the new submission 
+
+d) Link to view results 
+Viewing results: Leaderboard only shows each contestant's best score. Full scores and run results
+are found here: https://gist.github.com/botleague-results
+
