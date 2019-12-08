@@ -25,7 +25,7 @@ git clone https://github.com/deepdrive/deepdrive
 cd deepdrive
 ```
 
-> Optional - Activate the Python conda env or virtualenv with Tensorflow is installed, then
+> Optional - Activate the Python conda env or virtualenv with Tensorflow installed, then
 
 > Note: If you use Anaconda (we recommend Miniconda) - only use `pip install` in your deepdrive conda environment, never `conda install`
 
