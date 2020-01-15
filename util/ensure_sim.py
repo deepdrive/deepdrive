@@ -132,7 +132,7 @@ def get_latest_sim_url():
     sim_prefix = 'sim/' + c.SIM_PREFIX
     conn = S3Connection(anon=True)
     bucket = conn.get_bucket('deepdrive')
-    bucket_search_str = sim_prefix + '-' + c.MAJOR_MINOR_VERSION_STR
+    bucket_search_str = sim_prefix + '-' + '2.0' #c.MAJOR_MINOR_VERSION_STR
     sim_versions = list(bucket.list(bucket_search_str))
     if not sim_versions:
         raise RuntimeError('Could not find a sim version matching %s '
