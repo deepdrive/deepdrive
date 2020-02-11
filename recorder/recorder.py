@@ -324,6 +324,12 @@ def get_driving_specific_results(episode_returns, sum_over_episodes,
     # See https://docs.google.com/spreadsheets/d/1Nm7_3vUYM5pIs2zLWM2lO_TCoIlVpwX-YRLVo4S4-Cc/edit#gid=0
     #   for balancing score coefficients
 
+    # We have a problem with reaching the destination not meaning anything.
+    # You should not get any trip speed bonus if you don't complete the trip.
+    # SPD   CMFT   JAR
+    # 58  - 700  - 600
+    # 116 - 4800 - 1500
+
     ret = Box()
     score = 0
     ret.max_gforce = ts.max_gforce
