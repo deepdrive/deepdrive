@@ -235,7 +235,8 @@ def main():
         if len(sys.argv) > 2:
             # More than just --server was passed,
             # so sim will be configured purely on the server side,
-            # vs purely from the client.
+            # vs purely from the client in order to prevent
+            # cheating / clients that change their environment in evals.
             sim_args = get_sim_args_from_command_args(args)
         if sim_args is not None:
             sim_args = sim_args.to_dict()
