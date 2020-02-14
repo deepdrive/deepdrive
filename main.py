@@ -109,7 +109,10 @@ def add_standard_args(args:Args):
         help='Maximum number of episodes')
     args.add(
         '--server', action='store_true', default=False,
-        help='Run as an API server', )
+        help='Run as an API server - serializes in pyarrow', )
+    args.add(
+        '--json-server', action='store_true', default=False,
+        help='Run as a JSON API server - serializes with JSON', )
     args.add(
         '--upload-gist', action='store_true', default=False,
         help='Upload a private gist with driving performance'
@@ -228,7 +231,7 @@ def main():
         hdf5_to_tfrecord.encode(hdf5_path=args.recording_dir,
                                 experiment=args.experiment)
         return
-    elif args.server:
+    elif args.server or args.json_server:
         from deepdrive_api import server
         sim_args = None
         log.info('Starting Deepdrive server')
