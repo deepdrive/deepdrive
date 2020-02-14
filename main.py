@@ -244,7 +244,8 @@ def main():
         if sim_args is not None:
             sim_args = sim_args.to_dict()
         ensure_sim()
-        server.start(sim, get_sim_path(), sim_args=sim_args)
+        server.start(sim, json_mode=args.json_server,
+                     sim_path=get_sim_path(), sim_args=sim_args)
         return
     else:
         camera_rigs = get_camera_rigs(args)
