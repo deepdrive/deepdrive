@@ -28,14 +28,12 @@ DIR = dirname(realpath(__file__))
 
 @log.catch(reraise=True)
 def main():
-    build_and_run_botleague_ci(
-        build_url='https://sim.deepdrive.io/build-deepdrive',
-        run_botleague_ci_wrapper_fn=run_botleague_ci_for_deepdrive_build)
+    commit = os.environ['CIRCLE_SHA1']
+    branch = os.environ['CIRCLE_BRANCH']
+    # Circle builds / pushes the candidate deepdrive and botleague containers
+    run_botleague_ci_for_deepdrive_build(branch, commit)
 
-
-def run_botleague_ci_for_deepdrive_build(branch, commit, job):
-    if dbox(job.results).json_results_from_logs:
-        build_results = Box.from_json(job.results.json_results_from_logs)
+def run_botleague_ci_for_deepdrive_build(branch, commit):
 
     def set_version(problem_def, version):
         # Deepdrive sim sets the problem version, which is appropriate since

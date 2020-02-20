@@ -43,5 +43,5 @@ jobs:
             [ -z "$BOTLEAGUE_GITHUB_TOKEN" ] && echo "Need to set BOTLEAGUE_GITHUB_TOKEN" && exit 1;
             . venv/bin/activate
             cd .ci && make build_botleague
-            python -u cloud_ci.py && make push_botleague
+            python -u cloud_ci.py && if [ "$CIRCLE_BRANCH" = "master" ]; then make push_botleague; fi
 
