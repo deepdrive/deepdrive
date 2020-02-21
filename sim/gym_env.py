@@ -1212,6 +1212,10 @@ class DeepDriveEnv(gym.Env):
                       str(self.client_id))
             self.raise_connect_fail()
 
+        if config.IS_DEBUG_MODE:
+            log.warning('Turning off render in debug mode - doesn\'t do well '
+                        'with multiple processes.')
+            self.should_render = False
         if self.should_render:
             self.renderer = renderer_factory(cameras=cameras)
 

@@ -204,3 +204,4 @@ CMPS_TO_MPH = CMPS_TO_KPH * KPH_2_MPH
 
 UPLOAD_RESULTS = os.environ.get('DEEPDRIVE_UPLOAD', '')
 
+IS_DEBUG_MODE = getattr(sys, 'gettrace', None)
