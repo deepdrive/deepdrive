@@ -1152,7 +1152,8 @@ class DeepDriveEnv(gym.Env):
             ret = deepdrive_client.activate_synchronous_stepping(self.client_id)
             if ret != 1:
                 raise RuntimeError(
-                    'Could not activate synchronous mode - errno %r' % ret)
+                    'Could not activate synchronous mode. '
+                    'Is there another sim open? errno %r' % ret)
 
     def check_version(self):
         self.client_id = self.connection_props['client_id']
