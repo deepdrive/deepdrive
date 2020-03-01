@@ -24,7 +24,7 @@ simple-pid
 requests
 python-box
 sarge
-deepdrive-api>=3.1.20191111204349
+deepdrive-api==3.1.20200301111111
 ue4_ci_helpers>=0.0.9
 ue4cli
 
