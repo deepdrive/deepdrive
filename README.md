@@ -1,4 +1,4 @@
-# Voyage Deepdrive [![Build Status](https://travis-ci.org/deepdrive/deepdrive.svg?branch=master)](https://travis-ci.org/deepdrive/deepdrive)
+# Deepdrive [![Build Status](https://travis-ci.org/deepdrive/deepdrive.svg?branch=master)](https://travis-ci.org/deepdrive/deepdrive)
 
 The easiest way to experiment with self-driving AI
 
