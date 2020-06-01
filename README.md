@@ -174,19 +174,18 @@ You may need to disable secure boot in your BIOS in order for NVIDIA’s OpenGL 
 
 ## Citing
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3871907.svg)](https://doi.org/10.5281/zenodo.3871907)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1248998.svg)](https://doi.org/10.5281/zenodo.1248998)
 
 Bibtex
 ```
-@software{craig_quiter_2020_3871907,
-  author       = {Craig Quiter},
-  title        = {Deepdrive Zero},
-  month        = jun,
-  year         = 2020,
-  publisher    = {Zenodo},
-  version      = {alpha},
-  doi          = {10.5281/zenodo.3871907},
-  url          = {https://doi.org/10.5281/zenodo.3871907}
+@misc{craig_quiter_2018_1248998,
+  author       = {Craig Quiter and
+                  Maik Ernst},
+  title        = {deepdrive/deepdrive: 2.0},
+  month        = mar,
+  year         = 2018,
+  doi          = {10.5281/zenodo.1248998},
+  url          = {https://doi.org/10.5281/zenodo.1248998}
 }
 ```
 
