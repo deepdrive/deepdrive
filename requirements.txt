@@ -1,5 +1,5 @@
 scipy==1.2.1
-numpy>=1.16.1
+numpy==1.16.1
 h5py
 gym==0.10.0
 arrow
